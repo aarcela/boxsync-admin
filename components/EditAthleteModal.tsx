@@ -199,7 +199,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 type="submit"
                 disabled={loading || fetching}
                 className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-                  ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-red-700 shadow-red-200'}
+                  ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
                 `}
               >
                 {loading ? (

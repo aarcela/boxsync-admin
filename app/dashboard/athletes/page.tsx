@@ -92,7 +92,7 @@ export default function AthletesPage() {
         </div>
         <button 
          onClick={() => setIsAddModalOpen(true)}
-        className="flex items-center justify-center px-4 py-3 bg-pits-red text-white rounded-lg font-bold uppercase text-xs tracking-widest shadow-lg shadow-red-200 hover:bg-red-700 transition-all">
+        className="flex items-center justify-center px-4 py-3 bg-pits-red text-white rounded-lg font-bold uppercase text-xs tracking-widest shadow-lg shadow-red-200 hover:bg-pits-red-dark transition-all">
           <UserPlus size={18} className="mr-2" />
           Add New Athlete
         </button>

@@ -67,7 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`flex items-center p-3 rounded-lg transition-colors group
                   ${isActive 
-                    ? 'bg-[#FF2800] text-white' 
+                    ? 'bg-pits-red text-white' 
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
                 `}
               >
@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-[#FF2800] rounded-full flex items-center justify-center text-white font-bold text-xs">
+            <div className="w-8 h-8 bg-pits-red rounded-full flex items-center justify-center text-white font-bold text-xs">
               AD
             </div>
             <span className="ml-3 font-bold text-sm text-gray-700">Admin</span>

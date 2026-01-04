@@ -1,4 +1,15 @@
-@import "tailwindcss";  
+@import "tailwindcss";
+
+@theme {
+  --color-pits-bg: #F3F4F6;
+  --color-pits-card: #FFFFFF;
+  --color-pits-text: #111827;
+  --color-pits-dim: #6B7280;
+  --color-pits-red: #FF2800;
+  --color-pits-red-dark: #CC2000;
+  --color-pits-success: #10B981;
+  --color-pits-error: #EF4444;
+}
 
 :root {
   --foreground-rgb: 0, 0, 0;
