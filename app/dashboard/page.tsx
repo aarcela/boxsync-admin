@@ -14,8 +14,7 @@ interface PaymentRequest {
   user_id: string;
   profiles: {
     full_name: string;
-    email: string;
-  };
+  } | null;
 }
 
 export default function DashboardPage() {
@@ -44,7 +43,7 @@ export default function DashboardPage() {
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      setPayments(paymentsData as PaymentRequest[]);
+      setPayments((paymentsData as unknown) as PaymentRequest[]);
       setStats({
         pendingCount: paymentsData?.length || 0,
         totalMembers: memberCount || 0
