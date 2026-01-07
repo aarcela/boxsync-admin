@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save } from 'lucide-react';
 
 interface AddAthleteModalProps {
@@ -13,8 +13,16 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     full_name: '',
     email: '',
     password: '', // Temporary password
-    role: 'member'
+    role: 'member',
+    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box'
   });
+
+  // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
+  useEffect(() => {
+    if (formData.role === 'coach' || formData.role === 'manager') {
+      setFormData(prev => ({ ...prev, plan: 'unlimited' }));
+    }
+  }, [formData.role]);
 
   if (!isOpen) return null;
 
@@ -23,10 +31,18 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     setLoading(true);
 
     try {
+      // Ensure plan is always set: 'unlimited' for coaches/managers, or selected plan for members
+      const submitData = {
+        ...formData,
+        plan: formData.role === 'coach' || formData.role === 'manager' 
+          ? 'unlimited' 
+          : formData.plan
+      };
+
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -39,7 +55,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       onSuccess(); // Refresh list
       onClose();   // Close modal
       // Reset form
-      setFormData({ full_name: '', email: '', password: '', role: 'member' });
+      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited' });
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
@@ -125,6 +141,35 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
               <option value="manager">Manager</option>
             </select>
           </div>
+
+          {/* Plan selector - only show for members (athletes) */}
+          {formData.role === 'member' && (
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Plan
+              </label>
+              <select
+                value={formData.plan}
+                onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+              >
+                <option value="unlimited">Unlimited</option>
+                <option value="3x_week">3x / Week</option>
+                <option value="4x_week">4x / Week</option>
+                <option value="5x_week">5x / Week</option>
+                <option value="open_box">Open Box</option>
+              </select>
+            </div>
+          )}
+
+          {/* Show plan info for coaches/managers */}
+          {(formData.role === 'coach' || formData.role === 'manager') && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                Plan: Unlimited (Auto-assigned for {formData.role}s)
+              </p>
+            </div>
+          )}
 
           <div className="pt-4">
             <button

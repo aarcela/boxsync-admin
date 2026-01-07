@@ -16,6 +16,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     email: '',
     password: '', // Optional - only update if provided
     role: 'member' as 'member' | 'coach' | 'manager' | 'admin',
+    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box',
     is_solvent: true
   });
 
@@ -25,9 +26,16 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
       fetchUserData();
     } else if (!isOpen) {
       // Reset form when modal closes
-      setFormData({ full_name: '', email: '', password: '', role: 'member', is_solvent: true });
+      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', is_solvent: true });
     }
   }, [isOpen, userId]);
+
+  // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
+  useEffect(() => {
+    if (formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin') {
+      setFormData(prev => ({ ...prev, plan: 'unlimited' }));
+    }
+  }, [formData.role]);
 
   const fetchUserData = async () => {
     if (!userId) return;
@@ -46,6 +54,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         email: data.email || '',
         password: '', // Don't pre-fill password
         role: data.role || 'member',
+        plan: data.plan || 'unlimited',
         is_solvent: data.is_solvent ?? true
       });
     } catch (error: unknown) {
@@ -64,10 +73,18 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     setLoading(true);
 
     try {
+      // Ensure plan is always set: 'unlimited' for coaches/managers/admins, or selected plan for members
+      const submitData = {
+        ...formData,
+        plan: formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin'
+          ? 'unlimited' 
+          : formData.plan
+      };
+
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -174,6 +191,35 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 <option value="admin">Admin</option>
               </select>
             </div>
+
+            {/* Plan selector - only show for members (athletes) */}
+            {formData.role === 'member' && (
+              <div>
+                <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                  Plan
+                </label>
+                <select
+                  value={formData.plan}
+                  onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                >
+                  <option value="unlimited">Unlimited</option>
+                  <option value="3x_week">3x / Week</option>
+                  <option value="4x_week">4x / Week</option>
+                  <option value="5x_week">5x / Week</option>
+                  <option value="open_box">Open Box</option>
+                </select>
+              </div>
+            )}
+
+            {/* Show plan info for coaches/managers/admins */}
+            {(formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin') && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                  Plan: Unlimited (Auto-assigned for {formData.role}s)
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="flex items-center space-x-3 cursor-pointer">

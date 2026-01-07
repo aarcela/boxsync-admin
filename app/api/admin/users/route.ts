@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, full_name, role } = body;
+    const { email, password, full_name, role, plan } = body;
 
     // 1. Validation
     if (!email || !password || !full_name) {
@@ -37,15 +37,30 @@ export async function POST(request: Request) {
     if (createError) throw createError;
     if (!user.user) throw new Error('Failed to create user object');
 
-    // 3. Update Profile Role & Solvency
+    // 3. Update Profile Role, Solvency & Plan
     // The trigger created the profile, but defaults to 'member' / 'insolvent'.
     // We update it immediately to match what the admin selected.
+    const profileUpdate: {
+      role: string;
+      is_solvent: boolean;
+      plan?: string;
+    } = { 
+      role: role || 'member',
+      is_solvent: true // New users start active usually
+    };
+
+    // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
+    if (role === 'coach' || role === 'manager' || role === 'admin') {
+      profileUpdate.plan = 'unlimited';
+    } else if (plan) {
+      profileUpdate.plan = plan;
+    } else {
+      profileUpdate.plan = 'unlimited'; // Default for members
+    }
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ 
-        role: role || 'member',
-        is_solvent: true // New users start active usually
-      })
+      .update(profileUpdate)
       .eq('id', user.user.id);
 
     if (profileError) throw profileError;

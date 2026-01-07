@@ -53,6 +53,7 @@ export async function GET(
       full_name: profile.full_name,
       email: authUser.user?.email || '',
       role: profile.role,
+      plan: profile.plan || 'unlimited',
       is_solvent: profile.is_solvent ?? true,
       avatar_url: profile.avatar_url,
       created_at: profile.created_at
@@ -76,7 +77,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email, password, full_name, role, is_solvent } = body;
+    const { email, password, full_name, role, plan, is_solvent } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -121,6 +122,7 @@ export async function PUT(
     interface ProfileUpdateData {
       full_name: string;
       role: string;
+      plan?: string;
       is_solvent?: boolean;
     }
     
@@ -128,6 +130,13 @@ export async function PUT(
       full_name,
       role: role || 'member'
     };
+
+    // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
+    if (role === 'coach' || role === 'manager' || role === 'admin') {
+      profileUpdateData.plan = 'unlimited';
+    } else if (plan) {
+      profileUpdateData.plan = plan;
+    }
 
     // Only update is_solvent if provided (boolean)
     if (typeof is_solvent === 'boolean') {
@@ -148,6 +157,7 @@ export async function PUT(
         full_name,
         email,
         role,
+        plan: profileUpdateData.plan,
         is_solvent
       }
     });

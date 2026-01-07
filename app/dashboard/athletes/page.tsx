@@ -15,6 +15,7 @@ interface Profile {
   // To keep it simple and robust based on your schema, we'll focus on full_name and role.
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
+  plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box';
   created_at: string;
   avatar_url: string | null;
 }
@@ -65,8 +66,28 @@ export default function AthletesPage() {
 
       if (error) throw error;
 
-    } catch (error) {
+    } catch {
       alert('Failed to update status');
+      fetchProfiles(); // Revert on error
+    }
+  };
+
+  // CHANGE PLAN
+  const changePlan = async (id: string, newPlan: string) => {
+    try {
+      // Optimistic Update
+      setProfiles(prev => prev.map(p => 
+        p.id === id ? { ...p, plan: newPlan as Profile['plan'] } : p
+      ));
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ plan: newPlan })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch {
+      alert('Failed to update plan');
       fetchProfiles(); // Revert on error
     }
   };
@@ -87,7 +108,7 @@ export default function AthletesPage() {
             Athletes
           </h2>
           <p className="text-pits-dim font-medium text-sm">
-            Manage members, roles, and access permissions.
+            Manage members, plans, and access permissions.
           </p>
         </div>
         <button 
@@ -138,7 +159,8 @@ export default function AthletesPage() {
                 <tr>
                   <th className="px-6 py-4">Athlete</th>
                   <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status (Solvency)</th>
+                  <th className="px-6 py-4">Plan</th>
+                  <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -174,6 +196,21 @@ export default function AthletesPage() {
                       }`}>
                         {profile.role}
                       </span>
+                    </td>
+
+                    {/* PLAN SELECTOR */}
+                    <td className="px-6 py-4">
+                      <select
+                        value={profile.plan || 'unlimited'}
+                        onChange={(e) => changePlan(profile.id, e.target.value)}
+                        className="bg-white border border-gray-300 text-gray-700 text-xs rounded-lg focus:ring-pits-red focus:border-pits-red block w-full p-2 font-bold uppercase"
+                      >
+                        <option value="unlimited">Unlimited</option>
+                        <option value="3x_week">3x / Week</option>
+                        <option value="4x_week">4x / Week</option>
+                        <option value="5x_week">5x / Week</option>
+                        <option value="open_box">Open Box</option>
+                      </select>
                     </td>
 
                     {/* SOLVENCY TOGGLE */}
