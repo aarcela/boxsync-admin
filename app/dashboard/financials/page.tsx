@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { DollarSign, Filter, Search, CheckCircle, XCircle, AlertCircle, ExternalLink, RefreshCw, Lock } from 'lucide-react';
+import { DollarSign, Filter, Search, CheckCircle, XCircle, AlertCircle, ExternalLink, RefreshCw, Lock, TimerReset } from 'lucide-react';
 
 interface PaymentRecord {
   id: string;
@@ -25,6 +25,9 @@ export default function FinancialsPage() {
   
   // Debug State
   const [permissionIssue, setPermissionIssue] = useState(false);
+
+  // Expiry State
+  const [runningExpiry, setRunningExpiry] = useState(false);
 
   // Stats
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -75,6 +78,27 @@ export default function FinancialsPage() {
 
   // --- ACTIONS ---
 
+  const handleRunExpiry = async () => {
+    if (!confirm('Run daily membership expiry check?')) return;
+    
+    setRunningExpiry(true);
+    try {
+      const response = await fetch('/api/admin/cron/expire', { method: 'POST' });
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(result.message || 'Expiry check complete.');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error running expiry';
+      alert('Error running expiry: ' + errorMessage);
+    } finally {
+      setRunningExpiry(false);
+    }
+  };
+
   const handleApprove = async (id: string, userId: string) => {
     try {
       // 1. Update Payment Status
@@ -102,7 +126,7 @@ export default function FinancialsPage() {
       const paymentAmount = payments.find(p => p.id === id)?.amount || 0;
       setTotalRevenue(prev => prev + paymentAmount);
 
-    } catch (error) {
+    } catch {
       alert('Error approving payment');
     }
   };
@@ -131,7 +155,7 @@ export default function FinancialsPage() {
         setTotalRevenue(prev => prev - paymentAmount);
       }
 
-    } catch (error) {
+    } catch {
       alert('Error rejecting payment');
     }
   };
@@ -147,31 +171,46 @@ export default function FinancialsPage() {
     <div className="space-y-6">
       
       {/* HEADER */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
             Financial History
           </h2>
           <p className="text-pits-dim font-medium text-sm">
-            Audit trail of all incoming transactions.
+            Audit trail of transactions & membership status.
           </p>
         </div>
-        <button 
-          onClick={fetchFinancials}
-          className="p-2 bg-pits-card border border-gray-200 rounded-lg hover:bg-gray-50 text-pits-dim transition-colors"
-        >
-          <RefreshCw size={20} />
-        </button>
+        
+        <div className="flex gap-2">
+          {/* EXPIRY BUTTON */}
+          <button 
+            onClick={handleRunExpiry}
+            disabled={runningExpiry}
+            className={`flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-bold uppercase tracking-wide hover:bg-black transition-all
+              ${runningExpiry ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+          >
+            <TimerReset size={18} className={`mr-2 ${runningExpiry ? 'animate-spin' : ''}`} />
+            {runningExpiry ? 'Checking...' : 'Run Daily Expiry'}
+          </button>
+
+          <button 
+            onClick={fetchFinancials}
+            className="p-2 bg-pits-card border border-gray-200 rounded-lg hover:bg-gray-50 text-pits-dim transition-colors"
+          >
+            <RefreshCw size={20} />
+          </button>
+        </div>
       </div>
 
       {/* PERMISSION ERROR BANNER */}
       {permissionIssue && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-center justify-between animate-pulse">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-center justify-between">
           <div className="flex items-center">
             <Lock className="text-red-500 mr-3" size={24} />
             <div>
-              <h4 className="text-red-800 font-bold text-sm uppercase">Hidden Data Detected</h4>
-              <p className="text-red-700 text-sm">Database contains payments, but you are not authorized to see them. Please run the SQL Repair Script.</p>
+              <h4 className="text-red-800 font-bold text-sm uppercase">Access Restricted</h4>
+              <p className="text-red-700 text-sm">Payments exist but are hidden by security rules. Run the SQL Repair Script.</p>
             </div>
           </div>
         </div>
