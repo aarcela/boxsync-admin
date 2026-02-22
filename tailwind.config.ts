@@ -6,7 +6,17 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  // In Tailwind v4, colors are defined in CSS using @theme directive
-  // See app/globals.css for color definitions
+  theme: {
+    extend: {
+      colors: {
+        pits: {
+          black: '#121212',  // Matte Black
+          dark: '#1E1E1E',   // Card Background
+          red: '#FF2800',    // Ferrari Red
+          gray: '#E0E0E0',   // Text
+        }
+      },
+    },
+  },
 };
 export default config;
