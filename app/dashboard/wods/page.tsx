@@ -13,8 +13,24 @@ export default function WodEditorPage() {
   const [wodId, setWodId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [strength, setStrength] = useState('');
+  const [technique, setTechnique] = useState('');
   const [metcon, setMetcon] = useState('');
   const [scaling, setScaling] = useState('');
+  // PR Movements State
+  const [prMovements, setPrMovements] = useState<any[]>([]);
+
+  // Fetch PR Movements
+  useEffect(() => {
+    const fetchPrMovements = async () => {
+      try {
+        const { data } = await supabase.from('pr_movements').select('*').order('name');
+        if (data) setPrMovements(data);
+      } catch (error) {
+        console.error('Error fetching PR movements', error);
+      }
+    };
+    fetchPrMovements();
+  }, []);
 
   // Fetch WOD for selected date
   useEffect(() => {
@@ -23,6 +39,7 @@ export default function WodEditorPage() {
       setWodId(null);
       setTitle('');
       setStrength('');
+      setTechnique('');
       setMetcon('');
       setScaling('');
 
@@ -45,6 +62,7 @@ export default function WodEditorPage() {
             const contentObj = JSON.parse(data.content);
             setTitle(data.title || '');
             setStrength(contentObj.strength || '');
+            setTechnique(contentObj.technique || '');
             setMetcon(contentObj.metcon || '');
             setScaling(contentObj.scaling || '');
           } catch (e) {
@@ -67,6 +85,7 @@ export default function WodEditorPage() {
     try {
       const contentJson = JSON.stringify({
         strength,
+        technique,
         metcon,
         scaling
       });
@@ -168,6 +187,28 @@ export default function WodEditorPage() {
                 placeholder="5-5-5 Back Squat @ 75%"
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-blue-500 outline-none resize-none font-mono"
               />
+            </div>
+
+            {/* Technique Section */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex items-center mb-3">
+                <div className="w-1 h-6 bg-purple-600 rounded-full mr-3"></div>
+                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
+                  Technique
+                </label>
+              </div>
+              <select 
+                value={technique}
+                onChange={(e) => setTechnique(e.target.value)}
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-purple-600 outline-none"
+              >
+                <option value="">Select Technique...</option>
+                {prMovements.map((pr) => (
+                  <option key={pr.id} value={pr.name}>
+                    {pr.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Metcon Section */}
