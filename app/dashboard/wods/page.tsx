@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Calendar, Save, Loader2, Dumbbell } from 'lucide-react';
 
+interface PrMovement {
+  id: string;
+  name: string;
+}
+
 export default function WodEditorPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -17,7 +22,7 @@ export default function WodEditorPage() {
   const [metcon, setMetcon] = useState('');
   const [scaling, setScaling] = useState('');
   // PR Movements State
-  const [prMovements, setPrMovements] = useState<any[]>([]);
+  const [prMovements, setPrMovements] = useState<PrMovement[]>([]);
 
   // Fetch PR Movements
   useEffect(() => {

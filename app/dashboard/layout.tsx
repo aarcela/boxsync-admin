@@ -14,7 +14,8 @@ import {
   X, 
   DollarSign,
   Megaphone,
-  ClipboardCheck
+  ClipboardCheck,
+  Zap
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Attendance', href: '/dashboard/attendance', icon: ClipboardCheck },
     { name: 'Financials', href: '/dashboard/financials', icon: DollarSign }, 
+    { name: 'Insights', href: '/dashboard/financials/insights', icon: Zap }, 
     { name: 'Athletes', href: '/dashboard/athletes', icon: Users },
     { name: 'Schedule', href: '/dashboard/schedule', icon: CalendarDays },
     { name: 'WOD Editor', href: '/dashboard/wods', icon: Dumbbell },

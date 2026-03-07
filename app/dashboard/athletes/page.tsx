@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Search, UserPlus, Filter, Check, X, Edit2 } from 'lucide-react';
+import { Search, UserPlus, Filter, Check, X, Edit2, Award } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 
@@ -16,6 +16,8 @@ interface Profile {
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
   plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box';
+  inscription_plan: 'standard' | 'promo' | 're-entry' | 'founder';
+  inscription_paid: boolean;
   created_at: string;
   avatar_url: string | null;
 }
@@ -92,6 +94,17 @@ export default function AthletesPage() {
     }
   };
 
+  const toggleInscription = async (id: string, currentStatus: boolean) => {
+   try {
+     setProfiles(prev => prev.map(p => p.id === id ? { ...p, inscription_paid: !currentStatus } : p));
+     const { error } = await supabase.from('profiles').update({ inscription_paid: !currentStatus }).eq('id', id);
+     if (error) throw error;
+   } catch (error) {
+     alert('Failed to update inscription status');
+     fetchProfiles();
+   }
+ };
+
   // FILTER LOGIC
   const filteredProfiles = profiles.filter(profile => {
     const matchesSearch = (profile.full_name || 'Unknown').toLowerCase().includes(searchTerm.toLowerCase());
@@ -160,6 +173,7 @@ export default function AthletesPage() {
                   <th className="px-6 py-4">Athlete</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Plan</th>
+                  <th className="px-6 py-4">Inscription</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -211,6 +225,28 @@ export default function AthletesPage() {
                         <option value="5x_week">5x / Week</option>
                         <option value="open_box">Open Box</option>
                       </select>
+                    </td>
+
+                    {/* Inscription Plan & Payment Status */}
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => toggleInscription(profile.id, profile.inscription_paid)}
+                        className={`group flex flex-col items-start px-3 py-2 rounded-lg border transition-all w-32 ${
+                          profile.inscription_paid 
+                            ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                            : 'bg-orange-50 border-orange-200 text-orange-700'
+                        }`}
+                      >
+                        <div className="flex items-center w-full justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-tighter opacity-70">
+                            {profile.inscription_plan || 'standard'}
+                          </span>
+                          <Award size={10} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase">
+                          {profile.inscription_paid ? 'Paid' : 'Unpaid'}
+                        </span>
+                      </button>
                     </td>
 
                     {/* SOLVENCY TOGGLE */}

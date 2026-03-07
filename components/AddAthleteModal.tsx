@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Save } from 'lucide-react';
+import { X, Loader2, Save, Award } from 'lucide-react';
 
 interface AddAthleteModalProps {
   isOpen: boolean;
@@ -7,14 +7,24 @@ interface AddAthleteModalProps {
   onSuccess: () => void;
 }
 
+const INSCRIPTION_PRICES: Record<string, string> = {
+   standard: '$50',
+   promo: '$25',
+   're-entry': '$15',
+   founder: '$0'
+ };
+ 
+
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
-    password: '', // Temporary password
+    password: '',
     role: 'member',
-    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box'
+    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box',
+    inscription_plan: 'standard',
+    inscription_paid: false
   });
 
   // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
@@ -55,7 +65,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       onSuccess(); // Refresh list
       onClose();   // Close modal
       // Reset form
-      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited' });
+      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_paid: false   });
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
@@ -67,7 +77,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hiddem">
         
         {/* Header */}
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -80,113 +90,145 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-8">
           
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-              Full Name
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.full_name}
-              onChange={e => setFormData({...formData, full_name: e.target.value})}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
-              placeholder="e.g. Mat Fraser"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
-              placeholder="athlete@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-              Temporary Password
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.password}
-              onChange={e => setFormData({...formData, password: e.target.value})}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none font-mono"
-              placeholder="e.g. Pits2024!"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">
-              Share this with the athlete. They cannot change it in the app yet.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-              Role
-            </label>
-            <select
-              value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
-            >
-              <option value="member">Member</option>
-              <option value="coach">Coach</option>
-              <option value="manager">Manager</option>
-            </select>
-          </div>
-
-          {/* Plan selector - only show for members (athletes) */}
-          {formData.role === 'member' && (
+          <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Plan
+                Full Name
               </label>
-              <select
-                value={formData.plan}
-                onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
+              <input
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={e => setFormData({...formData, full_name: e.target.value})}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
-              >
-                <option value="unlimited">Unlimited</option>
-                <option value="3x_week">3x / Week</option>
-                <option value="4x_week">4x / Week</option>
-                <option value="5x_week">5x / Week</option>
-                <option value="open_box">Open Box</option>
-              </select>
+                placeholder="e.g. Mat Fraser"
+              />
             </div>
-          )}
 
-          {/* Show plan info for coaches/managers */}
-          {(formData.role === 'coach' || formData.role === 'manager') && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
-                Plan: Unlimited (Auto-assigned for {formData.role}s)
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                placeholder="athlete@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Temporary Password
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.password}
+                onChange={e => setFormData({...formData, password: e.target.value})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none font-mono"
+                placeholder="e.g. Pits2024!"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Share this with the athlete. They cannot change it in the app yet.
               </p>
             </div>
-          )}
 
-          <div className="pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
-              `}
-            >
-              {loading ? (
-                <Loader2 size={18} className="animate-spin mr-2" />
-              ) : (
-                <Save size={18} className="mr-2" />
-              )}
-              {loading ? 'Creating...' : 'Create Account'}
-            </button>
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Role
+              </label>
+              <select
+                value={formData.role}
+                onChange={e => setFormData({...formData, role: e.target.value})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+              >
+                <option value="member">Member</option>
+                <option value="coach">Coach</option>
+                <option value="manager">Manager</option>
+              </select>
+            </div>
+
+            {/* Plan selector - only show for members (athletes) */}
+            {formData.role === 'member' && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Plan
+                  </label>
+                  <select
+                    value={formData.plan}
+                    onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                  >
+                    <option value="unlimited">Unlimited</option>
+                    <option value="3x_week">3x / Week</option>
+                    <option value="4x_week">4x / Week</option>
+                    <option value="5x_week">5x / Week</option>
+                    <option value="open_box">Open Box</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Inscription Plan
+                  </label>
+                  <select 
+                    value={formData.inscription_plan} 
+                    onChange={e => setFormData({...formData, inscription_plan: e.target.value})} 
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                  >
+                    <option value="standard">Standard ({INSCRIPTION_PRICES.standard})</option>
+                    <option value="promo">Promo ({INSCRIPTION_PRICES.promo})</option>
+                    <option value="re-entry">Re-Entry ({INSCRIPTION_PRICES['re-entry']})</option>
+                    <option value="founder">Founder ({INSCRIPTION_PRICES.founder})</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2 flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <input 
+                    type="checkbox" 
+                    id="ins_paid"
+                    checked={formData.inscription_paid} 
+                    onChange={e => setFormData({...formData, inscription_paid: e.target.checked})}
+                    className="w-4 h-4 text-pits-red rounded border-gray-300 focus:ring-pits-red"
+                  />
+                  <label htmlFor="ins_paid" className="ml-3 text-sm font-bold text-blue-800 uppercase tracking-tight flex items-center">
+                    <Award size={16} className="mr-2" />
+                    Mark Inscription as Paid
+                  </label>
+                </div>
+              </>
+            )}
+
+            {/* Show plan info for coaches/managers */}
+            {(formData.role === 'coach' || formData.role === 'manager') && (
+              <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                  Plan: Unlimited (Auto-assigned for {formData.role}s)
+                </p>
+              </div>
+            )}
           </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
+            `}
+          >
+            {loading ? (
+              <Loader2 size={18} className="animate-spin mr-2" />
+            ) : (
+              <Save size={18} className="mr-2" />
+            )}
+            {loading ? 'Creating...' : 'Create Account'}
+          </button>
 
         </form>
       </div>
