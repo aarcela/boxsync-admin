@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Calendar, Save, Loader2, Dumbbell } from 'lucide-react';
-
-interface PrMovement {
-  id: string;
-  name: string;
-}
+import { UNIQUE_TECHNIQUES } from '../../../lib/techniques';
+import { Calendar, Save, Loader2, Dumbbell, Search } from 'lucide-react';
 
 export default function WodEditorPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -17,25 +13,15 @@ export default function WodEditorPage() {
   // WOD Data Structure
   const [wodId, setWodId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [strength, setStrength] = useState('');
+  const [warmUp, setWarmUp] = useState('');
   const [technique, setTechnique] = useState('');
+  const [strength, setStrength] = useState('');
   const [metcon, setMetcon] = useState('');
   const [scaling, setScaling] = useState('');
-  // PR Movements State
-  const [prMovements, setPrMovements] = useState<PrMovement[]>([]);
-
-  // Fetch PR Movements
-  useEffect(() => {
-    const fetchPrMovements = async () => {
-      try {
-        const { data } = await supabase.from('pr_movements').select('*').order('name');
-        if (data) setPrMovements(data);
-      } catch (error) {
-        console.error('Error fetching PR movements', error);
-      }
-    };
-    fetchPrMovements();
-  }, []);
+  
+  // Combobox State
+  const [techniqueDropdownOpen, setTechniqueDropdownOpen] = useState(false);
+  const [techniqueSearch, setTechniqueSearch] = useState('');
 
   // Fetch WOD for selected date
   useEffect(() => {
@@ -43,8 +29,9 @@ export default function WodEditorPage() {
       setLoading(true);
       setWodId(null);
       setTitle('');
-      setStrength('');
+      setWarmUp('');
       setTechnique('');
+      setStrength('');
       setMetcon('');
       setScaling('');
 
@@ -66,8 +53,9 @@ export default function WodEditorPage() {
           try {
             const contentObj = JSON.parse(data.content);
             setTitle(data.title || '');
-            setStrength(contentObj.strength || '');
+            setWarmUp(contentObj.warmUp || '');
             setTechnique(contentObj.technique || '');
+            setStrength(contentObj.strength || '');
             setMetcon(contentObj.metcon || '');
             setScaling(contentObj.scaling || '');
           } catch (e) {
@@ -89,8 +77,9 @@ export default function WodEditorPage() {
     setSaving(true);
     try {
       const contentJson = JSON.stringify({
-        strength,
+        warmUp,
         technique,
+        strength,
         metcon,
         scaling
       });
@@ -177,6 +166,79 @@ export default function WodEditorPage() {
               />
             </div>
 
+            {/* Warm Up Section */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex items-center mb-3">
+                <div className="w-1 h-6 bg-orange-500 rounded-full mr-3"></div>
+                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
+                  Warm Up
+                </label>
+              </div>
+              <textarea 
+                value={warmUp}
+                onChange={(e) => setWarmUp(e.target.value)}
+                rows={4}
+                placeholder="3 Rounds: 10 Squats, 10 Push-ups, 10 Sit-ups"
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-orange-500 outline-none resize-none font-mono"
+              />
+            </div>
+
+            {/* Technique Section */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative">
+              <div className="flex items-center mb-3">
+                <div className="w-1 h-6 bg-purple-600 rounded-full mr-3"></div>
+                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
+                  Technique
+                </label>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text"
+                  value={techniqueDropdownOpen ? techniqueSearch : technique}
+                  onChange={(e) => {
+                    setTechniqueSearch(e.target.value);
+                    setTechniqueDropdownOpen(true);
+                  }}
+                  onFocus={() => {
+                    setTechniqueSearch('');
+                    setTechniqueDropdownOpen(true);
+                  }}
+                  onBlur={() => setTechniqueDropdownOpen(false)}
+                  placeholder="Search or select technique..."
+                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-pits-text focus:border-purple-600 outline-none transition-colors"
+                />
+              </div>
+
+              {techniqueDropdownOpen && (
+                <div className="absolute z-50 left-6 right-6 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                  {UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).length > 0 ? (
+                    UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).map((t) => (
+                      <div 
+                        key={t}
+                        className="px-4 py-3 hover:bg-purple-50 cursor-pointer text-sm font-medium text-gray-700 transition-colors border-b border-gray-50 last:border-0"
+                        onMouseDown={(e) => {
+                          // Prevent input blur before click registers
+                          e.preventDefault();
+                        }}
+                        onClick={() => {
+                          setTechnique(t);
+                          setTechniqueDropdownOpen(false);
+                          setTechniqueSearch('');
+                        }}
+                      >
+                        {t}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-4 text-center text-sm text-gray-400 font-medium">
+                      No techniques found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Strength Section */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center mb-3">
@@ -192,28 +254,6 @@ export default function WodEditorPage() {
                 placeholder="5-5-5 Back Squat @ 75%"
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-blue-500 outline-none resize-none font-mono"
               />
-            </div>
-
-            {/* Technique Section */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-purple-600 rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Technique
-                </label>
-              </div>
-              <select 
-                value={technique}
-                onChange={(e) => setTechnique(e.target.value)}
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-purple-600 outline-none"
-              >
-                <option value="">Select Technique...</option>
-                {prMovements.map((pr) => (
-                  <option key={pr.id} value={pr.name}>
-                    {pr.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Metcon Section */}

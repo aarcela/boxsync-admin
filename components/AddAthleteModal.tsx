@@ -22,7 +22,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     email: '',
     password: '',
     role: 'member',
-    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box',
+    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids',
     inscription_plan: 'standard',
     inscription_paid: false
   });
@@ -170,6 +170,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                     <option value="4x_week">4x / Week</option>
                     <option value="5x_week">5x / Week</option>
                     <option value="open_box">Open Box</option>
+                    <option value="crossfit_kids">CrossFit Kids</option>
                   </select>
                 </div>
                 

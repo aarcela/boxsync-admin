@@ -15,11 +15,12 @@ interface Profile {
   // To keep it simple and robust based on your schema, we'll focus on full_name and role.
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
-  plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box';
+  plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids';
   inscription_plan: 'standard' | 'promo' | 're-entry' | 'founder';
   inscription_paid: boolean;
   created_at: string;
   avatar_url: string | null;
+  bookings?: { status: string }[];
 }
 
 export default function AthletesPage() {
@@ -37,7 +38,7 @@ export default function AthletesPage() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`*, bookings(status)`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -174,6 +175,12 @@ export default function AthletesPage() {
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Plan</th>
                   <th className="px-6 py-4">Inscription</th>
+                  <th className="px-6 py-4">
+                    Attendance
+                    <div className="text-[10px] text-gray-500 font-medium normal-case mt-0.5 tracking-normal">
+                      <span className="text-green-600 font-bold">A</span> / <span className="text-blue-600 font-bold">R</span> / <span className="text-red-600 font-bold">N</span>
+                    </div>
+                  </th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -224,6 +231,7 @@ export default function AthletesPage() {
                         <option value="4x_week">4x / Week</option>
                         <option value="5x_week">5x / Week</option>
                         <option value="open_box">Open Box</option>
+                        <option value="crossfit_kids">CrossFit Kids</option>
                       </select>
                     </td>
 
@@ -247,6 +255,17 @@ export default function AthletesPage() {
                           {profile.inscription_paid ? 'Paid' : 'Unpaid'}
                         </span>
                       </button>
+                    </td>
+
+                    {/* ATTENDANCE */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-1.5 font-bold text-sm bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg w-fit shadow-sm">
+                        <span className="text-green-600" title="Assisted">{profile.bookings?.filter(b => b.status === 'attended').length || 0}</span>
+                        <span className="text-gray-300 font-light">/</span>
+                        <span className="text-blue-600" title="Reserved">{profile.bookings?.filter(b => b.status === 'booked').length || 0}</span>
+                        <span className="text-gray-300 font-light">/</span>
+                        <span className="text-red-600" title="No Show">{profile.bookings?.filter(b => b.status === 'no_show').length || 0}</span>
+                      </div>
                     </td>
 
                     {/* SOLVENCY TOGGLE */}

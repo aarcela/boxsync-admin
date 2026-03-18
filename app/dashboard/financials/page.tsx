@@ -17,34 +17,65 @@ interface PaymentRecord {
   proof_image_url: string;
   created_at: string;
   user_id: string;
+  currency_type: string;
   profiles: {
     full_name: string | null;
   } | null;
 }
 
-interface FinancialStats {
+interface CurrencyStats {
   totalRevenue: number;
   pendingAmount: number;
   methodCounts: Record<string, number>;
+}
+
+interface FinancialStats {
+  usd: CurrencyStats;
+  ves: CurrencyStats;
   activeMembers: number;
   inactiveMembers: number;
   projectedRevenue: number;
   solvencyRate: number;
 }
 
+export enum CurrencyType {
+  USD = 'USD',
+  VES = 'VES',
+}
+
+export interface PaymentMethod {
+  id: string;
+  label: string;
+  currency: CurrencyType;
+  details: string | null;
+  is_active: boolean;
+}
+
+const getPaymentCurrency = (method?: string, dbCurrency?: string, paymentMethods?: PaymentMethod[]) => {
+  if (paymentMethods && paymentMethods.length > 0) {
+    const methodObj = paymentMethods.find(
+      m => m.id === method || m.label.toLowerCase() === String(method || '').toLowerCase()
+    );
+    if (methodObj) return methodObj.currency === CurrencyType.VES ? 'VES' : 'USD';
+  }
+  return dbCurrency && String(dbCurrency).toUpperCase() === 'VES' ? 'VES' : 'USD';
+};
+
 export default function FinancialsPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCurrency, setActiveCurrency] = useState<'USD' | 'VES'>('USD');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [permissionIssue, setPermissionIssue] = useState(false);
   const [runningExpiry, setRunningExpiry] = useState(false);
 
+
   // Advanced Stats State
   const [stats, setStats] = useState<FinancialStats>({
-    totalRevenue: 0,
-    pendingAmount: 0,
-    methodCounts: {},
+    usd: { totalRevenue: 0, pendingAmount: 0, methodCounts: {} },
+    ves: { totalRevenue: 0, pendingAmount: 0, methodCounts: {} },
     activeMembers: 0,
     inactiveMembers: 0,
     projectedRevenue: 0,
@@ -66,6 +97,15 @@ export default function FinancialsPage() {
       const records = payData;
       setPayments(records);
 
+      // 1.5 Fetch Payment Methods
+      const { data: methodsData, error: methodsError } = await supabase
+        .from('payment_methods')
+        .select('*');
+        
+      if (methodsError) throw methodsError;
+      const loadedMethods = methodsData as PaymentMethod[];
+      setPaymentMethods(loadedMethods);
+
       // 2. Fetch Athlete Stats for Health/Projection
       const { data: profiles, error: profError } = await supabase
         .from('profiles')
@@ -75,16 +115,20 @@ export default function FinancialsPage() {
       if (profError) throw profError;
 
       // 3. Calculate Metrics
-      const methodData: Record<string, number> = {};
-      let totalRev = 0;
-      let pendAmt = 0;
+      const usdStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
+      const vesStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
 
       records.forEach(p => {
+        const isVes = getPaymentCurrency(p.method, p.currency_type, loadedMethods) === 'VES';
+        const targetStats = isVes ? vesStats : usdStats;
+
         if (p.status === 'approved') {
-          totalRev += p.amount;
-          methodData[p.method] = (methodData[p.method] || 0) + p.amount;
+          targetStats.totalRevenue += p.amount;
+          if (p.method && String(p.method) !== 'null' && String(p.method).trim() !== '') {
+            targetStats.methodCounts[p.method] = (targetStats.methodCounts[p.method] || 0) + p.amount;
+          }
         } else if (p.status === 'pending') {
-          pendAmt += p.amount;
+          targetStats.pendingAmount += p.amount;
         }
       });
 
@@ -110,9 +154,8 @@ export default function FinancialsPage() {
       const totalMembers = activeCount + inactiveCount;
 
       setStats({
-        totalRevenue: totalRev,
-        pendingAmount: pendAmt,
-        methodCounts: methodData,
+        usd: usdStats,
+        ves: vesStats,
         activeMembers: activeCount,
         inactiveMembers: inactiveCount,
         projectedRevenue: projected,
@@ -175,11 +218,16 @@ export default function FinancialsPage() {
   };
 
   const filteredPayments = payments.filter(p => {
+    const isVes = getPaymentCurrency(p.method, p.currency_type, paymentMethods) === 'VES';
+    const matchesCurrency = activeCurrency === 'VES' ? isVes : !isVes;
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
     const athleteName = p.profiles?.full_name || 'Unknown';
     const matchesSearch = searchTerm === '' || athleteName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+    return matchesCurrency && matchesStatus && matchesSearch;
   });
+
+  const currentStats = activeCurrency === 'VES' ? stats.ves : stats.usd;
+  const currSym = activeCurrency === 'VES' ? 'Bs' : '$';
 
   return (
     <div className="space-y-6">
@@ -208,6 +256,22 @@ export default function FinancialsPage() {
         </div>
       </div>
 
+      {/* CURRENCY TABS */}
+      <div className="flex bg-gray-100 p-1 rounded-xl w-full max-w-sm">
+        <button 
+          onClick={() => setActiveCurrency('USD')} 
+          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'USD' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+        >
+          USD ($)
+        </button>
+        <button 
+          onClick={() => setActiveCurrency('VES')} 
+          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'VES' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+        >
+          VES (Bs)
+        </button>
+      </div>
+
       {/* TOP METRICS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Actual Revenue */}
@@ -216,7 +280,7 @@ export default function FinancialsPage() {
             <div className="p-2 bg-green-50 rounded-lg text-green-600"><DollarSign size={20}/></div>
             <ArrowUpRight size={16} className="text-green-500" />
           </div>
-          <p className="text-2xl font-black text-pits-text">${stats.totalRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-black text-pits-text">{currSym}{currentStats.totalRevenue.toLocaleString()}</p>
           <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1">Total Approved This Month</p>
         </div>
 
@@ -248,25 +312,25 @@ export default function FinancialsPage() {
             <PieChart size={12} className="mr-2"/> Method Share
           </p>
           <div className="space-y-2">
-            {Object.entries(stats.methodCounts).map(([method, amount]) => (
+            {Object.entries(currentStats.methodCounts).map(([method, amount]) => (
               <div key={method} className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-gray-500 truncate mr-2">{method}</span>
-                <span className="text-[10px] font-black text-pits-text">${amount.toLocaleString()}</span>
+                <span className="text-[10px] font-black text-pits-text">{currSym}{amount.toLocaleString()}</span>
               </div>
             ))}
-            {Object.keys(stats.methodCounts).length === 0 && <p className="text-[10px] text-gray-300 italic">No approved data</p>}
+            {Object.keys(currentStats.methodCounts).length === 0 && <p className="text-[10px] text-gray-300 italic">No approved data</p>}
           </div>
         </div>
       </div>
 
       {/* PENDING QUEUE ALERT */}
-      {stats.pendingAmount > 0 && (
+      {currentStats.pendingAmount > 0 && (
         <div className="bg-pits-red p-4 rounded-xl flex items-center justify-between shadow-lg shadow-red-100 animate-pulse">
           <div className="flex items-center">
             <AlertTriangle className="text-white mr-3" size={24} />
             <div>
               <p className="text-white font-black text-sm uppercase italic tracking-tight">Pending Capital</p>
-              <p className="text-white/80 text-xs font-medium">There is <span className="font-black text-white">${stats.pendingAmount.toLocaleString()}</span> waiting to be approved.</p>
+              <p className="text-white/80 text-xs font-medium">There is <span className="font-black text-white">{currSym}{currentStats.pendingAmount.toLocaleString()}</span> waiting to be approved.</p>
             </div>
           </div>
           <button 
@@ -334,12 +398,18 @@ export default function FinancialsPage() {
                       <div className="text-[10px] text-gray-400">ID: {payment.user_id.slice(0, 8)}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center text-gray-500">
-                        <CreditCard size={12} className="mr-1.5 opacity-50" />
-                        <span className="text-[10px] font-black uppercase tracking-wider">{payment.method}</span>
-                      </div>
+                      {payment.method && String(payment.method) !== 'null' && String(payment.method).trim() !== '' ? (
+                        <div className="flex items-center text-gray-500">
+                          <CreditCard size={12} className="mr-1.5 opacity-50" />
+                          <span className="text-[10px] font-black uppercase tracking-wider">
+                            {payment.method}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">-</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 font-black text-gray-900">${payment.amount}</td>
+                    <td className="px-6 py-4 font-black text-gray-900">{currSym}{payment.amount}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border
                         ${payment.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 

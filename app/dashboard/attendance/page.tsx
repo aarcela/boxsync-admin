@@ -25,8 +25,22 @@ interface Booking {
   };
 }
 
+const getCaracasDate = () => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Caracas',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(new Date());
+  const ye = parts.find((p) => p.type === 'year')?.value;
+  const mo = parts.find((p) => p.type === 'month')?.value;
+  const da = parts.find((p) => p.type === 'day')?.value;
+  return `${ye}-${mo}-${da}`;
+};
+
 export default function AttendancePage() {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getCaracasDate());
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [roster, setRoster] = useState<Booking[]>([]);
@@ -40,10 +54,9 @@ export default function AttendancePage() {
       setSelectedClassId(null);
       setRoster([]);
       
-      const start = new Date(date);
-      start.setUTCHours(0,0,0,0);
-      const end = new Date(date);
-      end.setUTCHours(23,59,59,999);
+      // Calculate start and end in Caracas time (UTC-4)
+      const startUtc = new Date(`${date}T00:00:00-04:00`).toISOString();
+      const endUtc = new Date(`${date}T23:59:59-04:00`).toISOString();
 
       const { data, error } = await supabase
         .from('classes')
@@ -52,8 +65,8 @@ export default function AttendancePage() {
           coach:profiles(full_name),
           bookings:bookings(count)
         `)
-        .gte('start_time', start.toISOString())
-        .lte('start_time', end.toISOString())
+        .gte('start_time', startUtc)
+        .lte('start_time', endUtc)
         .order('start_time', { ascending: true });
 
       if (!error && data) {
@@ -131,8 +144,8 @@ export default function AttendancePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              const currentDate = new Date(date);
-              currentDate.setDate(currentDate.getDate() - 1);
+              const currentDate = new Date(`${date}T12:00:00Z`);
+              currentDate.setUTCDate(currentDate.getUTCDate() - 1);
               setDate(currentDate.toISOString().split('T')[0]);
             }}
             className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
@@ -151,8 +164,8 @@ export default function AttendancePage() {
           </div>
           <button
             onClick={() => {
-              const currentDate = new Date(date);
-              currentDate.setDate(currentDate.getDate() + 1);
+              const currentDate = new Date(`${date}T12:00:00Z`);
+              currentDate.setUTCDate(currentDate.getUTCDate() + 1);
               setDate(currentDate.toISOString().split('T')[0]);
             }}
             className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
@@ -202,7 +215,7 @@ export default function AttendancePage() {
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-black text-pits-text italic">
-                      {new Date(cls.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <div className="flex items-center text-xs font-medium text-gray-400 mt-1">

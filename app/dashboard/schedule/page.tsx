@@ -126,7 +126,7 @@ export default function SchedulePage() {
                           </span>
                        </div>
                        <h4 className="text-lg font-black text-pits-text uppercase italic">
-                         {session.class_type} WOD
+                         {session.class_type}
                        </h4>
                        <div className="flex items-center text-xs font-bold text-gray-500 mt-1">
                          <User size={12} className="mr-1" />
