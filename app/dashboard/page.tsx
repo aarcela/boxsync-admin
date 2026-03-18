@@ -154,7 +154,7 @@ export default function DashboardPage() {
         <div className="bg-pits-card p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-pits-dim font-bold text-xs uppercase tracking-widest mb-1">Monthly Revenue</p>
-            <p className="text-4xl font-black text-pits-text">$ --</p>
+            <p className="text-4xl font-black text-pits-text">€ --</p>
           </div>
           <div className="p-3 bg-green-50 rounded-full text-pits-success">
             <DollarSign size={24} />

@@ -30,7 +30,7 @@ interface CurrencyStats {
 }
 
 interface FinancialStats {
-  usd: CurrencyStats;
+  EUR: CurrencyStats;
   ves: CurrencyStats;
   activeMembers: number;
   inactiveMembers: number;
@@ -39,7 +39,7 @@ interface FinancialStats {
 }
 
 export enum CurrencyType {
-  USD = 'USD',
+  EUR = 'EUR',
   VES = 'VES',
 }
 
@@ -56,16 +56,16 @@ const getPaymentCurrency = (method?: string, dbCurrency?: string, paymentMethods
     const methodObj = paymentMethods.find(
       m => m.id === method || m.label.toLowerCase() === String(method || '').toLowerCase()
     );
-    if (methodObj) return methodObj.currency === CurrencyType.VES ? 'VES' : 'USD';
+    if (methodObj) return methodObj.currency === CurrencyType.VES ? 'VES' : 'EUR';
   }
-  return dbCurrency && String(dbCurrency).toUpperCase() === 'VES' ? 'VES' : 'USD';
+  return dbCurrency && String(dbCurrency).toUpperCase() === 'VES' ? 'VES' : 'EUR';
 };
 
 export default function FinancialsPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCurrency, setActiveCurrency] = useState<'USD' | 'VES'>('USD');
+  const [activeCurrency, setActiveCurrency] = useState<'EUR' | 'VES'>('EUR');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [permissionIssue, setPermissionIssue] = useState(false);
@@ -74,7 +74,7 @@ export default function FinancialsPage() {
 
   // Advanced Stats State
   const [stats, setStats] = useState<FinancialStats>({
-    usd: { totalRevenue: 0, pendingAmount: 0, methodCounts: {} },
+    EUR: { totalRevenue: 0, pendingAmount: 0, methodCounts: {} },
     ves: { totalRevenue: 0, pendingAmount: 0, methodCounts: {} },
     activeMembers: 0,
     inactiveMembers: 0,
@@ -115,12 +115,12 @@ export default function FinancialsPage() {
       if (profError) throw profError;
 
       // 3. Calculate Metrics
-      const usdStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
+      const EURStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
       const vesStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
 
       records.forEach(p => {
         const isVes = getPaymentCurrency(p.method, p.currency_type, loadedMethods) === 'VES';
-        const targetStats = isVes ? vesStats : usdStats;
+        const targetStats = isVes ? vesStats : EURStats;
 
         if (p.status === 'approved') {
           targetStats.totalRevenue += p.amount;
@@ -154,7 +154,7 @@ export default function FinancialsPage() {
       const totalMembers = activeCount + inactiveCount;
 
       setStats({
-        usd: usdStats,
+        EUR: EURStats,
         ves: vesStats,
         activeMembers: activeCount,
         inactiveMembers: inactiveCount,
@@ -226,8 +226,8 @@ export default function FinancialsPage() {
     return matchesCurrency && matchesStatus && matchesSearch;
   });
 
-  const currentStats = activeCurrency === 'VES' ? stats.ves : stats.usd;
-  const currSym = activeCurrency === 'VES' ? 'Bs' : '$';
+  const currentStats = activeCurrency === 'VES' ? stats.ves : stats.EUR;
+  const currSym = activeCurrency === 'VES' ? 'Bs' : '';
 
   return (
     <div className="space-y-6">
@@ -247,9 +247,9 @@ export default function FinancialsPage() {
           <button 
             onClick={handleRunExpiry}
             disabled={runningExpiry}
-            className={`flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-black transition-all ${runningExpiry ? 'opacity-50' : ''}`}
+            className={`flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-black transition-all €{runningExpiry ? 'opacity-50' : ''}`}
           >
-            <Clock size={16} className={`mr-2 ${runningExpiry ? 'animate-spin' : ''}`} />
+            <Clock size={16} className={`mr-2 €{runningExpiry ? 'animate-spin' : ''}`} />
             {runningExpiry ? 'Syncing...' : 'Run Expiry Check'}
           </button>
           <button onClick={fetchFinancials} className="p-2 bg-pits-card border border-gray-200 rounded-lg hover:bg-gray-50 text-pits-dim"><RefreshCw size={20} /></button>
@@ -259,10 +259,10 @@ export default function FinancialsPage() {
       {/* CURRENCY TABS */}
       <div className="flex bg-gray-100 p-1 rounded-xl w-full max-w-sm">
         <button 
-          onClick={() => setActiveCurrency('USD')} 
-          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'USD' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          onClick={() => setActiveCurrency('EUR')} 
+          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'EUR' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
         >
-          USD ($)
+          EUR (€)
         </button>
         <button 
           onClick={() => setActiveCurrency('VES')} 
@@ -290,7 +290,7 @@ export default function FinancialsPage() {
             <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><TrendingUp size={20}/></div>
             <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">TARGET</span>
           </div>
-          <p className="text-2xl font-black text-pits-text">${stats.projectedRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-black text-pits-text">€{stats.projectedRevenue.toLocaleString()}</p>
           <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1">Expected Monthly Income</p>
         </div>
 
@@ -298,7 +298,7 @@ export default function FinancialsPage() {
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex justify-between items-start mb-2">
             <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><Activity size={20}/></div>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${stats.solvencyRate < 80 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full €{stats.solvencyRate < 80 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
               {stats.solvencyRate}% HEALTH
             </span>
           </div>
@@ -412,7 +412,7 @@ export default function FinancialsPage() {
                     <td className="px-6 py-4 font-black text-gray-900">{currSym}{payment.amount}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border
-                        ${payment.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 
+                        €{payment.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 
                           payment.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
                           'bg-yellow-50 text-yellow-700 border-yellow-200'}
                       `}>

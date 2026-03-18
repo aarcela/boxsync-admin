@@ -77,7 +77,7 @@ export default function WodEditorPage() {
     setSaving(true);
     try {
       const contentJson = JSON.stringify({
-        warmUp,
+        warm_up: warmUp,
         technique,
         strength,
         metcon,
