@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Calendar, Clock, User, CheckCircle, XCircle, MinusCircle, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, CheckCircle, XCircle, MinusCircle, Users, ChevronLeft, ChevronRight, X, Info } from 'lucide-react';
 
 interface ClassSession {
   id: string;
@@ -46,6 +46,7 @@ export default function AttendancePage() {
   const [roster, setRoster] = useState<Booking[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingRoster, setLoadingRoster] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 1. Fetch Classes for selected Date
   useEffect(() => {
@@ -218,9 +219,21 @@ export default function AttendancePage() {
                       {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <div className="flex items-center text-xs font-medium text-gray-400 mt-1">
-                    <User size={12} className="mr-1" />
-                    Coach {cls.coach?.full_name || 'Staff'}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center text-xs font-medium text-gray-400">
+                      <User size={12} className="mr-1" />
+                      Coach {cls.coach?.full_name || 'Staff'}
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClassId(cls.id);
+                        setIsModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-pits-red bg-red-50 hover:bg-pits-red hover:text-white px-2 py-1 rounded transition-colors"
+                    >
+                      DETAILS
+                    </button>
                   </div>
                 </button>
               ))
@@ -323,6 +336,104 @@ export default function AttendancePage() {
         </div>
 
       </div>
+
+      {/* MODAL */}
+      {isModalOpen && selectedClassId && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="text-xl font-black text-pits-text uppercase italic">Class Details</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {(() => {
+                const cls = classes.find(c => c.id === selectedClassId);
+                if (!cls) return null;
+                return (
+                  <div className="space-y-6">
+                    {/* Class Info */}
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Type</p>
+                        <p className="font-bold text-pits-text text-sm">{cls.class_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Time</p>
+                        <p className="font-bold text-pits-text text-sm">
+                          {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Coach</p>
+                        <p className="font-bold text-pits-text text-sm">{cls.coach?.full_name || 'Staff'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Capacity</p>
+                        <p className="font-bold text-pits-text text-sm">{cls.bookings[0]?.count || 0} / {cls.max_capacity}</p>
+                      </div>
+                    </div>
+
+                    {/* Roster */}
+                    <div>
+                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3">Athletes</h4>
+                      {loadingRoster ? (
+                        <p className="text-gray-400 text-sm p-4 bg-gray-50 rounded-lg text-center font-medium">Loading roster...</p>
+                      ) : roster.length === 0 ? (
+                        <p className="text-gray-400 text-sm p-4 bg-gray-50 rounded-lg text-center font-medium">No bookings yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {roster.map(booking => (
+                            <div key={booking.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 bg-white shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                                  {booking.profiles.avatar_url ? (
+                                    <img src={booking.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    booking.profiles.full_name?.charAt(0)
+                                  )}
+                                </div>
+                                <span className="font-bold text-pits-text text-sm">{booking.profiles.full_name}</span>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
+                                ${booking.status === 'attended' ? 'bg-green-100 text-green-700' : 
+                                  booking.status === 'no_show' ? 'bg-red-100 text-red-700' :
+                                  'bg-blue-100 text-blue-700'}
+                              `}>
+                                {booking.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            
+            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 bg-white border border-gray-200 text-pits-text font-bold text-sm rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
