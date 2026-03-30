@@ -7,13 +7,6 @@ interface AddAthleteModalProps {
   onSuccess: () => void;
 }
 
-const INSCRIPTION_PRICES: Record<string, string> = {
-   standard: '$50',
-   promo: '$25',
-   're-entry': '$15',
-   founder: '$0'
- };
- 
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const [loading, setLoading] = useState(false);
@@ -24,7 +17,9 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     role: 'member',
     plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids',
     inscription_plan: 'standard',
-    inscription_paid: false
+    inscription_cost: '50',
+    inscription_paid: false,
+    admin_note: ''
   });
 
   // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
@@ -65,7 +60,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       onSuccess(); // Refresh list
       onClose();   // Close modal
       // Reset form
-      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_paid: false   });
+      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_cost: '50', inscription_paid: false, admin_note: ''   });
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
@@ -183,11 +178,25 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                     onChange={e => setFormData({...formData, inscription_plan: e.target.value})} 
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
                   >
-                    <option value="standard">Standard ({INSCRIPTION_PRICES.standard})</option>
-                    <option value="promo">Promo ({INSCRIPTION_PRICES.promo})</option>
-                    <option value="re-entry">Re-Entry ({INSCRIPTION_PRICES['re-entry']})</option>
-                    <option value="founder">Founder ({INSCRIPTION_PRICES.founder})</option>
+                    <option value="standard">Standard</option>
+                    <option value="promo">Promo</option>
+                    <option value="re-entry">Re-Entry</option>
+                    <option value="founder">No-Cost</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Inscription Price ($)
+                  </label>
+                  <input 
+                    type="number"
+                    value={formData.inscription_cost} 
+                    onChange={e => setFormData({...formData, inscription_cost: e.target.value})} 
+                    placeholder="e.g. 50"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    min="0"
+                  />
                 </div>
 
                 <div className="col-span-2 flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -214,6 +223,20 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 </p>
               </div>
             )}
+
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2 flex justify-between">
+                Admin Note
+                <span className="text-gray-400 font-normal">{formData.admin_note.length}/150</span>
+              </label>
+              <textarea
+                value={formData.admin_note}
+                onChange={e => setFormData({...formData, admin_note: e.target.value.slice(0, 150)})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none resize-none h-20"
+                placeholder="Internal notes for this athlete..."
+                maxLength={150}
+              />
+            </div>
           </div>
 
           <button

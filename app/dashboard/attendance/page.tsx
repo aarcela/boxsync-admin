@@ -118,12 +118,18 @@ export default function AttendancePage() {
       b.id === bookingId ? { ...b, status: newStatus } : b
     ));
 
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: newStatus })
-      .eq('id', bookingId);
+    try {
+      const response = await fetch('/api/admin/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, status: newStatus }),
+      });
 
-    if (error) {
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+    } catch (error) {
+      console.error(error);
       alert('Failed to update status');
       // Revert logic would go here in a full production app
     }

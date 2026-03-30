@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   Zap
 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -51,9 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Brand */}
         <div className="h-16 flex items-center justify-center border-b border-gray-800">
           {isSidebarOpen ? (
-            <h1 className="font-black text-2xl tracking-tighter italic text-white">
-              PITS <span className="text-[#FF2800]">CROSSFIT</span>
-            </h1>
+            <Image src="/assets/logo.png" alt="Logo" width={100} height={100} />
           ) : (
             <span className="font-black text-2xl text-[#FF2800]">P</span>
           )}
