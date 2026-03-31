@@ -142,7 +142,19 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Type</label>
-              <select value={type} onChange={e => setType(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red">
+              <select 
+                value={type} 
+                onChange={e => {
+                  const newType = e.target.value;
+                  setType(newType);
+                  if (newType === 'Open Box') {
+                    setDuration('120');
+                  } else {
+                    setDuration('60');
+                  }
+                }} 
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red"
+              >
                 {CLASS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
