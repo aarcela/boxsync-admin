@@ -15,14 +15,18 @@ import {
   DollarSign,
   Megaphone,
   ClipboardCheck,
-  Zap
+  Zap,
+  MessageSquare
 } from 'lucide-react';
+import { useLanguage } from '../../components/LanguageContext';
+import { Globe } from 'lucide-react';
 import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { lang, setLanguage, t } = useLanguage();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -30,14 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const navItems = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Attendance', href: '/dashboard/attendance', icon: ClipboardCheck },
-    { name: 'Financials', href: '/dashboard/financials', icon: DollarSign }, 
-    { name: 'Insights', href: '/dashboard/financials/insights', icon: Zap }, 
-    { name: 'Athletes', href: '/dashboard/athletes', icon: Users },
-    { name: 'Schedule', href: '/dashboard/schedule', icon: CalendarDays },
-    { name: 'WOD Editor', href: '/dashboard/wods', icon: Dumbbell },
-    { name: 'News', href: '/dashboard/news', icon: Megaphone },
+    { name: t('Overview'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('Attendance'), href: '/dashboard/attendance', icon: ClipboardCheck },
+    { name: t('Financials'), href: '/dashboard/financials', icon: DollarSign }, 
+    { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap }, 
+    { name: t('Athletes'), href: '/dashboard/athletes', icon: Users },
+    { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
+    { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
+    { name: t('News'), href: '/dashboard/news', icon: Megaphone },
+    { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
   ];
 
   return (
@@ -92,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <LogOut size={20} />
             {isSidebarOpen && (
               <span className="ml-3 font-bold text-sm uppercase tracking-wide">
-                Log Out
+                {t('Log Out')}
               </span>
             )}
           </button>
@@ -103,18 +108,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
-          >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+            >
+              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
+            {/* Language Toggle */}
+            <div className="flex items-center bg-gray-50 border border-gray-100 rounded-full p-1 ml-2">
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+                  lang === 'en' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('es')}
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+                  lang === 'es' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                ES
+              </button>
+            </div>
+          </div>
           
           <div className="flex items-center">
             <div className="w-8 h-8 bg-pits-red rounded-full flex items-center justify-center text-white font-bold text-xs">
               AD
             </div>
-            <span className="ml-3 font-bold text-sm text-gray-700">Admin</span>
+            <span className="ml-3 font-bold text-sm text-gray-700">{t('Admin')}</span>
           </div>
         </header>
 

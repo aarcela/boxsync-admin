@@ -70,6 +70,10 @@ export default function FinancialsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [permissionIssue, setPermissionIssue] = useState(false);
   const [runningExpiry, setRunningExpiry] = useState(false);
+  
+  // Date Filter State
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
 
   // Advanced Stats State
@@ -119,16 +123,21 @@ export default function FinancialsPage() {
       const vesStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, methodCounts: {} };
 
       records.forEach(p => {
-        const isVes = getPaymentCurrency(p.method, p.currency_type, loadedMethods) === 'VES';
-        const targetStats = isVes ? vesStats : EURStats;
+        const paymentDate = new Date(p.created_at);
+        const isSelectedMonth = paymentDate.getMonth() === selectedMonth && paymentDate.getFullYear() === selectedYear;
 
-        if (p.status === 'approved') {
-          targetStats.totalRevenue += p.amount;
-          if (p.method && String(p.method) !== 'null' && String(p.method).trim() !== '') {
-            targetStats.methodCounts[p.method] = (targetStats.methodCounts[p.method] || 0) + p.amount;
+        if (isSelectedMonth) {
+          const isVes = getPaymentCurrency(p.method, p.currency_type, loadedMethods) === 'VES';
+          const targetStats = isVes ? vesStats : EURStats;
+
+          if (p.status === 'approved') {
+            targetStats.totalRevenue += p.amount;
+            if (p.method && String(p.method) !== 'null' && String(p.method).trim() !== '') {
+              targetStats.methodCounts[p.method] = (targetStats.methodCounts[p.method] || 0) + p.amount;
+            }
+          } else if (p.status === 'pending') {
+            targetStats.pendingAmount += p.amount;
           }
-        } else if (p.status === 'pending') {
-          targetStats.pendingAmount += p.amount;
         }
       });
 
@@ -177,7 +186,7 @@ export default function FinancialsPage() {
 
   useEffect(() => {
     fetchFinancials();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const handleRunExpiry = async () => {
     if (!confirm('Run daily membership expiry check? This will lock accounts whose month is up.')) return;
@@ -218,6 +227,10 @@ export default function FinancialsPage() {
   };
 
   const filteredPayments = payments.filter(p => {
+    const paymentDate = new Date(p.created_at);
+    const isSelectedMonth = paymentDate.getMonth() === selectedMonth && paymentDate.getFullYear() === selectedYear;
+    if (!isSelectedMonth) return false;
+
     const isVes = getPaymentCurrency(p.method, p.currency_type, paymentMethods) === 'VES';
     const matchesCurrency = activeCurrency === 'VES' ? isVes : !isVes;
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
@@ -256,20 +269,43 @@ export default function FinancialsPage() {
         </div>
       </div>
 
-      {/* CURRENCY TABS */}
-      <div className="flex bg-gray-100 p-1 rounded-xl w-full max-w-sm">
-        <button 
-          onClick={() => setActiveCurrency('EUR')} 
-          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'EUR' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-        >
-          EUR (€)
-        </button>
-        <button 
-          onClick={() => setActiveCurrency('VES')} 
-          className={`flex-1 py-2 text-center text-sm font-black uppercase rounded-lg transition-all ${activeCurrency === 'VES' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-        >
-          VES (Bs)
-        </button>
+      {/* PERIOD SELECTOR & CURRENCY TABS */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex bg-gray-100 p-1 rounded-xl w-full max-w-sm">
+          <button 
+            onClick={() => setActiveCurrency('EUR')} 
+            className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase rounded-lg transition-all ${activeCurrency === 'EUR' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            EUR (€)
+          </button>
+          <button 
+            onClick={() => setActiveCurrency('VES')} 
+            className={`flex-1 py-1.5 text-center text-[10px] font-black uppercase rounded-lg transition-all ${activeCurrency === 'VES' ? 'bg-white text-pits-text shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            VES (Bs)
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="flex-1 md:w-32 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-gray-700 outline-none uppercase"
+          >
+            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month, i) => (
+              <option key={month} value={i}>{month}</option>
+            ))}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="flex-1 md:w-24 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-gray-700 outline-none uppercase"
+          >
+            {[2024, 2025, 2026].map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* TOP METRICS GRID */}
@@ -281,7 +317,9 @@ export default function FinancialsPage() {
             <ArrowUpRight size={16} className="text-green-500" />
           </div>
           <p className="text-2xl font-black text-pits-text">{currSym}{currentStats.totalRevenue.toLocaleString()}</p>
-          <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1">Total Approved This Month</p>
+          <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1">
+            Total Approved in {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][selectedMonth]}
+          </p>
         </div>
 
         {/* Projected Revenue */}

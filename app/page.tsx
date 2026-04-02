@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Globe } from 'lucide-react';
+import { useLanguage } from '../components/LanguageContext';
 
 export default function LoginPage() {
+  const { lang, setLanguage, t } = useLanguage();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ export default function LoginPage() {
       });
 
       if (authError) throw authError;
-      if (!user) throw new Error('No user found');
+      if (!user) throw new Error(t('No user found'));
 
       // 2. Authorization Check (RBAC)
       // We check the profiles table to ensure they are actually Staff
@@ -39,7 +41,7 @@ export default function LoginPage() {
 
       if (profile.role !== 'manager' && profile.role !== 'admin') {
         await supabase.auth.signOut();
-        throw new Error('Unauthorized: Staff access only.');
+        throw new Error(t('Unauthorized: Staff access only.'));
       }
 
       // 3. Redirect to Dashboard
@@ -58,7 +60,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+      {/* Top Right Language Toggle */}
+      <div className="absolute top-6 right-6 flex items-center bg-white border border-gray-100 rounded-full p-1 shadow-sm">
+        <button
+          onClick={() => setLanguage('en')}
+          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+            lang === 'en' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          EN
+        </button>
+        <button
+          onClick={() => setLanguage('es')}
+          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+            lang === 'es' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          ES
+        </button>
+      </div>
+
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         
         {/* Header */}
@@ -71,7 +93,7 @@ export default function LoginPage() {
             Pits CrossFit
           </h1>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">
-            Command Center
+            {t('Command Center')}
           </p>
         </div>
 
@@ -79,7 +101,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              Staff Email
+              {t('Staff Email')}
             </label>
             <input
               type="email"
@@ -92,7 +114,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              Password
+              {t('Password')}
             </label>
             <input
               type="password"
@@ -117,13 +139,13 @@ export default function LoginPage() {
             `}
           >
             {loading && <Loader2 size={18} className="animate-spin mr-2" />}
-            {loading ? 'Verifying...' : 'Access Dashboard'}
+            {loading ? t('Verifying...') : t('Access Dashboard')}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-400">
-            Authorized personnel only. <br/> IP address is being logged.
+            {t('Authorized personnel only. IP address is being logged.')}
           </p>
         </div>
       </div>
