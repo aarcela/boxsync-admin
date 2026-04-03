@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "../components/LanguageContext";
+import { ToastProvider } from "../components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +19,6 @@ export const metadata: Metadata = {
   description: "Pits CrossFit Admin",
 };
 
-import { LanguageProvider } from "../components/LanguageContext";
 
 export default function RootLayout({
   children,
@@ -25,12 +26,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <LanguageProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </LanguageProvider>
       </body>
     </html>

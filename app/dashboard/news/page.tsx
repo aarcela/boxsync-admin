@@ -4,16 +4,19 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Plus, Trash2, Megaphone, Bell } from 'lucide-react';
 import CreateNewsModal from '@/components/AddNewsModal';
-
+import { useToast } from '../../../components/Toast';
+import { useLanguage } from '@/components/LanguageContext';
 
 interface NewsItem {
   id: string;
   title: string;
+  body: string | null;
   tag: 'ALERT' | 'INFO' | 'EVENT';
   created_at: string;
 }
 
 export default function NewsPage() {
+  const { toast } = useToast();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,16 +46,16 @@ export default function NewsPage() {
   const deleteNews = async (id: string) => {
     if (!confirm('Remove this announcement?')) return;
     try {
-      // Hard delete or Soft delete depending on preference. Using Soft delete here.
       const { error } = await supabase
         .from('news')
         .update({ is_active: false })
         .eq('id', id);
         
       if (error) throw error;
+      toast('Announcement removed', 'success');
       fetchNews();
-    } catch (error) {
-      alert('Could not remove news item.');
+    } catch {
+      toast('Could not remove news item.', 'error');
     }
   };
 
@@ -115,6 +118,9 @@ export default function NewsPage() {
                       </span>
                     </div>
                     <h4 className="font-bold text-pits-text">{item.title}</h4>
+                    {item.body && (
+                      <p className="text-sm text-pits-dim mt-1 leading-relaxed">{item.body}</p>
+                    )}
                   </div>
                 </div>
 

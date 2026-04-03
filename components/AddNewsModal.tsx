@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Loader2, Send, Megaphone } from 'lucide-react';
+import { useToast } from './Toast';
 
 interface CreateNewsModalProps {
   isOpen: boolean;
@@ -11,8 +12,10 @@ interface CreateNewsModalProps {
 const TAGS = ['INFO', 'ALERT', 'EVENT'];
 
 export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNewsModalProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
   const [tag, setTag] = useState('INFO');
 
   if (!isOpen) return null;
@@ -24,18 +27,21 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
     try {
       const { error } = await supabase.from('news').insert({
         title,
+        body: body || null,
         tag,
         is_active: true
       });
 
       if (error) throw error;
 
+      toast('News posted successfully', 'success');
       onSuccess();
       onClose();
-      setTitle(''); // Reset form
+      setTitle('');
+      setBody('');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create news';
-      alert(errorMessage);
+      toast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -74,6 +80,22 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
             />
             <p className="text-[10px] text-gray-400 mt-1 text-right">
               {title.length}/60 chars
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+              Description <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-pits-red outline-none resize-none h-20"
+              placeholder="Add more details about this announcement..."
+              maxLength={280}
+            />
+            <p className="text-[10px] text-gray-400 mt-1 text-right">
+              {body.length}/280 chars
             </p>
           </div>
 

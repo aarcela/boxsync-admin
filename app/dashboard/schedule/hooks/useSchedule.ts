@@ -47,13 +47,12 @@ export function useSchedule() {
   }, [selectedClassId, fetchRoster]);
 
   const deleteClass = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel and delete this class? This will remove all bookings.')) return;
-    
     try {
       await scheduleService.deleteClass(id);
       await fetchSchedule();
-    } catch (error) {
-      alert('Could not delete class.');
+      return true;
+    } catch {
+      throw new Error('Could not delete class.');
     }
   };
 

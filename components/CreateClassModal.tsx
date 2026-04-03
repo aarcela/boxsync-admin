@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Loader2, Save, Calendar, Clock, Repeat } from 'lucide-react';
 import { addDays, format, isSameDay, parseISO } from 'date-fns';
+import { useToast } from './Toast';
 
 interface CreateClassModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const DAYS_OF_WEEK = [
 ];
 
 export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateClassModalProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   
@@ -103,11 +105,12 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
       const { error } = await supabase.from('classes').insert(classesToInsert);
       if (error) throw error;
 
-      alert(`Successfully scheduled ${classesToInsert.length} classes.`);
+      toast(`Successfully scheduled ${classesToInsert.length} class${classesToInsert.length > 1 ? 'es' : ''}.`, 'success');
       onSuccess();
       onClose();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to schedule class';
+      toast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

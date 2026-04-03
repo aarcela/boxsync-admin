@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Award } from 'lucide-react';
+import { useToast } from './Toast';
 
 interface AddAthleteModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface AddAthleteModalProps {
 
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -56,15 +58,15 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         throw new Error(data.error || 'Failed to create user');
       }
 
-      alert(`User ${formData.full_name} created successfully!`);
-      onSuccess(); // Refresh list
-      onClose();   // Close modal
+      toast(`User ${formData.full_name} created successfully!`, 'success');
+      onSuccess();
+      onClose();
       // Reset form
       setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_cost: '50', inscription_paid: false, admin_note: ''   });
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
-      alert(errorMessage);
+      toast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -187,7 +189,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
                 <div>
                   <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                    Inscription Price ($)
+                    Inscription Price (€)
                   </label>
                   <input 
                     type="number"

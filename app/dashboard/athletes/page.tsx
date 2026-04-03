@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Search, UserPlus, Filter, Check, X, Edit2, Award } from 'lucide-react';
+import { Search, UserPlus, Filter, Check, X, Edit2, Award, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
+import { useToast } from '../../../components/Toast';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { formatDistanceToNow, format } from 'date-fns';
+import { financialService } from '@/lib/services/financialService';
 
 interface Profile {
   id: string;
   full_name: string;
-  email: string; // Note: We might need to join auth.users to get email properly, but for now we rely on what's in profiles or fetch differently. 
-  // *Correction*: Supabase profiles table usually doesn't have email unless we synced it. 
-  // For this view, we'll assume we might need to fetch it or just show names.
-  // To keep it simple and robust based on your schema, we'll focus on full_name and role.
+  email: string;
+  phone: string; // Added phone for WhatsApp
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
   plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids';
@@ -20,10 +22,15 @@ interface Profile {
   inscription_paid: boolean;
   created_at: string;
   avatar_url: string | null;
-  bookings?: { status: string }[];
+  bookings?: { status: string; created_at: string }[];
+  last_payment_date?: string;
 }
 
+type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
+type SortDir = 'asc' | 'desc';
+
 export default function AthletesPage() {
+  const { toast } = useToast();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,19 +39,50 @@ export default function AthletesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // FETCH USERS
+  // Sorting state
+  const [sortKey, setSortKey] = useState<SortKey>('full_name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // Confirm dialog for solvency toggle
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    profileId: string;
+    profileName: string;
+    currentSolvency: boolean;
+  }>({ isOpen: false, profileId: '', profileName: '', currentSolvency: false });
+
+  // Debounce refs for plan changes
+  const planTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // FETCH USERS — limit bookings to last 30 days
   const fetchProfiles = async () => {
     setLoading(true);
     try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('profiles')
-        .select(`*, bookings(status)`)
+        .select(`*, bookings!left(status, created_at)`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProfiles(data as Profile[]);
+      
+      const profilesData = data as Profile[];
+      
+      // Fetch last payment dates for all athletes
+      const userIds = profilesData.map(p => p.id);
+      const lastPaymentDates = await financialService.getLastPaymentDates(userIds);
+      
+      const profilesWithPayments = profilesData.map(p => ({
+        ...p,
+        last_payment_date: lastPaymentDates[p.id]
+      }));
+
+      setProfiles(profilesWithPayments);
     } catch (error) {
       console.error('Error fetching athletes:', error);
+      toast('Failed to load athlete data', 'error');
     } finally {
       setLoading(false);
     }
@@ -54,8 +92,11 @@ export default function AthletesPage() {
     fetchProfiles();
   }, []);
 
-  // TOGGLE SOLVENCY
-  const toggleSolvency = async (id: string, currentStatus: boolean) => {
+  // TOGGLE SOLVENCY — with confirmation
+  const executeSolvencyToggle = async () => {
+    const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
+    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+
     try {
       // Optimistic Update
       setProfiles(prev => prev.map(p => 
@@ -68,31 +109,45 @@ export default function AthletesPage() {
         .eq('id', id);
 
       if (error) throw error;
+      toast(
+        !currentStatus ? 'Athlete access restored' : 'Athlete access revoked', 
+        !currentStatus ? 'success' : 'warning'
+      );
 
     } catch {
-      alert('Failed to update status');
+      toast('Failed to update status', 'error');
       fetchProfiles(); // Revert on error
     }
   };
 
-  // CHANGE PLAN
-  const changePlan = async (id: string, newPlan: string) => {
-    try {
-      // Optimistic Update
-      setProfiles(prev => prev.map(p => 
-        p.id === id ? { ...p, plan: newPlan as Profile['plan'] } : p
-      ));
+  // CHANGE PLAN — debounced (waits 1.5s after last change)
+  const changePlan = (id: string, newPlan: string) => {
+    // Optimistic Update immediately
+    setProfiles(prev => prev.map(p => 
+      p.id === id ? { ...p, plan: newPlan as Profile['plan'] } : p
+    ));
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ plan: newPlan })
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch {
-      alert('Failed to update plan');
-      fetchProfiles(); // Revert on error
+    // Clear previous timer for this profile
+    if (planTimerRef.current[id]) {
+      clearTimeout(planTimerRef.current[id]);
     }
+
+    // Set new debounce timer
+    planTimerRef.current[id] = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ plan: newPlan })
+          .eq('id', id);
+
+        if (error) throw error;
+        toast('Plan updated', 'success');
+      } catch {
+        toast('Failed to update plan', 'error');
+        fetchProfiles();
+      }
+      delete planTimerRef.current[id];
+    }, 1500);
   };
 
   const toggleInscription = async (id: string, currentStatus: boolean) => {
@@ -100,18 +155,57 @@ export default function AthletesPage() {
      setProfiles(prev => prev.map(p => p.id === id ? { ...p, inscription_paid: !currentStatus } : p));
      const { error } = await supabase.from('profiles').update({ inscription_paid: !currentStatus }).eq('id', id);
      if (error) throw error;
-   } catch (error) {
-     alert('Failed to update inscription status');
+     toast(
+       !currentStatus ? 'Inscription marked as paid' : 'Inscription marked as unpaid',
+       !currentStatus ? 'success' : 'info'
+     );
+   } catch {
+     toast('Failed to update inscription status', 'error');
      fetchProfiles();
    }
  };
 
-  // FILTER LOGIC
-  const filteredProfiles = profiles.filter(profile => {
-    const matchesSearch = (profile.full_name || 'Unknown').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || profile.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  // SORT HANDLER
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
+    return sortDir === 'asc' 
+      ? <ChevronUp size={12} className="ml-1 text-pits-red" /> 
+      : <ChevronDown size={12} className="ml-1 text-pits-red" />;
+  };
+
+  // FILTER + SORT LOGIC
+  const filteredProfiles = profiles
+    .filter(profile => {
+      const matchesSearch = (profile.full_name || 'Unknown').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === 'all' || profile.role === roleFilter;
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortKey) {
+        case 'full_name':
+          return dir * (a.full_name || '').localeCompare(b.full_name || '');
+        case 'is_solvent':
+          return dir * (Number(b.is_solvent) - Number(a.is_solvent));
+        case 'created_at':
+          return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        case 'plan':
+          return dir * (a.plan || '').localeCompare(b.plan || '');
+        case 'last_payment_date':
+          return dir * (new Date(a.last_payment_date || 0).getTime() - new Date(b.last_payment_date || 0).getTime());
+        default:
+          return 0;
+      }
+    });
 
   return (
     <div className="space-y-6">
@@ -119,17 +213,20 @@ export default function AthletesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
-            Athletes
+            Roster <span className="text-gray-300">/ Atletas</span>
           </h2>
           <p className="text-pits-dim font-medium text-sm">
-            Manage members, plans, and access permissions.
+            Retention & Revenue Command Center.
+            <span className="ml-2 text-xs text-pits-red font-bold animate-pulse">
+              ● {profiles.filter(p => p.role === 'member' && !p.is_solvent).length} Unpaid
+            </span>
           </p>
         </div>
         <button 
-         onClick={() => setIsAddModalOpen(true)}
-        className="flex items-center justify-center px-4 py-3 bg-pits-red text-white rounded-lg font-bold uppercase text-xs tracking-widest shadow-lg shadow-red-200 hover:bg-pits-red-dark transition-all">
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center justify-center px-4 py-3 bg-black text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-xl hover:bg-gray-900 transition-all active:scale-95">
           <UserPlus size={18} className="mr-2" />
-          Add New Athlete
+          Add Athlete
         </button>
       </div>
 
@@ -171,144 +268,215 @@ export default function AthletesPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-gray-500 uppercase bg-gray-50 font-bold tracking-wider border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4">Athlete</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Plan</th>
-                  <th className="px-6 py-4">Inscription</th>
                   <th className="px-6 py-4">
-                    Attendance
-                    <div className="text-[10px] text-gray-500 font-medium normal-case mt-0.5 tracking-normal">
-                      <span className="text-green-600 font-bold">A</span> / <span className="text-blue-600 font-bold">R</span> / <span className="text-red-600 font-bold">N</span>
-                    </div>
+                    <button onClick={() => handleSort('full_name')} className="flex items-center hover:text-pits-red transition-colors">
+                      Athlete / <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" />
+                    </button>
                   </th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Joined</th>
+                  <th className="px-6 py-4">
+                     <button onClick={() => handleSort('plan')} className="flex items-center hover:text-pits-red transition-colors">
+                      Plan <SortIcon column="plan" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4">
+                    <button onClick={() => handleSort('is_solvent')} className="flex items-center hover:text-pits-red transition-colors">
+                      Status <SortIcon column="is_solvent" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4 whitespace-nowrap">
+                    <button onClick={() => handleSort('created_at')} className="flex items-center hover:text-pits-red transition-colors">
+                      Registered <SortIcon column="created_at" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4 whitespace-nowrap">
+                    <button onClick={() => handleSort('last_payment_date')} className="flex items-center hover:text-pits-red transition-colors">
+                      Last Payment <SortIcon column="last_payment_date" />
+                    </button>
+                  </th>
+                  <th className="px-6 py-4">Utilization</th>
+                  <th className="px-6 py-4">Last Visit</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredProfiles.map((profile) => (
-                  <tr key={profile.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={profile.id} className={`transition-colors border-l-4 ${!profile.is_solvent ? 'border-l-pits-red bg-red-50/30' : 'border-l-transparent hover:bg-gray-50'}`}>
                     
-                    {/* NAME */}
+                    {/* NAME + CONTACT */}
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm mr-3 overflow-hidden border border-gray-100">
-                           {profile.avatar_url ? (
-                             <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-                           ) : (
-                             <span>{profile.full_name?.charAt(0) || 'U'}</span>
-                           )}
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm mr-3 overflow-hidden border border-gray-100">
+                             {profile.avatar_url ? (
+                               <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                             ) : (
+                               <span>{profile.full_name?.charAt(0) || 'U'}</span>
+                             )}
+                          </div>
+                          {profile.role !== 'member' && (
+                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-black border-2 border-white rounded-full flex items-center justify-center">
+                               <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                             </div>
+                          )}
                         </div>
                         <div>
-                          <div className="font-bold text-gray-900">{profile.full_name || 'Unnamed Athlete'}</div>
-                          <div className="text-xs text-gray-400 font-mono">{profile.id.slice(0, 8)}...</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-900">{profile.full_name || 'Unnamed'}</span>
+                            <a 
+                              href={`https://wa.me/${profile.phone?.replace(/[^0-9]/g, '')}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="p-1 text-green-500 hover:bg-green-50 rounded-md transition-colors"
+                              title="Text on WhatsApp"
+                            >
+                              <MessageCircle size={14} />
+                            </a>
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-mono tracking-tighter uppercase whitespace-nowrap">
+                            {profile.role} • ID: {profile.id.slice(0, 5)}
+                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* ROLE */}
+                    {/* PLAN */}
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider border ${
-                        profile.role === 'admin' ? 'bg-black text-white border-black' :
-                        profile.role === 'coach' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        profile.role === 'manager' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                        'bg-gray-100 text-gray-600 border-gray-200'
-                      }`}>
-                        {profile.role}
-                      </span>
-                    </td>
-
-                    {/* PLAN SELECTOR */}
-                    <td className="px-6 py-4">
-                      <select
-                        value={profile.plan || 'unlimited'}
-                        onChange={(e) => changePlan(profile.id, e.target.value)}
-                        className="bg-white border border-gray-300 text-gray-700 text-xs rounded-lg focus:ring-pits-red focus:border-pits-red block w-full p-2 font-bold uppercase"
-                      >
-                        <option value="unlimited">Unlimited</option>
-                        <option value="3x_week">3x / Week</option>
-                        <option value="4x_week">4x / Week</option>
-                        <option value="5x_week">5x / Week</option>
-                        <option value="open_box">Open Box</option>
-                        <option value="crossfit_kids">CrossFit Kids</option>
-                      </select>
-                    </td>
-
-                    {/* Inscription Plan & Payment Status */}
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => toggleInscription(profile.id, profile.inscription_paid)}
-                        className={`group flex flex-col items-start px-3 py-2 rounded-lg border transition-all w-32 ${
-                          profile.inscription_paid 
-                            ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                            : 'bg-orange-50 border-orange-200 text-orange-700'
-                        }`}
-                      >
-                        <div className="flex items-center w-full justify-between">
-                          <span className="text-[9px] font-black uppercase tracking-tighter opacity-70">
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={profile.plan || 'unlimited'}
+                          onChange={(e) => changePlan(profile.id, e.target.value)}
+                          className="bg-transparent border-none text-gray-700 text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors"
+                        >
+                          <option value="unlimited">Unlimited</option>
+                          <option value="3x_week">3x / Week</option>
+                          <option value="4x_week">4x / Week</option>
+                          <option value="5x_week">5x / Week</option>
+                          <option value="open_box">Open Box</option>
+                          <option value="crossfit_kids">Kids</option>
+                        </select>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                            profile.inscription_paid ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
                             {profile.inscription_plan || 'standard'}
                           </span>
-                          <Award size={10} />
                         </div>
-                        <span className="text-[10px] font-black uppercase">
-                          {profile.inscription_paid ? 'Paid' : 'Unpaid'}
-                        </span>
-                      </button>
-                    </td>
-
-                    {/* ATTENDANCE */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-1.5 font-bold text-sm bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg w-fit shadow-sm">
-                        <span className="text-green-600" title="Assisted">{profile.bookings?.filter(b => b.status === 'attended').length || 0}</span>
-                        <span className="text-gray-300 font-light">/</span>
-                        <span className="text-blue-600" title="Reserved">{profile.bookings?.filter(b => b.status === 'booked').length || 0}</span>
-                        <span className="text-gray-300 font-light">/</span>
-                        <span className="text-red-600" title="No Show">{profile.bookings?.filter(b => b.status === 'no_show').length || 0}</span>
                       </div>
                     </td>
 
-                    {/* SOLVENCY TOGGLE */}
+                    {/* STATUS (Solvency) */}
                     <td className="px-6 py-4">
                       <button 
-                        onClick={() => toggleSolvency(profile.id, profile.is_solvent)}
-                        className={`flex items-center px-3 py-1.5 rounded-full border transition-all ${
+                        onClick={() => setConfirmConfig({
+                          isOpen: true,
+                          profileId: profile.id,
+                          profileName: profile.full_name || 'this athlete',
+                          currentSolvency: profile.is_solvent
+                        })}
+                        className={`group relative flex items-center justify-center w-full max-w-[100px] px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${
                           profile.is_solvent 
-                            ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' 
-                            : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
+                            ? 'bg-white border-green-500 text-green-600 hover:bg-green-500 hover:text-white' 
+                            : 'bg-pits-red border-pits-red text-white hover:bg-black hover:border-black'
                         }`}
                       >
-                        {profile.is_solvent ? (
-                          <>
-                            <Check size={14} className="mr-1.5" />
-                            <span className="text-xs font-bold uppercase tracking-wide">Active</span>
-                          </>
-                        ) : (
-                          <>
-                            <X size={14} className="mr-1.5" />
-                            <span className="text-xs font-bold uppercase tracking-wide">Inactive</span>
-                          </>
-                        )}
+                        {profile.is_solvent ? 'Solvent / Paid' : 'Debt / Unpaid'}
                       </button>
                     </td>
 
-                    {/* DATE */}
-                    <td className="px-6 py-4 text-gray-500 font-medium">
-                      {new Date(profile.created_at).toLocaleDateString()}
+                    {/* REGISTERED */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-gray-700">
+                          {profile.created_at ? format(new Date(profile.created_at), 'dd/MM/yyyy') : '-'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {profile.created_at ? formatDistanceToNow(new Date(profile.created_at), { addSuffix: true }) : ''}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* LAST PAYMENT */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {profile.last_payment_date ? (
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-gray-900">
+                              {format(new Date(profile.last_payment_date), 'dd/MM/yyyy')}
+                            </span>
+                            <span className="text-[10px] text-gray-400 capitalize">
+                              {formatDistanceToNow(new Date(profile.last_payment_date), { addSuffix: true })}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No payments</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* UTILIZATION / ATTENDANCE */}
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const attended = profile.bookings?.filter(b => b.status === 'attended').length || 0;
+                        const noShow = profile.bookings?.filter(b => b.status === 'no_show').length || 0;
+                        const isRisk = attended === 0 && (profile.bookings?.length || 0) > 0;
+                        
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4].map(idx => (
+                                <div 
+                                  key={idx} 
+                                  className={`w-2.5 h-2.5 rounded-full ${
+                                    idx <= attended ? 'bg-green-500' : 
+                                    (idx <= (attended + noShow) ? 'bg-red-500' : 'bg-gray-100')
+                                  }`} 
+                                />
+                              ))}
+                            </div>
+                            <span className={`text-[10px] font-bold ${isRisk ? 'text-red-500 animate-pulse' : 'text-gray-400'}`}>
+                              {attended} Visits (30d)
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* LAST VISIT */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {(() => {
+                        const lastVisit = profile.bookings
+                          ?.filter(b => b.status === 'attended')
+                          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+                        
+                        if (!lastVisit) return <span className="text-gray-400 text-xs italic">Never</span>;
+                        
+                        const date = new Date(lastVisit.created_at);
+                        const days = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 3600 * 24));
+                        
+                        return (
+                          <div className="flex items-center text-xs font-bold text-gray-700">
+                             <Calendar size={12} className="mr-1.5 text-gray-400" />
+                             {formatDistanceToNow(date, { addSuffix: true })}
+                             {days > 10 && <span className="ml-2 w-2 h-2 bg-red-500 rounded-full" title="Inactive > 10 days" />}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* ACTIONS */}
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => {
-                          setSelectedUserId(profile.id);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="p-2 text-gray-400 hover:text-pits-red hover:bg-red-50 rounded-lg transition-colors"
-                        title="Edit athlete"
-                      >
-                        <Edit2 size={18} />
-                      </button>
+                       <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={() => {
+                            setSelectedUserId(profile.id);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Edit athlete"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                      </div>
                     </td>
 
                   </tr>
@@ -322,7 +490,7 @@ export default function AthletesPage() {
       <AddAthleteModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchProfiles} // Refresh list on success
+        onSuccess={fetchProfiles}
       />
 
       <EditAthleteModal 
@@ -331,8 +499,23 @@ export default function AthletesPage() {
           setIsEditModalOpen(false);
           setSelectedUserId(null);
         }}
-        onSuccess={fetchProfiles} // Refresh list on success
+        onSuccess={fetchProfiles}
         userId={selectedUserId}
+      />
+
+      {/* SOLVENCY CONFIRMATION */}
+      <ConfirmDialog
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.currentSolvency ? 'Revoke Access' : 'Restore Access'}
+        message={
+          confirmConfig.currentSolvency
+            ? `Lock out ${confirmConfig.profileName}? They will immediately lose booking access until reactivated.`
+            : `Restore access for ${confirmConfig.profileName}? They will be able to book classes again.`
+        }
+        confirmLabel={confirmConfig.currentSolvency ? 'Lock Out' : 'Restore'}
+        variant={confirmConfig.currentSolvency ? 'danger' : 'default'}
+        onConfirm={executeSolvencyToggle}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
       />
 
     </div>

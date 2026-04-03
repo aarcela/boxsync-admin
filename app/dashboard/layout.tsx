@@ -16,7 +16,8 @@ import {
   Megaphone,
   ClipboardCheck,
   Zap,
-  MessageSquare
+  MessageSquare,
+  TrendingUp
 } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
 import { Globe } from 'lucide-react';
@@ -43,6 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
     { name: t('News'), href: '/dashboard/news', icon: Megaphone },
     { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
+    { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
   ];
 
   return (

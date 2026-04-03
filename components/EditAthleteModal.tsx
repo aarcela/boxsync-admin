@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save } from 'lucide-react';
+import { useToast } from './Toast';
 
 interface EditAthleteModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface EditAthleteModalProps {
 }
 
 export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }: EditAthleteModalProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,7 +61,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load user data';
-      alert(errorMessage);
+      toast(errorMessage, 'error');
       onClose();
     } finally {
       setFetching(false);
@@ -93,13 +95,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         throw new Error(data.error || 'Failed to update user');
       }
 
-      alert(`User ${formData.full_name} updated successfully!`);
+      toast(`User ${formData.full_name} updated successfully!`, 'success');
       onSuccess(); // Refresh list
       onClose();   // Close modal
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update user';
-      alert(errorMessage);
+      toast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -153,6 +155,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               <input
                 type="email"
                 required
+                disabled
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"

@@ -3,12 +3,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { UNIQUE_TECHNIQUES } from '../../../lib/techniques';
-import { Calendar, Save, Loader2, Dumbbell, Search } from 'lucide-react';
+import { 
+  Calendar, Save, Loader2, Dumbbell, Search, 
+  Eye, Zap, ListOrdered, Scale, Sparkles, MoveRight
+} from 'lucide-react';
+import { useToast } from '../../../components/Toast';
 
 export default function WodEditorPage() {
+  const { toast } = useToast();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<'edit' | 'preview'>('edit');
   
   // WOD Data Structure
   const [wodId, setWodId] = useState<string | null>(null);
@@ -18,6 +24,7 @@ export default function WodEditorPage() {
   const [strength, setStrength] = useState('');
   const [metcon, setMetcon] = useState('');
   const [scaling, setScaling] = useState('');
+  const [stimulus, setStimulus] = useState(''); // New key for the strategy
   
   // Combobox State
   const [techniqueDropdownOpen, setTechniqueDropdownOpen] = useState(false);
@@ -34,9 +41,10 @@ export default function WodEditorPage() {
       setStrength('');
       setMetcon('');
       setScaling('');
+      setStimulus('');
 
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('wods')
           .select('*')
           .eq('date', date)
@@ -44,27 +52,21 @@ export default function WodEditorPage() {
 
         if (data) {
           setWodId(data.id);
-          // Parse content if it's JSON, or use raw if simple text
-          // For this implementation, we assume we store JSON in the 'content' column 
-          // or we can add specific columns. To keep it compatible with the mobile app 
-          // we built earlier which expected sections, let's restructure the 'content' field.
-          // Mobile expects: type='STRENGTH' | 'METCON'
-          
           try {
             const contentObj = JSON.parse(data.content);
             setTitle(data.title || '');
-            setWarmUp(contentObj.warmUp || '');
+            setWarmUp(contentObj.warm_up || '');
             setTechnique(contentObj.technique || '');
             setStrength(contentObj.strength || '');
             setMetcon(contentObj.metcon || '');
             setScaling(contentObj.scaling || '');
+            setStimulus(contentObj.stimulus || ''); // Load the new field if it exists
           } catch (e) {
-            // Fallback for legacy data
             setTitle(data.title || '');
           }
         }
       } catch (error) {
-        // No WOD found for this date, which is fine (new entry)
+        // No WOD found
       } finally {
         setLoading(false);
       }
@@ -81,7 +83,8 @@ export default function WodEditorPage() {
         technique,
         strength,
         metcon,
-        scaling
+        scaling,
+        stimulus // Save strategic stimulus
       });
 
       const payload = {
@@ -91,14 +94,12 @@ export default function WodEditorPage() {
       };
 
       if (wodId) {
-        // Update existing
         const { error } = await supabase
           .from('wods')
           .update(payload)
           .eq('id', wodId);
         if (error) throw error;
       } else {
-        // Create new
         const { error } = await supabase
           .from('wods')
           .insert(payload);
@@ -108,88 +109,103 @@ export default function WodEditorPage() {
         if (data) setWodId(data.id);
       }
 
-      alert('WOD Saved Successfully');
+      toast('Workout Published Successfully', 'success');
+      setView('preview');
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert('Error saving WOD: ' + errorMessage);
+      toast('Error saving WOD: ' + errorMessage, 'error');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       
       {/* HEADER & DATE PICKER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter flex items-center">
-            <Dumbbell className="mr-3 text-pits-red" />
-            Program WOD
-          </h2>
-          <p className="text-pits-dim font-medium text-sm">
-            Select a date to assign the workout.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-pits-red rounded-xl flex items-center justify-center shadow-lg shadow-red-100">
+            <Dumbbell className="text-white" size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter">
+              Programming Center
+            </h2>
+            <p className="text-pits-dim font-medium text-xs flex items-center">
+              <Calendar size={12} className="mr-1" />
+              Assigning workout for {new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
         </div>
         
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input 
-            type="date" 
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 focus:border-pits-red outline-none shadow-sm"
-          />
+        <div className="flex gap-2">
+          <div className="relative">
+            <input 
+              type="date" 
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red outline-none shadow-sm transition-all"
+            />
+          </div>
+          <button 
+            onClick={() => setView(view === 'edit' ? 'preview' : 'edit')}
+            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-text text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            title="Toggle Preview"
+          >
+            <Eye size={20} />
+          </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-gray-400">Loading whiteboard...</div>
+        <div className="p-24 flex flex-col items-center justify-center text-gray-400 gap-4">
+          <Loader2 size={40} className="animate-spin text-pits-red" />
+          <p className="font-bold text-sm uppercase tracking-widest">Loading Whiteboard...</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* LEFT COLUMN: INPUTS */}
-          <div className="md:col-span-2 space-y-6">
+          {/* MAIN FORM: INPUTS */}
+          <div className={`lg:col-span-7 space-y-6 ${view === 'preview' ? 'hidden lg:block' : 'block'}`}>
             
             {/* Title Block */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Workout Title / Theme
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-1 h-full bg-pits-red"></div>
+              <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
+                Workout Theme or Naming
               </label>
               <input 
                 type="text" 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. 'Murph Prep' or 'Leg Day'"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-black text-lg text-pits-text focus:border-pits-red outline-none"
+                placeholder="e.g. 'Stronger Together' or 'Engine Builder'"
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all"
               />
             </div>
 
             {/* Warm Up Section */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-orange-500 rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Warm Up
-                </label>
-              </div>
-              <textarea 
-                value={warmUp}
-                onChange={(e) => setWarmUp(e.target.value)}
-                rows={4}
-                placeholder="3 Rounds: 10 Squats, 10 Push-ups, 10 Sit-ups"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-orange-500 outline-none resize-none font-mono"
-              />
-            </div>
+            <Section 
+              label="1. Preparation (Warm-up)" 
+              color="bg-orange-500" 
+              icon={<Sparkles size={16} />}
+              value={warmUp} 
+              onChange={setWarmUp} 
+              placeholder="Elevate heart rate & prep specific joints...\n3 Rounds:\n- 10 Empty Bar Cleans\n- 10 Scaps Pull"
+            />
 
             {/* Technique Section */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-purple-600 rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Technique
-                </label>
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative group overflow-visible">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mr-3">
+                    <Zap size={16} />
+                  </div>
+                  <label className="text-sm font-black text-pits-text uppercase tracking-widest">
+                    2. Focus (Technique)
+                  </label>
+                </div>
               </div>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -204,108 +220,147 @@ export default function WodEditorPage() {
                     setTechniqueSearch('');
                     setTechniqueDropdownOpen(true);
                   }}
-                  onBlur={() => setTechniqueDropdownOpen(false)}
-                  placeholder="Search or select technique..."
-                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-pits-text focus:border-purple-600 outline-none transition-colors"
+                  onBlur={() => setTimeout(() => setTechniqueDropdownOpen(false), 200)}
+                  placeholder="Select primary skill focus..."
+                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-white focus:border-purple-600 outline-none transition-all"
                 />
               </div>
 
               {techniqueDropdownOpen && (
-                <div className="absolute z-50 left-6 right-6 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
-                  {UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).length > 0 ? (
-                    UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).map((t) => (
-                      <div 
-                        key={t}
-                        className="px-4 py-3 hover:bg-purple-50 cursor-pointer text-sm font-medium text-gray-700 transition-colors border-b border-gray-50 last:border-0"
-                        onMouseDown={(e) => {
-                          // Prevent input blur before click registers
-                          e.preventDefault();
-                        }}
-                        onClick={() => {
-                          setTechnique(t);
-                          setTechniqueDropdownOpen(false);
-                          setTechniqueSearch('');
-                        }}
-                      >
-                        {t}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-4 py-4 text-center text-sm text-gray-400 font-medium">
-                      No techniques found
+                <div className="absolute z-50 left-6 right-6 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).map((t) => (
+                    <div 
+                      key={t}
+                      className="px-5 py-3 hover:bg-purple-50 cursor-pointer text-sm font-bold text-gray-700 transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group/item"
+                      onClick={() => {
+                        setTechnique(t);
+                        setTechniqueDropdownOpen(false);
+                      }}
+                    >
+                      {t}
+                      <MoveRight size={14} className="opacity-0 group-hover/item:opacity-100 text-purple-400" />
                     </div>
+                  )) || (
+                    <div className="p-4 text-center text-xs text-gray-400">No match found</div>
                   )}
                 </div>
               )}
             </div>
 
             {/* Strength Section */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-blue-600 rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Strength / Skill
-                </label>
-              </div>
-              <textarea 
-                value={strength}
-                onChange={(e) => setStrength(e.target.value)}
-                rows={4}
-                placeholder="5-5-5 Back Squat @ 75%"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-blue-500 outline-none resize-none font-mono"
-              />
-            </div>
+            <Section 
+              label="3. Build (Strength / Skill)" 
+              color="bg-blue-600" 
+              icon={<Dumbbell size={16} />}
+              value={strength} 
+              onChange={setStrength} 
+              placeholder="Specify sets, reps and load intensity...\n5x3 Back Squats @ 80-85%\nRest 2:00 between sets."
+            />
 
             {/* Metcon Section */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-pits-red rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Metcon (WOD)
-                </label>
-              </div>
-              <textarea 
-                value={metcon}
-                onChange={(e) => setMetcon(e.target.value)}
-                rows={6}
-                placeholder={`AMRAP 12:\n10 Wall Balls\n10 Box Jumps`}
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-pits-red outline-none resize-none font-mono"
-              />
-            </div>
+            <Section 
+              label="4. Perform (The Metcon)" 
+              color="bg-pits-red" 
+              icon={<Zap size={16} />}
+              value={metcon} 
+              onChange={setMetcon} 
+              rows={8}
+              placeholder="Describe the workout heart...\nAMRAP 15:\n- 10 Box Jumps\n- 10 Power Snatches (95/65)"
+            />
 
-            {/* Scaling Options */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-3">
-                <div className="w-1 h-6 bg-gray-400 rounded-full mr-3"></div>
-                <label className="text-sm font-bold text-pits-text uppercase tracking-wide">
-                  Scaling / Notes
-                </label>
+            {/* Stimulus & Scaling */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mr-3">
+                    <Sparkles size={16} />
+                  </div>
+                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">Intended Stimulus</label>
+                </div>
+                <textarea 
+                  value={stimulus}
+                  onChange={(e) => setStimulus(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. 'Fast & Unbroken. Heart rate 90%+'"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-white focus:border-emerald-500 outline-none resize-none transition-all placeholder:text-gray-300"
+                />
               </div>
-              <textarea 
-                value={scaling}
-                onChange={(e) => setScaling(e.target.value)}
-                rows={3}
-                placeholder="Scale Pull-ups to Ring Rows"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-gray-400 outline-none resize-none"
-              />
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center mr-3">
+                    <Scale size={16} />
+                  </div>
+                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">Scaling & Notes</label>
+                </div>
+                <textarea 
+                  value={scaling}
+                  onChange={(e) => setScaling(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. 'Scale Pull-ups to Ring Rows...'"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-white focus:border-slate-500 outline-none resize-none transition-all placeholder:text-gray-300"
+                />
+              </div>
             </div>
 
           </div>
 
-          {/* RIGHT COLUMN: ACTIONS & PREVIEW HINT */}
-          <div className="space-y-6">
+          {/* PREVIEW & ACTIONS PANEL */}
+          <div className="lg:col-span-5 space-y-6 sticky top-6">
+            
+            {/* Live Mobile Preview */}
+            <div className={`bg-gray-900 rounded-[2.5rem] p-4 border-[8px] border-gray-800 shadow-2xl relative transition-all duration-500 ${view === 'preview' ? 'scale-100' : 'scale-95 opacity-80'}`}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl z-10 flex items-center justify-center">
+                 <div className="w-10 h-1 bg-gray-700 rounded-full"></div>
+              </div>
+              
+              <div className="bg-white rounded-[1.8rem] h-[600px] overflow-hidden relative flex flex-col pt-8">
+                {/* Simulated In-App Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                  <div className="uppercase font-black text-2xl italic tracking-tighter text-pits-text leading-none">
+                    {title || 'TODAY\'S WORKOUT'}
+                  </div>
+                  <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                    {new Date(date).toDateString()}
+                  </div>
+
+                  {/* Reactive Blocks */}
+                  {warmUp && <PreviewBlock label="Prep" color="border-orange-500" content={warmUp} />}
+                  {technique && <PreviewBlock label="Focus" color="border-purple-600" content={technique} />}
+                  {strength && <PreviewBlock label="Strength" color="border-blue-600" content={strength} />}
+                  {metcon && <PreviewBlock label="Metcon" color="border-pits-red" content={metcon} />}
+                  {(stimulus || scaling) && (
+                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                       <div className="text-[9px] font-black text-emerald-600 uppercase mb-1">Stimulus & Scaling</div>
+                       <p className="text-[11px] font-bold text-emerald-800 leading-relaxed whitespace-pre-line">
+                         {stimulus ? `💡 ${stimulus}\n` : ''}
+                         {scaling ? `⚖️ ${scaling}` : ''}
+                       </p>
+                    </div>
+                  )}
+                  
+                  {!warmUp && !metcon && !strength && (
+                    <div className="flex flex-col items-center justify-center h-48 text-gray-300">
+                       <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                         <Dumbbell size={24} className="opacity-20" />
+                       </div>
+                       <p className="text-xs font-bold uppercase tracking-widest">Workout is empty</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 border-t border-gray-100 bg-gray-50 text-center">
+                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Athlete Mobile View</p>
+                </div>
+              </div>
+            </div>
             
             {/* Save Action */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm sticky top-6">
-              <h3 className="font-bold text-pits-text uppercase text-xs tracking-wider mb-4">
-                Publishing
-              </h3>
-              
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg transition-all
-                  ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
+                className={`w-full py-4 rounded-xl flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-xl transition-all
+                  ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark hover:scale-[1.02] active:scale-[0.98] shadow-red-100'}
                 `}
               >
                 {saving ? (
@@ -313,42 +368,57 @@ export default function WodEditorPage() {
                 ) : (
                   <Save size={18} className="mr-2" />
                 )}
-                {saving ? 'Saving...' : 'Publish to App'}
+                {saving ? 'Publishing...' : 'Publish to PITS App'}
               </button>
 
-              <p className="text-xs text-gray-400 mt-4 text-center">
-                Updates appear instantly on athlete devices.
-              </p>
-            </div>
-
-            {/* Mobile Preview (Static Visual) */}
-            <div className="bg-pits-text rounded-[2rem] p-4 border-4 border-gray-800 shadow-2xl opacity-90 hidden md:block">
-              <div className="bg-gray-900 rounded-2xl h-96 overflow-hidden relative p-4">
-                <div className="flex justify-center mb-4">
-                  <div className="w-20 h-1 bg-gray-800 rounded-full"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-4 w-1/2 bg-gray-800 rounded mb-4"></div>
-                  <div className="p-3 bg-gray-800 rounded-lg border-l-2 border-pits-red">
-                    <div className="h-2 w-10 bg-pits-red rounded mb-2"></div>
-                    <div className="h-2 w-full bg-gray-700 rounded"></div>
-                    <div className="h-2 w-2/3 bg-gray-700 rounded mt-1"></div>
-                  </div>
-                  <div className="p-3 bg-gray-800 rounded-lg border-l-2 border-blue-600">
-                    <div className="h-2 w-10 bg-blue-600 rounded mb-2"></div>
-                    <div className="h-2 w-full bg-gray-700 rounded"></div>
-                    <div className="h-2 w-2/3 bg-gray-700 rounded mt-1"></div>
-                  </div>
-                </div>
-                <div className="absolute bottom-4 w-full text-center">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">Mobile Preview</p>
-                </div>
+              <div className="mt-4 flex items-center justify-between px-2">
+                 <div className="flex items-center gap-1.5 opacity-40">
+                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Connected</span>
+                 </div>
+                 <p className="text-[10px] text-gray-400 font-bold uppercase text-right">
+                   Auto-scales for iOS/Android
+                 </p>
               </div>
             </div>
 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// UI HELPER COMPONENTS
+function Section({ label, color, icon, value, onChange, placeholder, rows = 4 }: any) {
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm transition-all hover:border-gray-300">
+      <div className="flex items-center mb-4">
+        <div className={`w-8 h-8 ${color} text-white rounded-lg flex items-center justify-center mr-3 shadow-sm`}>
+          {icon}
+        </div>
+        <label className="text-sm font-black text-pits-text uppercase tracking-widest">
+          {label}
+        </label>
+      </div>
+      <textarea 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-white focus:border-gray-400 outline-none resize-none transition-all placeholder:text-gray-300 font-mono"
+      />
+    </div>
+  );
+}
+
+function PreviewBlock({ label, color, content }: { label: string, color: string, content: string }) {
+  return (
+    <div className={`border-l-4 ${color} pl-4 py-1`}>
+      <div className="text-[9px] font-black uppercase text-gray-400 mb-1 tracking-widest">{label}</div>
+      <p className="text-[12px] font-bold text-pits-text leading-snug whitespace-pre-line">
+        {content}
+      </p>
     </div>
   );
 }
