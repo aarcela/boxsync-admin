@@ -1,198 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabase';
-import { Calendar, Clock, User, CheckCircle, XCircle, MinusCircle, Users, ChevronLeft, ChevronRight, X, CheckCheck, Ban, Search } from 'lucide-react';
+import { 
+  Calendar, Clock, CheckCircle, XCircle, MinusCircle, 
+  Users, ChevronLeft, ChevronRight, CheckCheck, Ban, Search 
+} from 'lucide-react';
+import { useAttendance } from './hooks/useAttendance';
 import Tooltip from '@/components/Tooltip';
-import { useToast } from '../../../components/Toast';
-
-interface ClassSession {
-  id: string;
-  start_time: string;
-  class_type: string;
-  max_capacity: number;
-  coach: { full_name: string } | null;
-  bookings: { count: number }[];
-}
-
-type BookingStatus = 'booked' | 'attended' | 'no_show';
-
-interface Booking {
-  id: string;
-  status: BookingStatus;
-  profiles: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-  };
-}
-
-const getCaracasDate = () => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const parts = formatter.formatToParts(new Date());
-  const ye = parts.find((p) => p.type === 'year')?.value;
-  const mo = parts.find((p) => p.type === 'month')?.value;
-  const da = parts.find((p) => p.type === 'day')?.value;
-  return `${ye}-${mo}-${da}`;
-};
 
 export default function AttendancePage() {
-  const { toast } = useToast();
-  const [date, setDate] = useState('');
-
-  useEffect(() => {
-    // Only run on client mount to avoid hydration mismatch
-    setDate(getCaracasDate());
-  }, []);
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-  const [roster, setRoster] = useState<Booking[]>([]);
-  const [loadingClasses, setLoadingClasses] = useState(false);
-  const [loadingRoster, setLoadingRoster] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // 1. Fetch Classes for selected Date
-  useEffect(() => {
-    if (!date) return; // Wait for date to be set on mount
-
-    const fetchClasses = async () => {
-      setLoadingClasses(true);
-      setSelectedClassId(null);
-      setRoster([]);
-      
-      // Calculate start and end in Caracas time (UTC-4)
-      const startUtc = new Date(`${date}T00:00:00-04:00`).toISOString();
-      const endUtc = new Date(`${date}T23:59:59-04:00`).toISOString();
-
-      const { data, error } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          coach:profiles(full_name),
-          bookings:bookings(count)
-        `)
-        .gte('start_time', startUtc)
-        .lte('start_time', endUtc)
-        .order('start_time', { ascending: true });
-
-      if (!error && data) {
-        const fetchedClasses = data as ClassSession[];
-        setClasses(fetchedClasses);
-        
-        // Auto-select class closest to now if looking at today
-        const todayStr = getCaracasDate();
-        if (date === todayStr && fetchedClasses.length > 0) {
-          const now = new Date();
-          let closestId = fetchedClasses[0].id;
-          let minDiff = Infinity;
-          
-          fetchedClasses.forEach(cls => {
-            const diff = Math.abs(new Date(cls.start_time).getTime() - now.getTime());
-            if (diff < minDiff) {
-              minDiff = diff;
-              closestId = cls.id;
-            }
-          });
-          setSelectedClassId(closestId);
-        }
-      }
-      setLoadingClasses(false);
-    };
-
-    fetchClasses();
-  }, [date]);
-
-  // 2. Fetch Roster when a class is selected
-  useEffect(() => {
-    if (!selectedClassId) return;
-
-    const fetchRoster = async () => {
-      setLoadingRoster(true);
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          id, status,
-          profiles:user_id (id, full_name, avatar_url)
-        `)
-        .eq('class_id', selectedClassId);
-
-      if (!error && data) {
-        // Transform Supabase response to match Booking interface
-        const bookings: Booking[] = data.map((item: unknown) => {
-          const d = item as { id: string; status: BookingStatus; profiles: { id: string; full_name: string; avatar_url: string | null } };
-          return {
-            id: d.id,
-            status: d.status as BookingStatus,
-            profiles: d.profiles
-          };
-        });
-        setRoster(bookings);
-      }
-      setLoadingRoster(false);
-    };
-
-    fetchRoster();
-  }, [selectedClassId]);
-
-  // Filter roster for search
-  const filteredRoster = roster.filter(b => 
-    b.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // 3. Update Status
-  const updateStatus = async (bookingId: string, newStatus: BookingStatus) => {
-    // Optimistic Update
-    setRoster(prev => prev.map(b => 
-      b.id === bookingId ? { ...b, status: newStatus } : b
-    ));
-
-    try {
-      const response = await fetch('/api/admin/bookings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update status');
-      }
-    } catch (error) {
-      console.error(error);
-      toast('Failed to update status', 'error');
-    }
-  };
-
-  // Bulk Update All
-  const markAll = async (newStatus: BookingStatus) => {
-    const toUpdate = roster.filter(b => b.status !== newStatus);
-    if (toUpdate.length === 0) {
-      toast(`All athletes are already marked as ${newStatus}`, 'info');
-      return;
-    }
-
-    // Optimistic update all
-    setRoster(prev => prev.map(b => ({ ...b, status: newStatus })));
-
-    try {
-      const promises = toUpdate.map(b => 
-        fetch('/api/admin/bookings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId: b.id, status: newStatus }),
-        })
-      );
-      await Promise.all(promises);
-      toast(`${toUpdate.length} athletes marked as ${newStatus.replace('_', ' ')}`, 'success');
-    } catch (error) {
-      console.error(error);
-      toast('Some updates may have failed', 'error');
-    }
-  };
+  const {
+    date,
+    setDate,
+    classes,
+    loadingClasses,
+    selectedClassId,
+    setSelectedClassId,
+    roster,
+    loadingRoster,
+    searchTerm,
+    setSearchTerm,
+    filteredRoster,
+    updateStatus,
+    markAll,
+    nextDay,
+    prevDay
+  } = useAttendance();
 
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
@@ -210,11 +42,7 @@ export default function AttendancePage() {
         <div className="flex items-center gap-2">
           <Tooltip content="Previous day">
             <button
-              onClick={() => {
-                const currentDate = new Date(`${date}T12:00:00Z`);
-                currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-                setDate(currentDate.toISOString().split('T')[0]);
-              }}
+              onClick={prevDay}
               className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
             >
               <ChevronLeft size={18} />
@@ -231,11 +59,7 @@ export default function AttendancePage() {
           </div>
           <Tooltip content="Next day">
             <button
-              onClick={() => {
-                const currentDate = new Date(`${date}T12:00:00Z`);
-                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-                setDate(currentDate.toISOString().split('T')[0]);
-              }}
+              onClick={nextDay}
               className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
             >
               <ChevronRight size={18} />

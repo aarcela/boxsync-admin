@@ -1,47 +1,34 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { useState } from 'react';
 import { Search, UserPlus, Filter, Check, X, Edit2, Award, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
-import { useToast } from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import { formatDistanceToNow, format } from 'date-fns';
-import { financialService } from '@/lib/services/financialService';
-
-interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string; // Added phone for WhatsApp
-  role: 'member' | 'coach' | 'manager' | 'admin';
-  is_solvent: boolean;
-  plan: 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids';
-  inscription_plan: 'standard' | 'promo' | 're-entry' | 'founder';
-  inscription_paid: boolean;
-  created_at: string;
-  avatar_url: string | null;
-  bookings?: { status: string; created_at: string }[];
-  last_payment_date?: string;
-}
-
-type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
-type SortDir = 'asc' | 'desc';
+import { useAthletes, SortKey } from './hooks/useAthletes';
 
 export default function AthletesPage() {
-  const { toast } = useToast();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const {
+    profiles,
+    loading,
+    searchTerm,
+    setSearchTerm,
+    roleFilter,
+    setRoleFilter,
+    sortKey,
+    sortDir,
+    handleSort,
+    filteredProfiles,
+    toggleSolvency,
+    changePlan,
+    toggleInscription,
+    refresh
+  } = useAthletes();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-  // Sorting state
-  const [sortKey, setSortKey] = useState<SortKey>('full_name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   // Confirm dialog for solvency toggle
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -51,128 +38,11 @@ export default function AthletesPage() {
     currentSolvency: boolean;
   }>({ isOpen: false, profileId: '', profileName: '', currentSolvency: false });
 
-  // Debounce refs for plan changes
-  const planTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
-
-  // FETCH USERS — limit bookings to last 30 days
-  const fetchProfiles = async () => {
-    setLoading(true);
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`*, bookings!left(status, created_at)`)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      const profilesData = data as Profile[];
-      
-      // Fetch last payment dates for all athletes
-      const userIds = profilesData.map(p => p.id);
-      const lastPaymentDates = await financialService.getLastPaymentDates(userIds);
-      
-      const profilesWithPayments = profilesData.map(p => ({
-        ...p,
-        last_payment_date: lastPaymentDates[p.id]
-      }));
-
-      setProfiles(profilesWithPayments);
-    } catch (error) {
-      console.error('Error fetching athletes:', error);
-      toast('Failed to load athlete data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfiles();
-  }, []);
-
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
     const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-
-    try {
-      // Optimistic Update
-      setProfiles(prev => prev.map(p => 
-        p.id === id ? { ...p, is_solvent: !currentStatus } : p
-      ));
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_solvent: !currentStatus })
-        .eq('id', id);
-
-      if (error) throw error;
-      toast(
-        !currentStatus ? 'Athlete access restored' : 'Athlete access revoked', 
-        !currentStatus ? 'success' : 'warning'
-      );
-
-    } catch {
-      toast('Failed to update status', 'error');
-      fetchProfiles(); // Revert on error
-    }
-  };
-
-  // CHANGE PLAN — debounced (waits 1.5s after last change)
-  const changePlan = (id: string, newPlan: string) => {
-    // Optimistic Update immediately
-    setProfiles(prev => prev.map(p => 
-      p.id === id ? { ...p, plan: newPlan as Profile['plan'] } : p
-    ));
-
-    // Clear previous timer for this profile
-    if (planTimerRef.current[id]) {
-      clearTimeout(planTimerRef.current[id]);
-    }
-
-    // Set new debounce timer
-    planTimerRef.current[id] = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ plan: newPlan })
-          .eq('id', id);
-
-        if (error) throw error;
-        toast('Plan updated', 'success');
-      } catch {
-        toast('Failed to update plan', 'error');
-        fetchProfiles();
-      }
-      delete planTimerRef.current[id];
-    }, 1500);
-  };
-
-  const toggleInscription = async (id: string, currentStatus: boolean) => {
-   try {
-     setProfiles(prev => prev.map(p => p.id === id ? { ...p, inscription_paid: !currentStatus } : p));
-     const { error } = await supabase.from('profiles').update({ inscription_paid: !currentStatus }).eq('id', id);
-     if (error) throw error;
-     toast(
-       !currentStatus ? 'Inscription marked as paid' : 'Inscription marked as unpaid',
-       !currentStatus ? 'success' : 'info'
-     );
-   } catch {
-     toast('Failed to update inscription status', 'error');
-     fetchProfiles();
-   }
- };
-
-  // SORT HANDLER
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
+    await toggleSolvency(id, currentStatus);
   };
 
   const SortIcon = ({ column }: { column: SortKey }) => {
@@ -181,31 +51,6 @@ export default function AthletesPage() {
       ? <ChevronUp size={12} className="ml-1 text-pits-red" /> 
       : <ChevronDown size={12} className="ml-1 text-pits-red" />;
   };
-
-  // FILTER + SORT LOGIC
-  const filteredProfiles = profiles
-    .filter(profile => {
-      const matchesSearch = (profile.full_name || 'Unknown').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = roleFilter === 'all' || profile.role === roleFilter;
-      return matchesSearch && matchesRole;
-    })
-    .sort((a, b) => {
-      const dir = sortDir === 'asc' ? 1 : -1;
-      switch (sortKey) {
-        case 'full_name':
-          return dir * (a.full_name || '').localeCompare(b.full_name || '');
-        case 'is_solvent':
-          return dir * (Number(b.is_solvent) - Number(a.is_solvent));
-        case 'created_at':
-          return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        case 'plan':
-          return dir * (a.plan || '').localeCompare(b.plan || '');
-        case 'last_payment_date':
-          return dir * (new Date(a.last_payment_date || 0).getTime() - new Date(b.last_payment_date || 0).getTime());
-        default:
-          return 0;
-      }
-    });
 
   return (
     <div className="space-y-6">
@@ -490,7 +335,7 @@ export default function AthletesPage() {
       <AddAthleteModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchProfiles}
+        onSuccess={refresh}
       />
 
       <EditAthleteModal 
@@ -499,7 +344,7 @@ export default function AthletesPage() {
           setIsEditModalOpen(false);
           setSelectedUserId(null);
         }}
-        onSuccess={fetchProfiles}
+        onSuccess={refresh}
         userId={selectedUserId}
       />
 

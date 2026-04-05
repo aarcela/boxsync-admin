@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { 
-  DollarSign, Filter, Search, CheckCircle, XCircle, 
+  DollarSign, Search, CheckCircle, XCircle, 
   ExternalLink, RefreshCw, Clock, 
-  TrendingUp, Users, AlertTriangle, CreditCard,
+  TrendingUp, AlertTriangle, CreditCard,
   Download, BarChart3, ChevronLeft, ChevronRight,
   Zap, Info, Wallet
 } from 'lucide-react';
 import { useToast } from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
-import { useFinancialData } from '../../../lib/hooks/useFinancialData';
-import { financialService, CurrencyType } from '../../../lib/services/financialService';
+import Tooltip from '../../../components/Tooltip';
+import { useFinancials } from './hooks/useFinancials';
+import { CurrencyType } from '@/lib/types/gym';
 import { useLanguage } from '../../../components/LanguageContext';
 
 const ITEMS_PER_PAGE = 12;
@@ -19,37 +20,62 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 
 export default function FinancialsPage() {
   const { toast } = useToast();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   
-  // Date State
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  // Date & Filter State
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+  const [customRange, setCustomRange] = useState<{ start: Date; end: Date }>({
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    end: new Date()
+  });
   
-  // Logic State
-  const { payments, paymentMethods, stats, officialRate, loading, refresh } = useFinancialData(selectedMonth, selectedYear);
-  const [exchangeRate, setExchangeRate] = useState(545.9483); // Customizable system rate, synced with API
-  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(CurrencyType.EUR);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [runningExpiry, setRunningExpiry] = useState(false);
+  // Orchestrated Financial Logic
+  const {
+    loading,
+    stats,
+    exchangeRate,
+    setExchangeRate,
+    activeCurrency,
+    setActiveCurrency,
+    statusFilter,
+    setStatusFilter,
+    searchTerm,
+    setSearchTerm,
+    filteredPayments,
+    currentPage,
+    setCurrentPage,
+    runningExpiry,
+    approve,
+    reject,
+    runExpiry,
+    refresh
+  } = useFinancials(period, period === 'custom' ? customRange : undefined);
 
-  // Cash Reconciliation state
-  const [physicalCashEUR, setPhysicalCashEUR] = useState<string>('');
+  // Daily EUR Cash Reconciliation state
+  const [reconState, setReconState] = useState({
+    opening: 0,
+    received: 0,
+    withdrawals: 0,
+    actual: 0
+  });
 
-  // Sync with API when rate data arrives
-  useEffect(() => {
-    if (officialRate) setExchangeRate(Number(officialRate.toFixed(4)));
-  }, [officialRate]);
+  // Calculate today's EUR cash received automatically
+  const todayEURCashReceived = filteredPayments
+    .filter(p => p.status === 'approved' && p.currency_type === 'EUR' && (p.method?.toLowerCase().includes('cash') || p.method?.toLowerCase().includes('efectivo')))
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const expectedClosingCash = (Number(reconState.opening) + todayEURCashReceived) - Number(reconState.withdrawals);
+  const reconDifference = Number(reconState.actual || 0) - expectedClosingCash;
 
   const handleAudit = () => {
-    const diffEUR = Number(physicalCashEUR || 0) - stats.EUR.cashAmount;
-
-    if (diffEUR === 0) {
-      toast('Vault reconciled successfully. Synchronized.', 'success');
+    if (reconDifference === 0) {
+      toast('Vault reconciled perfectly.', 'success');
     } else {
-      let msg = `EUR ${diffEUR > 0 ? '+' : ''}${diffEUR.toFixed(2)}`;
-      toast(`Reconciliation mismatch: ${msg}`, diffEUR < 0 ? 'error' : 'warning');
+      const msg = `${reconDifference > 0 ? '+' : ''}${reconDifference.toFixed(2)} EUR`;
+      toast(`Reconciliation mismatch: ${msg}`, reconDifference < 0 ? 'error' : 'warning');
     }
   };
 
@@ -61,52 +87,21 @@ export default function FinancialsPage() {
     athleteName: string;
   }>({ isOpen: false, action: 'approve', paymentId: '', userId: '', athleteName: '' });
 
-  // Combined Business Health Logic
-  const combinedTotalEUR = stats.EUR.totalRevenue + (stats.VES.totalRevenue / exchangeRate);
-  const efficiencyRate = stats.projectedRevenueEUR > 0 
-    ? Math.round((combinedTotalEUR / stats.projectedRevenueEUR) * 100) 
-    : 0;
-
-  // Filtering Logic
-  const filteredPayments = useMemo(() => {
-    return payments.filter(p => {
-      const methodObj = paymentMethods.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-      const isVes = methodObj ? methodObj.currency === CurrencyType.VES : p.currency_type === 'VES';
-      
-      const matchesCurrency = activeCurrency === CurrencyType.VES ? isVes : !isVes;
-      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-      const matchesSearch = searchTerm === '' || (p.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      return matchesCurrency && matchesStatus && matchesSearch;
-    });
-  }, [payments, activeCurrency, statusFilter, searchTerm, paymentMethods]);
-
+  // Paged state (local to UI)
   const paginatedPayments = filteredPayments.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
 
-  // Actions
+  // Business calculations
+  const combinedTotalEUR = stats.EUR.totalRevenue + (stats.VES.totalRevenue / exchangeRate);
+  const efficiencyRate = stats.projectedRevenueEUR > 0 ? Math.round((combinedTotalEUR / stats.projectedRevenueEUR) * 100) : 0;
+
   const handleConfirmAction = async () => {
     const { action, paymentId, userId } = confirmConfig;
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
 
-    try {
-      if (action === 'approve') {
-        await financialService.approvePayment(paymentId, userId);
-        toast('Payment approved successfully', 'success');
-      } else if (action === 'reject') {
-        await financialService.rejectPayment(paymentId);
-        toast('Payment rejected', 'warning');
-      } else if (action === 'expiry') {
-        setRunningExpiry(true);
-        const res = await financialService.runExpiryCheck();
-        toast(res.message, 'info');
-      }
-      refresh();
-    } catch (e) {
-      toast('Operation failed', 'error');
-    } finally {
-      if (action === 'expiry') setRunningExpiry(false);
-    }
+    if (action === 'approve') await approve(paymentId, userId);
+    else if (action === 'reject') await reject(paymentId);
+    else if (action === 'expiry') await runExpiry();
   };
 
   const handleExportCSV = () => {
@@ -127,9 +122,9 @@ export default function FinancialsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `PITS-Ledger-${MONTHS[selectedMonth]}-${selectedYear}.csv`;
+    link.download = `Ledger-${MONTHS[selectedMonth]}-${selectedYear}.csv`;
     link.click();
-    toast('Financial ledger exported', 'success');
+    toast('Financial ledger exported.', 'success');
   };
 
   return (
@@ -139,12 +134,12 @@ export default function FinancialsPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200/60">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
               {t('Financial Command')}
             </h1>
             <div className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 border border-slate-200">v2.0 REFACTOR</div>
           </div>
-          <p className="text-slate-400 text-xs font-semibold mt-1 tracking-wide uppercase italic">
+          <p className="text-slate-400 text-xs font-semibold mt-1 tracking-wide uppercase">
             {t('Strategic performance and reconciliation cockpit')}
           </p>
         </div>
@@ -152,7 +147,7 @@ export default function FinancialsPage() {
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Exchange Rate Master */}
           <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
-             <div className="text-[10px] font-black text-slate-400 uppercase mr-3 italic group-hover:text-pits-red flex items-center gap-1">
+             <div className="text-[10px] font-black text-slate-400 uppercase mr-3 group-hover:text-pits-red flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 {t('Official Rate')}
              </div>
@@ -265,36 +260,36 @@ export default function FinancialsPage() {
              <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic">{t('Timeline')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic">{t('Subject')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic">{t('Value')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic">{t('Evidence')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase italic text-right">{t('Control')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Timeline')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Subject')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Method')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Value')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Evidence')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">{t('Control')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {loading ? (
-                    <tr><td colSpan={6} className="py-20 text-center text-slate-400 font-bold uppercase italic animate-pulse">Syncing Matrix...</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-slate-400 font-bold uppercase animate-pulse">Syncing Matrix...</td></tr>
                   ) : paginatedPayments.map(p => (
                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4">
-                        <div className="text-[11px] font-black text-slate-900 italic">{new Date(p.created_at).toLocaleDateString()}</div>
+                        <div className="text-[11px] font-black text-slate-900">{new Date(p.created_at).toLocaleDateString()}</div>
                         <div className="text-[9px] text-slate-400 font-bold">{new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-xs font-black text-slate-900 uppercase italic">{p.profiles?.full_name || 'Anonymous Object'}</div>
+                        <div className="text-xs font-black text-slate-900 uppercase">{p.profiles?.full_name || 'Anonymous Object'}</div>
                         <div className="text-[8px] text-slate-400 font-bold tracking-widest">ID_{p.id.slice(0,6)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
                           <div className="p-1 bg-slate-100 rounded text-slate-500"><CreditCard size={10}/></div>
-                          <span className="text-[10px] font-black text-slate-600 uppercase italic">{p.method || 'Unknown Channel'}</span>
+                          <span className="text-[10px] font-black text-slate-600 uppercase">{p.method || 'Unknown Channel'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-black text-slate-900 italic">
+                            <span className="text-xs font-black text-slate-900">
                                {activeCurrency === CurrencyType.EUR ? '€' : 'Bs.'}
                                {p.amount.toLocaleString()}
                             </span>
@@ -305,7 +300,7 @@ export default function FinancialsPage() {
                            href={p.proof_image_url} 
                            target="_blank" 
                            rel="noreferrer"
-                           className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase italic hover:bg-blue-100 transition-colors"
+                           className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors"
                          >
                             Check Proof <ExternalLink size={10} className="ml-1" />
                          </a>
@@ -320,11 +315,11 @@ export default function FinancialsPage() {
                                 ><XCircle size={18}/></button>
                                 <button 
                                   onClick={() => setConfirmConfig({ isOpen: true, action: 'approve', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || 'Unknown' })}
-                                  className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic shadow-sm hover:bg-emerald-600 active:scale-95 transition-all"
+                                  className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm hover:bg-emerald-600 active:scale-95 transition-all"
                                 >Approve</button>
                               </>
                             ) : (
-                              <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase italic border ${p.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                              <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                                 {p.status}
                               </div>
                             )}
@@ -333,7 +328,7 @@ export default function FinancialsPage() {
                     </tr>
                   ))}
                   {filteredPayments.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="py-20 text-center text-slate-300 font-bold italic uppercase">Void results in this sector.</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-slate-300 font-bold uppercase">Void results in this sector.</td></tr>
                   )}
                 </tbody>
              </table>
@@ -341,10 +336,10 @@ export default function FinancialsPage() {
              {/* PAGINATION */}
              {totalPages > 1 && (
                <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase italic">{t('Sector Coverage')}: {filteredPayments.length} Units</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('Sector Coverage')}: {filteredPayments.length} Units</p>
                   <nav className="flex gap-1.5">
                      <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronLeft size={16}/></button>
-                     <div className="flex bg-white border border-slate-200 rounded-lg p-0.5 px-3 items-center text-[11px] font-black italic">
+                     <div className="flex bg-white border border-slate-200 rounded-lg p-0.5 px-3 items-center text-[11px] font-black">
                         {currentPage} <span className="mx-2 text-slate-300">/</span> {totalPages}
                      </div>
                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronRight size={16}/></button>
@@ -366,25 +361,58 @@ export default function FinancialsPage() {
              <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-6">
                    <div className="p-2 bg-red-500/20 text-pits-red rounded-lg"><Zap size={18} fill="currentColor"/></div>
-                   <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">{t('Vault Reconciler')}</h3>
+                   <h3 className="text-sm font-black text-white uppercase tracking-tighter">{t('Vault Reconciler')}</h3>
                 </div>
 
-                <div className="space-y-5">
-                   <ReconInput label={t('Physical EUR')} symbol="€" value={physicalCashEUR} onChange={setPhysicalCashEUR} systemValue={stats.EUR.cashAmount} t={t} />
-                </div>
+                 <div className="space-y-5">
+                    <ReconInput 
+                      label={t('Opening Cash')} 
+                      symbol="€" 
+                      value={reconState.opening} 
+                      onChange={(val: any) => setReconState(prev => ({ ...prev, opening: val }))} 
+                      systemValue={0} 
+                      hideExpected={true}
+                      t={t} 
+                    />
+                    <ReconInput 
+                      label={t('Today\'s Inflow')} 
+                      symbol="€" 
+                      value={todayEURCashReceived} 
+                      isReadOnly={true}
+                      systemValue={todayEURCashReceived} 
+                      t={t} 
+                    />
+                    <ReconInput 
+                      label={t('Withdrawals')} 
+                      symbol="€" 
+                      value={reconState.withdrawals} 
+                      onChange={(val: any) => setReconState(prev => ({ ...prev, withdrawals: val }))} 
+                      systemValue={0} 
+                      hideExpected={true}
+                      t={t} 
+                    />
+                    <ReconInput 
+                      label={t('Physical Count')} 
+                      symbol="€" 
+                      value={reconState.actual} 
+                      onChange={(val: any) => setReconState(prev => ({ ...prev, actual: val }))} 
+                      systemValue={expectedClosingCash} 
+                      t={t} 
+                    />
+                 </div>
 
                 <div className="mt-8 pt-6 border-t border-slate-800">
                    <div className="flex justify-between items-end">
                       <div>
-                         <p className="text-[10px] font-black text-slate-400 uppercase italic mb-1">{t('Status Report')}</p>
-                         <p className={`text-xs font-bold flex items-center gap-1 ${((Number(physicalCashEUR || 0) - stats.EUR.cashAmount) === 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
-                            {((Number(physicalCashEUR || 0) - stats.EUR.cashAmount) === 0) ? <CheckCircle size={12}/> : <AlertTriangle size={12}/>}
-                            {((Number(physicalCashEUR || 0) - stats.EUR.cashAmount) === 0) ? t('Verified Sync') : t('Mismatch Found')}
+                         <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('Status Report')}</p>
+                         <p className={`text-xs font-bold flex items-center gap-1 ${(reconDifference === 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {(reconDifference === 0) ? <CheckCircle size={12}/> : <AlertTriangle size={12}/>}
+                            {(reconDifference === 0) ? t('Verified Sync') : t('Mismatch Found')}
                          </p>
                       </div>
                       <button 
                         onClick={handleAudit}
-                        className="bg-pits-red text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg active:scale-95 transition-all"
+                        className="bg-pits-red text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all"
                       >
                          {t('Audit Now')}
                       </button>
@@ -396,14 +424,19 @@ export default function FinancialsPage() {
           {/* INSIGHTS & ACTIONS */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
              <div>
-                <h3 className="text-xs font-black text-slate-900 italic uppercase mb-4 flex items-center gap-2">
-                   <BarChart3 size={14} className="text-pits-red" /> {t('Operational Health')}
+                <h3 className="text-xs font-black text-slate-900 uppercase mb-4 flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                       <BarChart3 size={14} className="text-pits-red" /> {t('Operational Health')}
+                   </div>
+                   <Tooltip content={t('Operational Health Info')}>
+                      <Info size={14} className="text-slate-400 cursor-help" />
+                   </Tooltip>
                 </h3>
                 <div className="space-y-4">
                    <MetricRow 
-                      label={t('Contract Health')} value={`${stats.solvencyRate}%`} color="purple" progress={stats.solvencyRate} t={t} />
-                   <MetricRow label={t('Growth Velocity')} value="+4.2%" color="emerald" progress={75} t={t} />
-                   <MetricRow label={t('Churn Risk')} value={t('Low')} color="slate" progress={20} t={t} />
+                      label={t('Contract Health')} value={`${stats.solvencyRate}%`} color="purple" progress={stats.solvencyRate} tooltip={t('Contract Health Tip')} t={t} />
+                   <MetricRow label={t('Growth Velocity')} value="+4.2%" color="emerald" progress={75} tooltip={t('Growth Velocity Tip')} t={t} />
+                   <MetricRow label={t('Churn Risk')} value={t('Low')} color="slate" progress={20} tooltip={t('Churn Risk Tip')} t={t} />
                 </div>
              </div>
 
@@ -411,7 +444,7 @@ export default function FinancialsPage() {
                 <button 
                   onClick={() => setConfirmConfig({ isOpen: true, action: 'expiry', paymentId: '', userId: '', athleteName: '' })}
                   disabled={runningExpiry}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-[11px] font-black uppercase italic transition-all border border-slate-200/50"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-[11px] font-black uppercase transition-all border border-slate-200/50"
                 >
                    <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
                    {t('Run Expiry Sync')}
@@ -461,7 +494,7 @@ function StatCard({ label, value, symbol, trend, color, info, t }: any) {
   return (
     <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
       <div className="flex justify-between items-start mb-4">
-        <p className="text-[9px] font-black text-slate-400 uppercase italic tracking-widest leading-tight">{label}</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">{label}</p>
         <div className={`p-1.5 rounded-lg border ${colors[color]}`}>
           {trend === 'positive' && <TrendingUp size={14} />}
           {trend === 'neutral' && <DollarSign size={14} />}
@@ -470,10 +503,10 @@ function StatCard({ label, value, symbol, trend, color, info, t }: any) {
         </div>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-sm font-black text-slate-400 italic mb-1">{symbol}</span>
-        <span className="text-xl font-black text-slate-900 tracking-tighter italic">{value.toLocaleString()}</span>
+        <span className="text-sm font-black text-slate-400 mb-1">{symbol}</span>
+        <span className="text-xl font-black text-slate-900 tracking-tighter">{value.toLocaleString()}</span>
       </div>
-      {info && <p className="text-[8px] font-bold text-slate-300 uppercase mt-1 italic tracking-tighter">{t ? t(info) : info}</p>}
+      {info && <p className="text-[8px] font-bold text-slate-300 uppercase mt-1 tracking-tighter">{t ? t(info) : info}</p>}
     </div>
   );
 }
@@ -493,8 +526,8 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any)
       
       <div className="flex justify-between items-start relative z-10">
         <div>
-          <h3 className={`text-[10px] font-black uppercase italic tracking-widest mb-1 ${active ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
-          <p className={`text-2xl font-black italic tracking-tighter ${active ? 'text-white' : 'text-slate-900'}`}>
+          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${active ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
+          <p className={`text-2xl font-black tracking-tighter ${active ? 'text-white' : 'text-slate-900'}`}>
             {symbol}{stats.totalRevenue.toLocaleString()}
           </p>
         </div>
@@ -505,8 +538,8 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any)
 
       <div className="mt-6 flex items-center justify-between relative z-10">
         <div className="space-y-0.5">
-           <p className="text-[9px] font-black text-slate-500 uppercase italic">{t('Pending Flow')}</p>
-           <p className={`text-xs font-black italic ${active ? 'text-amber-400' : 'text-amber-600'}`}>
+           <p className="text-[9px] font-black text-slate-500 uppercase">{t('Pending Flow')}</p>
+           <p className={`text-xs font-black ${active ? 'text-amber-400' : 'text-amber-600'}`}>
              {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[10px]">({stats.pendingCount} units)</span>
            </p>
         </div>
@@ -518,16 +551,18 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any)
   );
 }
 
-function ReconInput({ label, symbol, value, onChange, systemValue, t }: any) {
+function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, hideExpected, t }: any) {
   const diff = Number(value || 0) - systemValue;
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
-        <label className="text-[9px] font-black text-slate-500 uppercase italic">{label}</label>
-        <span className={`text-[9px] font-black uppercase italic ${diff === 0 ? 'text-slate-600' : diff < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-           {diff === 0 ? t('In Sync') : diff < 0 ? `${symbol}${Math.abs(diff)} Gap` : `${symbol}${diff} Surplus`}
-        </span>
+        <label className="text-[9px] font-black text-slate-500 uppercase">{label}</label>
+        {!hideExpected && !isReadOnly && (
+          <span className={`text-[9px] font-black uppercase ${diff === 0 ? 'text-slate-600' : diff < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+             {diff === 0 ? t('In Sync') : diff < 0 ? `${symbol}${Math.abs(diff)} Gap` : `${symbol}${diff} Surplus`}
+          </span>
+        )}
       </div>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-black">{symbol}</span>
@@ -535,16 +570,17 @@ function ReconInput({ label, symbol, value, onChange, systemValue, t }: any) {
           type="number" 
           placeholder="0.00"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl pl-10 pr-4 py-3 text-sm font-black text-white focus:outline-none focus:border-pits-red transition-all italic placeholder:text-slate-700"
+          readOnly={isReadOnly}
+          onChange={(e) => onChange && onChange(e.target.value)}
+          className={`w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-slate-700 focus:outline-none ${isReadOnly ? 'bg-slate-800/20 border-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-800/50 border-slate-700 text-white focus:border-pits-red'}`}
         />
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-slate-500 uppercase italic">{t('Expected')}: {systemValue.toLocaleString()}</div>
+        {!hideExpected && <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-slate-500 uppercase">{t('Expected')}: {systemValue.toLocaleString()}</div>}
       </div>
     </div>
   );
 }
 
-function MetricRow({ label, value, color, progress, t }: any) {
+function MetricRow({ label, value, color, progress, tooltip, t }: any) {
   const colors: Record<string, string> = {
     purple: 'bg-purple-500',
     emerald: 'bg-emerald-500',
@@ -554,8 +590,15 @@ function MetricRow({ label, value, color, progress, t }: any) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-end">
-        <p className="text-[9px] font-black text-slate-400 uppercase italic">{label}</p>
-        <span className="text-[10px] font-black text-slate-900 italic">{value}</span>
+        <div className="flex items-center gap-1.5">
+           <p className="text-[9px] font-black text-slate-400 uppercase">{label}</p>
+           {tooltip && (
+             <Tooltip content={tooltip}>
+                <Info size={10} className="text-slate-300 cursor-help" />
+             </Tooltip>
+           )}
+        </div>
+        <span className="text-[10px] font-black text-slate-900">{value}</span>
       </div>
       <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
         <div className={`h-full rounded-full ${colors[color]} transition-all duration-1000`} style={{ width: `${progress}%` }} />

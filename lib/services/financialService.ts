@@ -1,50 +1,11 @@
 import { supabase } from '../supabase';
-
-export enum CurrencyType {
-  EUR = 'EUR',
-  VES = 'VES',
-}
-
-export interface PaymentMethod {
-  id: string;
-  label: string;
-  currency: CurrencyType;
-  details: string | null;
-  is_active: boolean;
-}
-
-export interface PaymentRecord {
-  id: string;
-  amount: number;
-  method: string;
-  status: 'pending' | 'approved' | 'rejected';
-  proof_image_url: string;
-  created_at: string;
-  user_id: string;
-  currency_type: string;
-  profiles: {
-    full_name: string | null;
-  } | null;
-}
-
-export interface CurrencyStats {
-  totalRevenue: number;
-  pendingAmount: number;
-  pendingCount: number;
-  cashAmount: number; // For reconciliation
-  methodCounts: Record<string, number>;
-}
-
-export interface FinancialStats {
-  EUR: CurrencyStats;
-  VES: CurrencyStats;
-  activeMembers: number;
-  inactiveMembers: number;
-  projectedRevenueEUR: number;
-  projectedRevenueVES: number;
-  overdueAmountEUR: number;
-  solvencyRate: number;
-}
+import { 
+  CurrencyType, 
+  PaymentMethod, 
+  PaymentRecord, 
+  CurrencyStats, 
+  FinancialStats 
+} from '@/lib/types/gym';
 
 const PLAN_PRICES_EUR: Record<string, number> = { 
   unlimited: 80, 
@@ -61,15 +22,12 @@ export const financialService = {
     return data || [];
   },
 
-  async getPayments(month: number, year: number): Promise<PaymentRecord[]> {
-    const startOfMonth = new Date(year, month, 1).toISOString();
-    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-
+  async getPayments(startDate: string, endDate: string): Promise<PaymentRecord[]> {
     const { data, error } = await supabase
       .from('payments')
       .select('*, profiles ( full_name )')
-      .gte('created_at', startOfMonth)
-      .lte('created_at', endOfMonth)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
