@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
@@ -18,10 +18,11 @@ import {
   Zap,
   MessageSquare,
   TrendingUp,
-  Wallet
+  Wallet,
+  ChevronDown,
+  Scale
 } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
-import { Globe } from 'lucide-react';
 import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { lang, setLanguage, t } = useLanguage();
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
+
+  const toggleMenu = (menuName: string) => {
+    setOpenMenus(prev => 
+      prev.includes(menuName) 
+        ? prev.filter(m => m !== menuName) 
+        : [...prev, menuName]
+    );
+  };
+
+  // Auto-expand menu if sub-item is active
+  useEffect(() => {
+    navItems.forEach(item => {
+      if ('subItems' in item && item.subItems?.some(sub => pathname === sub.href)) {
+        if (!openMenus.includes(item.name)) {
+          setOpenMenus(prev => [...prev, item.name]);
+        }
+      }
+    });
+  }, [pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -38,15 +59,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = [
     { name: t('Overview'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('Attendance'), href: '/dashboard/attendance', icon: ClipboardCheck },
-    { name: t('Financials'), href: '/dashboard/financials', icon: DollarSign }, 
-    { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap }, 
+    { 
+      name: t('Financial'), 
+      icon: DollarSign,
+      subItems: [
+        { name: t('Dashboard'), href: '/dashboard/financials', icon: DollarSign },
+        { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
+        { name: t('Accountability'), href: '/dashboard/accountability', icon: Scale },
+        { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap },
+      ]
+    },
     { name: t('Athletes'), href: '/dashboard/athletes', icon: Users },
-    { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
-    { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
-    { name: t('News'), href: '/dashboard/news', icon: Megaphone },
+    { 
+      name: t('Box Management'), 
+      icon: Dumbbell,
+      subItems: [
+        { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
+        { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
+        { name: t('News'), href: '/dashboard/news', icon: Megaphone },
+      ]
+    },
     { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
     { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
-    { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
   ];
 
   return (
@@ -70,24 +104,78 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Navigation */}
         <nav className="flex-1 py-6 space-y-2 px-3">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
+            const isMenuOpen = openMenus.includes(item.name);
+            const isActive = 'href' in item 
+              ? pathname === item.href 
+              : 'subItems' in item && item.subItems?.some(sub => pathname === sub.href);
+            
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center p-3 rounded-lg transition-colors group
-                  ${isActive 
-                    ? 'bg-pits-red text-white' 
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
-                `}
-              >
-                <item.icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'} />
-                {isSidebarOpen && (
-                  <span className="ml-3 font-bold text-sm uppercase tracking-wide">
-                    {item.name}
-                  </span>
+              <div key={item.name} className="space-y-1">
+                {hasSubItems ? (
+                  <button
+                    onClick={() => toggleMenu(item.name)}
+                    className={`w-full flex items-center p-3 rounded-lg transition-colors group
+                      ${isActive && !isMenuOpen
+                        ? 'bg-gray-800 text-white' 
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
+                    `}
+                  >
+                    <item.icon size={20} className={isActive ? 'text-pits-red' : 'text-gray-400 group-hover:text-white'} />
+                    {isSidebarOpen && (
+                      <>
+                        <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
+                          {item.name}
+                        </span>
+                        <ChevronDown 
+                          size={16} 
+                          className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} 
+                        />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href={(item as any).href}
+                    className={`flex items-center p-3 rounded-lg transition-colors group
+                      ${isActive 
+                        ? 'bg-pits-red text-white' 
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
+                    `}
+                  >
+                    <item.icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'} />
+                    {isSidebarOpen && (
+                      <span className="ml-3 font-bold text-sm uppercase tracking-wide">
+                        {item.name}
+                      </span>
+                    )}
+                  </Link>
                 )}
-              </Link>
+
+                {hasSubItems && isMenuOpen && isSidebarOpen && (
+                  <div className="ml-4 space-y-1 border-l border-gray-800 pl-2">
+                    {(item as any).subItems.map((sub: any) => {
+                      const isSubActive = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.name}
+                          href={sub.href}
+                          className={`flex items-center p-2 rounded-lg transition-colors group
+                            ${isSubActive 
+                              ? 'bg-pits-red text-white' 
+                              : 'text-gray-500 hover:bg-gray-800 hover:text-white'}
+                          `}
+                        >
+                          <sub.icon size={16} className={isSubActive ? 'text-white' : 'text-gray-500 group-hover:text-white'} />
+                          <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
+                            {sub.name}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
