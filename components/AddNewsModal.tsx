@@ -15,7 +15,6 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
   const [tag, setTag] = useState('INFO');
 
   if (!isOpen) return null;
@@ -27,7 +26,6 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
     try {
       const { error } = await supabase.from('news').insert({
         title,
-        body: body || null,
         tag,
         is_active: true
       });
@@ -38,7 +36,6 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
       onSuccess();
       onClose();
       setTitle('');
-      setBody('');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create news';
       toast(errorMessage, 'error');
@@ -82,23 +79,6 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
               {title.length}/60 chars
             </p>
           </div>
-
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-              Description <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-pits-red outline-none resize-none h-20"
-              placeholder="Add more details about this announcement..."
-              maxLength={280}
-            />
-            <p className="text-[10px] text-gray-400 mt-1 text-right">
-              {body.length}/280 chars
-            </p>
-          </div>
-
           <div>
             <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
               Type

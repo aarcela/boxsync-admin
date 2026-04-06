@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, full_name, role, plan, inscription_plan, inscription_cost, inscription_paid } = body;
+    const { email, password, full_name, role, plan, inscription_plan, inscription_cost, inscription_paid, discount } = body;
 
     // 1. Validation
     if (!email || !password || !full_name) {
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       inscription_plan: string;
       inscription_cost: number;
       inscription_paid: boolean;
+      discount?: number | null;
     } = { 
       role: role || 'member',
       is_solvent: true,
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
       inscription_plan: inscription_plan || 'standard',
       inscription_cost: inscription_cost ? parseFloat(inscription_cost) : 0
     };
+
+    if (discount !== undefined) {
+      profileUpdate.discount = discount === '' ? null : parseFloat(discount);
+    }
 
     // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
     if (role === 'coach' || role === 'manager' || role === 'admin') {

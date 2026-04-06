@@ -21,6 +21,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     inscription_plan: 'standard',
     inscription_cost: '50',
     inscription_paid: false,
+    discount: '',
     admin_note: ''
   });
 
@@ -62,7 +63,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       onSuccess();
       onClose();
       // Reset form
-      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_cost: '50', inscription_paid: false, admin_note: ''   });
+      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_cost: '50', inscription_paid: false, discount: '', admin_note: ''   });
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
@@ -198,6 +199,21 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                     placeholder="e.g. 50"
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
                     min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Discount (%) / Optional
+                  </label>
+                  <input 
+                    type="number"
+                    value={formData.discount} 
+                    onChange={e => setFormData({...formData, discount: e.target.value})} 
+                    placeholder="e.g. 10"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    min="0"
+                    max="100"
                   />
                 </div>
 

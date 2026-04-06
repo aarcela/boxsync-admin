@@ -71,6 +71,7 @@ export interface Profile {
   inscription_paid: boolean;
   created_at: string;
   avatar_url: string | null;
+  discount?: number | null;
   bookings?: { status: string; created_at: string }[];
   last_payment_date?: string;
 }

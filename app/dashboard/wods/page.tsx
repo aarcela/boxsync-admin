@@ -25,6 +25,7 @@ export default function WodEditorPage() {
   const [metcon, setMetcon] = useState('');
   const [scaling, setScaling] = useState('');
   const [stimulus, setStimulus] = useState(''); // New key for the strategy
+  const [scoreType, setScoreType] = useState('none');
   
   // Combobox State
   const [techniqueDropdownOpen, setTechniqueDropdownOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function WodEditorPage() {
       setMetcon('');
       setScaling('');
       setStimulus('');
+      setScoreType('none');
 
       try {
         const { data } = await supabase
@@ -61,6 +63,7 @@ export default function WodEditorPage() {
             setMetcon(contentObj.metcon || '');
             setScaling(contentObj.scaling || '');
             setStimulus(contentObj.stimulus || ''); // Load the new field if it exists
+            setScoreType(contentObj.score_type || 'none');
           } catch (e) {
             setTitle(data.title || '');
           }
@@ -84,13 +87,14 @@ export default function WodEditorPage() {
         strength,
         metcon,
         scaling,
-        stimulus // Save strategic stimulus
+        stimulus, // Save strategic stimulus
       });
 
       const payload = {
         date,
         title: title || 'Daily WOD',
         content: contentJson,
+        score_type: scoreType
       };
 
       if (wodId) {
@@ -170,19 +174,43 @@ export default function WodEditorPage() {
           {/* MAIN FORM: INPUTS */}
           <div className={`lg:col-span-7 space-y-6 ${view === 'preview' ? 'hidden lg:block' : 'block'}`}>
             
-            {/* Title Block */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-1 h-full bg-pits-red"></div>
-              <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
-                Workout Theme or Naming
-              </label>
-              <input 
-                type="text" 
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. 'Stronger Together' or 'Engine Builder'"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all"
-              />
+            {/* Title & Score Type Block */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-1 h-full bg-pits-red"></div>
+                <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
+                  Workout Theme or Naming
+                </label>
+                <input 
+                  type="text" 
+                  value={title}
+                  maxLength={200}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. 'Stronger Together' or 'Engine Builder'"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all"
+                />
+                <div className="text-right mt-1.5">
+                  <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {200 - title.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+                <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
+                  Score Type
+                </label>
+                <select 
+                  value={scoreType}
+                  onChange={(e) => setScoreType(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all cursor-pointer"
+                >
+                  <option value="none">None</option>
+                  <option value="amrap">AMRAP</option>
+                  <option value="for_time">For Time</option>
+                  <option value="emom">EMOM</option>
+                </select>
+              </div>
             </div>
 
             {/* Warm Up Section */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save } from 'lucide-react';
 import { useToast } from './Toast';
+import { AthletePlan, InscriptionPlan } from '../lib/types/gym';
 
 interface EditAthleteModalProps {
   isOpen: boolean;
@@ -16,9 +17,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
+    phone: '',
     password: '', // Optional - only update if provided
     role: 'member' as 'member' | 'coach' | 'manager' | 'admin',
-    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box',
+    plan: 'unlimited' as AthletePlan,
+    inscription_plan: 'standard' as InscriptionPlan,
+    inscription_paid: false,
+    discount: '',
     is_solvent: true
   });
 
@@ -28,7 +33,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
       fetchUserData();
     } else if (!isOpen) {
       // Reset form when modal closes
-      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', is_solvent: true });
+      setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
     }
   }, [isOpen, userId]);
 
@@ -54,9 +59,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
       setFormData({
         full_name: data.full_name || '',
         email: data.email || '',
+        phone: data.phone || '',
         password: '', // Don't pre-fill password
         role: data.role || 'member',
         plan: data.plan || 'unlimited',
+        inscription_plan: data.inscription_plan || 'standard',
+        inscription_paid: data.inscription_paid ?? false,
+        discount: data.discount !== null ? String(data.discount) : '',
         is_solvent: data.is_solvent ?? true
       });
     } catch (error: unknown) {
@@ -109,7 +118,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         
         {/* Header */}
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -126,15 +135,20 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         </div>
 
         {/* Form */}
+        <div className="overflow-y-auto overflow-x-hidden p-6">
         {fetching ? (
           <div className="p-12 text-center">
             <Loader2 size={32} className="animate-spin mx-auto text-pits-red mb-4" />
             <p className="text-sm text-gray-500 font-medium">Loading user data...</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             
-            <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Personal Info */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-sm text-pits-text border-b pb-2 mb-4">Personal Information</h4>
+                <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Full Name
               </label>
@@ -165,6 +179,19 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={e => setFormData({...formData, phone: e.target.value})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 New Password <span className="text-gray-400 font-normal">(Optional)</span>
               </label>
               <input
@@ -179,7 +206,12 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               </p>
             </div>
 
-            <div>
+              </div>
+
+              {/* Right Column: Gym Status */}
+              <div className="space-y-4">
+                <h4 className="font-bold text-sm text-pits-text border-b pb-2 mb-4">Membership Details</h4>
+                <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Role
               </label>
@@ -203,7 +235,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 </label>
                 <select
                   value={formData.plan}
-                  onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
+                  onChange={e => setFormData({...formData, plan: e.target.value as AthletePlan})}
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
                 >
                   <option value="unlimited">Unlimited</option>
@@ -211,9 +243,60 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                   <option value="4x_week">4x / Week</option>
                   <option value="5x_week">5x / Week</option>
                   <option value="open_box">Open Box</option>
+                  <option value="crossfit_kids">CrossFit Kids</option>
                 </select>
               </div>
             )}
+
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Inscription Plan
+                  </label>
+                  <select
+                    value={formData.inscription_plan}
+                    onChange={e => setFormData({...formData, inscription_plan: e.target.value as InscriptionPlan})}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="promo">Promo</option>
+                    <option value="re-entry">Re-Entry</option>
+                    <option value="founder">Founder</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                    Discount (%) / Optional
+                  </label>
+                  <input 
+                    type="number"
+                    value={formData.discount} 
+                    onChange={e => setFormData({...formData, discount: e.target.value})} 
+                    placeholder="e.g. 10"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+
+                <div className="flex items-center mt-6 col-span-2">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.inscription_paid}
+                      onChange={e => setFormData({...formData, inscription_paid: e.target.checked})}
+                      className="w-5 h-5 text-pits-red border-gray-300 rounded focus:ring-pits-red focus:ring-2"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-pits-dim uppercase tracking-wider">
+                        Inscription Fee Paid
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
 
             {/* Show plan info for coaches/managers/admins */}
             {(formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin') && (
@@ -242,12 +325,21 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 </div>
               </label>
             </div>
+            </div>
+            </div>
 
-            <div className="pt-4">
+            <div className="pt-6 mt-2 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 rounded-lg font-bold text-sm text-gray-500 hover:bg-gray-100 mr-4"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
                 disabled={loading || fetching}
-                className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
+                className={`px-8 py-3 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
                   ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
                 `}
               >
@@ -262,6 +354,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
           </form>
         )}
+        </div>
       </div>
     </div>
   );

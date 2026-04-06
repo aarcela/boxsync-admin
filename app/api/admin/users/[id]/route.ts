@@ -52,10 +52,14 @@ export async function GET(
       id: profile.id,
       full_name: profile.full_name,
       email: authUser.user?.email || '',
+      phone: profile.phone || '',
       role: profile.role,
       plan: profile.plan || 'unlimited',
+      inscription_plan: profile.inscription_plan || 'standard',
+      inscription_paid: profile.inscription_paid ?? false,
       is_solvent: profile.is_solvent ?? true,
       avatar_url: profile.avatar_url,
+      discount: profile.discount ?? null,
       created_at: profile.created_at
     });
 
@@ -77,7 +81,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email, password, full_name, role, plan, is_solvent } = body;
+    const { email, password, full_name, phone, role, plan, inscription_plan, inscription_paid, is_solvent, discount } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -121,13 +125,18 @@ export async function PUT(
     // 3. Update profile
     interface ProfileUpdateData {
       full_name: string;
+      phone?: string;
       role: string;
       plan?: string;
+      inscription_plan?: string;
+      inscription_paid?: boolean;
       is_solvent?: boolean;
+      discount?: number | null;
     }
     
     const profileUpdateData: ProfileUpdateData = {
       full_name,
+      phone,
       role: role || 'member'
     };
 
@@ -138,9 +147,21 @@ export async function PUT(
       profileUpdateData.plan = plan;
     }
 
+    if (inscription_plan) {
+      profileUpdateData.inscription_plan = inscription_plan;
+    }
+
+    if (typeof inscription_paid === 'boolean') {
+      profileUpdateData.inscription_paid = inscription_paid;
+    }
+
     // Only update is_solvent if provided (boolean)
     if (typeof is_solvent === 'boolean') {
       profileUpdateData.is_solvent = is_solvent;
+    }
+
+    if (discount !== undefined) {
+      profileUpdateData.discount = discount === '' ? null : parseFloat(discount);
     }
 
     const { error: profileError } = await supabaseAdmin
@@ -156,9 +177,13 @@ export async function PUT(
         id,
         full_name,
         email,
+        phone,
         role,
         plan: profileUpdateData.plan,
-        is_solvent
+        inscription_plan,
+        inscription_paid,
+        is_solvent,
+        discount
       }
     });
 
