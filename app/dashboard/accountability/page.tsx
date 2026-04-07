@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { 
-  TrendingUp, 
-  TrendingDown, 
+  TrendingUp,
+  TrendingDown,
   Calendar, 
   ArrowUpRight, 
   ArrowDownRight,
@@ -14,7 +14,12 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
-  Scale
+  Scale,
+  Percent,
+  Layers,
+  Flame,
+  Target,
+  Users
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useAccountability } from './hooks/useAccountability';
@@ -32,7 +37,7 @@ export default function AccountabilityPage() {
   const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(CurrencyType.EUR);
 
   const periodString = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
-  const { loading, stats, refresh, expenses } = useAccountability(periodString);
+  const { loading, stats, refresh, expenses, payments } = useAccountability(periodString);
 
   const changeMonth = (direction: number) => {
     let newMonth = selectedMonth + direction;
@@ -57,6 +62,47 @@ export default function AccountabilityPage() {
   const activeExpenses = expenses.filter(e => e.currency === activeCurrency);
   const fixedCosts = activeExpenses.filter(e => ['Rent', 'Staff', 'Services'].includes(e.category)).reduce((sum, e) => sum + e.amount, 0);
   const variableCosts = currentStats.outcome - fixedCosts;
+
+  // --- DERIVED KPIs ---
+
+  // 1. % Gasto sobre ingresos
+  const spendingRatio = currentStats.income > 0
+    ? (currentStats.outcome / currentStats.income) * 100
+    : 0;
+
+  // 2. Gasto por categoría
+  const categoryMap: Record<string, number> = {};
+  activeExpenses.forEach(e => {
+    categoryMap[e.category] = (categoryMap[e.category] || 0) + e.amount;
+  });
+  const categoryBreakdown = Object.entries(categoryMap)
+    .map(([cat, amt]) => ({ category: cat, amount: amt }))
+    .sort((a, b) => b.amount - a.amount);
+
+  // 3. Burn rate mensual (daily rate × days in month)
+  const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const dailyBurnRate = currentStats.outcome / daysInMonth;
+  const projectedMonthlyBurn = dailyBurnRate * daysInMonth; // = outcome (already a full month)
+  const today = new Date();
+  const currentDay = selectedMonth === today.getMonth() + 1 && selectedYear === today.getFullYear()
+    ? today.getDate()
+    : daysInMonth;
+  const burnToDate = dailyBurnRate * currentDay;
+  const burnProgress = (burnToDate / (currentStats.income || 1)) * 100;
+
+  // 4. Punto de equilibrio: how much income covers current expenses
+  const breakEvenCoverage = currentStats.income > 0
+    ? Math.min((currentStats.income / (currentStats.outcome || 1)) * 100, 100)
+    : 0;
+  const breakEvenGap = currentStats.outcome - currentStats.income;
+
+  // 5. Gasto por atleta: unique paying members this month
+  const uniquePayingAthletes = new Set(
+    payments.filter(p => p.status === 'approved').map(p => p.user_id)
+  ).size;
+  const costPerAthlete = uniquePayingAthletes > 0
+    ? currentStats.outcome / uniquePayingAthletes
+    : 0;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-12">
@@ -168,7 +214,7 @@ export default function AccountabilityPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* LEFT: P&L LEDGER (8 COLS) */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
             <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
@@ -180,39 +226,60 @@ export default function AccountabilityPage() {
               </div>
             </div>
 
-            <div className="p-8">
-              <div className="space-y-8">
-                
-                {/* INCOMES SECTION */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100 uppercase font-black text-xs"><TrendingUp size={14}/></div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 uppercase">{t('Incomes')}</h4>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                     <span className="text-xs font-black uppercase text-slate-500">{t('Total Revenue Flow')}</span>
-                     <span className="text-xl font-black text-emerald-500">{symbol}{currentStats.income.toLocaleString()}</span>
-                  </div>
+            <div className="px-8">
+
+              {/* PUNTO DE EQUILIBRIO — income vs outcome in one view */}
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-tighter flex items-center gap-2">
+                    <Target size={14} className="text-pits-red" /> Punto de Equilibrio
+                  </h4>
+                  <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide ${
+                    breakEvenGap <= 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                    : 'bg-red-50 text-red-600 border border-red-100'
+                  }`}>
+                    {breakEvenGap <= 0 ? 'Alcanzado ✓' : 'No alcanzado'}
+                  </span>
                 </div>
 
-                {/* OUTCOMES SECTION */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 border-b border-slate-100 pb-2">
-                    <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-500 border border-red-100 uppercase font-black text-xs"><TrendingDown size={14}/></div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 uppercase">{t('Outcomes')}</h4>
+                <div className="flex items-center gap-6">
+                  {/* Circular gauge */}
+                  <div className="relative w-24 h-24 flex-shrink-0">
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      <circle cx="50" cy="50" r="38" fill="none" stroke="#f1f5f9" strokeWidth="14" />
+                      <circle
+                        cx="50" cy="50" r="38" fill="none"
+                        stroke={breakEvenGap <= 0 ? '#10b981' : '#ef4444'}
+                        strokeWidth="14"
+                        strokeDasharray={`${(breakEvenCoverage / 100) * 238.76} 238.76`}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-lg font-black text-slate-900 leading-none">{breakEvenCoverage.toFixed(0)}%</span>
+                      <span className="text-[7px] font-black text-slate-400 uppercase">cubierto</span>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                     <span className="text-xs font-black uppercase text-slate-500">{t('Total Expense Burn')}</span>
-                     <span className="text-xl font-black text-red-500">{symbol}{currentStats.outcome.toLocaleString()}</span>
+                  {/* Rows */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between items-center bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                      <span className="text-[9px] font-black text-slate-400 uppercase">Total gastos</span>
+                      <span className="text-xs font-black text-red-500">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                      <span className="text-[9px] font-black text-slate-400 uppercase">Ingresos actuales</span>
+                      <span className="text-xs font-black text-emerald-600">{symbol}{currentStats.income.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                    </div>
+                    {breakEvenGap > 0 && (
+                      <div className="flex justify-between items-center bg-red-50 rounded-xl p-2.5 border border-red-100">
+                        <span className="text-[9px] font-black text-red-500 uppercase">Déficit</span>
+                        <span className="text-xs font-black text-red-600">{symbol}{breakEvenGap.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-
               </div>
 
               {/* CONSOLIDATED SUMMARY BAR */}
@@ -291,6 +358,217 @@ export default function AccountabilityPage() {
           </div>
 
         </div>
+      </div>
+
+      {/* 3. NEW KPI SECTIONS */}
+      <div className="space-y-6">
+
+        {/* ROW A: % Gasto sobre ingresos + Burn Rate */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* % Gasto sobre ingresos */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                <Percent size={16} className="text-pits-red" /> % Gasto sobre Ingresos
+              </h3>
+              <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide ${
+                spendingRatio > 100 ? 'bg-red-50 text-red-600 border border-red-100'
+                : spendingRatio > 80 ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+              }`}>
+                {spendingRatio > 100 ? 'Over Budget' : spendingRatio > 80 ? 'Warning' : 'Healthy'}
+              </span>
+            </div>
+
+            <div className="flex items-end gap-2 mb-4">
+              <span className="text-5xl font-black text-slate-900 tracking-tighter">
+                {spendingRatio.toFixed(1)}
+              </span>
+              <span className="text-2xl font-black text-slate-400 mb-1">%</span>
+            </div>
+
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-3">
+              De cada {symbol}100 de ingreso, {symbol}{spendingRatio.toFixed(0)} se van en gastos
+            </p>
+
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  spendingRatio > 100 ? 'bg-red-500'
+                  : spendingRatio > 80 ? 'bg-amber-400'
+                  : 'bg-emerald-400'
+                }`}
+                style={{ width: `${Math.min(spendingRatio, 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[8px] font-bold text-slate-300 uppercase">0%</span>
+              <span className="text-[8px] font-bold text-slate-300 uppercase">100% breakeven</span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <p className="text-[8px] font-black text-slate-400 uppercase">Ingresos</p>
+                <p className="text-sm font-black text-emerald-600 mt-0.5">{symbol}{currentStats.income.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <p className="text-[8px] font-black text-slate-400 uppercase">Gastos</p>
+                <p className="text-sm font-black text-red-500 mt-0.5">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Burn Rate Mensual */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                <Flame size={16} className="text-orange-500" /> Burn Rate Mensual
+              </h3>
+              <span className="text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide bg-orange-50 text-orange-600 border border-orange-100">
+                {symbol}{dailyBurnRate.toFixed(2)}/día
+              </span>
+            </div>
+
+            <div className="flex items-end gap-2 mb-1">
+              <span className="text-5xl font-black text-slate-900 tracking-tighter">
+                {symbol}{dailyBurnRate.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-sm font-black text-slate-400 mb-1">/ día</span>
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-4">
+              Gasto diario promedio · {daysInMonth} días en el mes
+            </p>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
+                <span>Quemado al día {currentDay}</span>
+                <span>{symbol}{burnToDate.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-orange-400 transition-all duration-1000"
+                  style={{ width: `${Math.min(burnProgress, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[8px] font-bold text-slate-300 uppercase">
+                <span>Día 1</span>
+                <span>Día {daysInMonth}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-4 bg-orange-50/60 rounded-2xl border border-orange-100">
+              <p className="text-[9px] font-black text-orange-700 uppercase tracking-wide">Proyección mensual completa</p>
+              <p className="text-lg font-black text-slate-900 mt-1">{symbol}{projectedMonthlyBurn.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ROW B: Gasto por Categoría */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
+            <Layers size={16} className="text-violet-500" /> Gasto por Categoría
+          </h3>
+
+          {categoryBreakdown.length === 0 ? (
+            <div className="flex items-center justify-center h-24 text-slate-300 text-xs font-bold uppercase">
+              Sin gastos registrados en {activeCurrency}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+              {categoryBreakdown.map(({ category, amount }) => {
+                const pct = currentStats.outcome > 0 ? (amount / currentStats.outcome) * 100 : 0;
+                const CAT_COLORS: Record<string, string> = {
+                  Staff: 'bg-blue-400',
+                  Rent: 'bg-violet-400',
+                  Utilities: 'bg-cyan-400',
+                  Maintenance: 'bg-amber-400',
+                  Services: 'bg-indigo-400',
+                  Marketing: 'bg-pink-400',
+                  Taxes: 'bg-red-400',
+                  Other: 'bg-slate-400',
+                };
+                const barColor = CAT_COLORS[category] || 'bg-slate-400';
+                return (
+                  <div key={category} className="space-y-1.5">
+                    <div className="flex justify-between items-end">
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-wide">{category}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400">{pct.toFixed(1)}%</span>
+                        <span className="text-xs font-black text-slate-900">{symbol}{amount.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${barColor} transition-all duration-1000`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">
+              {categoryBreakdown.length} categorías · Total gastos
+            </span>
+            <span className="text-sm font-black text-slate-900">
+              {symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}
+            </span>
+          </div>
+        </div>
+
+
+        {/* ROW C: Gasto por Atleta — full width */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                <Users size={16} className="text-sky-500" /> Gasto por Atleta
+              </h3>
+              <span className="text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide bg-sky-50 text-sky-600 border border-sky-100">
+                {uniquePayingAthletes} atletas
+              </span>
+            </div>
+
+            <div className="flex items-end gap-2 mb-1">
+              <span className="text-5xl font-black text-slate-900 tracking-tighter">
+                {symbol}{costPerAthlete.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-sm font-black text-slate-400 mb-1">/ atleta</span>
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-4">
+              Costo operativo por atleta activo este mes
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span className="text-[9px] font-black text-slate-400 uppercase">Atletas pagadores</span>
+                <span className="text-xs font-black text-slate-900">{uniquePayingAthletes}</span>
+              </div>
+              <div className="flex justify-between items-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span className="text-[9px] font-black text-slate-400 uppercase">Total gastos</span>
+                <span className="text-xs font-black text-red-500">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+              </div>
+              <div className="flex justify-between items-center bg-sky-50 rounded-xl p-3 border border-sky-100">
+                <span className="text-[9px] font-black text-sky-600 uppercase">Ingreso por atleta</span>
+                <span className="text-xs font-black text-sky-700">
+                  {symbol}{(uniquePayingAthletes > 0 ? currentStats.income / uniquePayingAthletes : 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Margen neto por atleta</p>
+              <p className={`text-lg font-black mt-0.5 ${
+                uniquePayingAthletes > 0 && currentStats.net / uniquePayingAthletes >= 0 ? 'text-emerald-500' : 'text-red-500'
+              }`}>
+                {symbol}{(uniquePayingAthletes > 0 ? currentStats.net / uniquePayingAthletes : 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
+              </p>
+            </div>
+        </div>
+
       </div>
 
     </div>

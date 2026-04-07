@@ -107,6 +107,8 @@ export interface ExpenseRecord {
   expense_date: string;
   created_at: string;
   created_by?: string;
+  status: 'pending' | 'paid' | 'due';
+  payment_method: string;
 }
 
 export interface ProfitabilityStats {

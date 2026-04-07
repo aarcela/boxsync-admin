@@ -36,5 +36,14 @@ export const expenseService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  async updateExpenseStatus(id: string, status: 'pending' | 'paid' | 'due'): Promise<void> {
+    const { error } = await supabase
+      .from('expenses')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
   }
 };

@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../../components/Toast';
 import { useLanguage } from '../../../components/LanguageContext';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { supabase } from '@/lib/supabase';
 import { expenseService } from '@/lib/services/expenseService';
 import { financialService } from '@/lib/services/financialService';
-import { ExpenseRecord, ExpenseCategory, CurrencyType } from '@/lib/types/gym';
+import { ExpenseRecord, ExpenseCategory, CurrencyType, PaymentMethod } from '@/lib/types/gym';
 
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -39,6 +41,8 @@ export default function ExpensesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewCurrency, setViewCurrency] = useState<CurrencyType>(CurrencyType.EUR);
+  const [statusConfirm, setStatusConfirm] = useState<{ id: string; nextStatus: 'pending' | 'paid' | 'due' } | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   // Form State
   const [newExpense, setNewExpense] = useState({
@@ -46,7 +50,9 @@ export default function ExpensesPage() {
     category: 'Other' as ExpenseCategory,
     amount: '',
     currency: CurrencyType.EUR,
-    expense_date: new Date().toISOString().split('T')[0]
+    expense_date: new Date().toISOString().split('T')[0],
+    status: 'pending' as 'pending' | 'paid' | 'due',
+    payment_method: ''
   });
 
   const fetchData = async () => {
@@ -61,7 +67,11 @@ export default function ExpensesPage() {
       const start = `${selectedPeriod}-01`;
       const end = new Date(year, month, 0).toISOString().split('T')[0];
 
-      const data = await expenseService.getExpenses(start, end);
+      const [methods, data] = await Promise.all([
+        financialService.getPaymentMethods(),
+        expenseService.getExpenses(start, end)
+      ]);
+      setPaymentMethods(methods);
       setExpenses(data);
     } catch (error) {
       console.error(error);
@@ -81,13 +91,18 @@ export default function ExpensesPage() {
 
     try {
       const amountNum = parseFloat(newExpense.amount);
+      const { data: { user } } = await supabase.auth.getUser();
+
       await expenseService.addExpense({
         description: newExpense.description,
         category: newExpense.category,
         amount: amountNum,
         currency: newExpense.currency,
         exchange_rate_at_time: exchangeRate,
-        expense_date: newExpense.expense_date
+        expense_date: newExpense.expense_date,
+        created_by: user?.id,
+        status: newExpense.status,
+        payment_method: newExpense.payment_method
       });
 
       toast('Operational cost recorded', 'success');
@@ -97,7 +112,9 @@ export default function ExpensesPage() {
         category: 'Other' as ExpenseCategory,
         amount: '',
         currency: CurrencyType.EUR,
-        expense_date: new Date().toISOString().split('T')[0]
+        expense_date: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        payment_method: ''
       });
       fetchData();
     } catch (error) {
@@ -112,6 +129,24 @@ export default function ExpensesPage() {
       fetchData();
     } catch (error) {
       toast('Purge sequence failed', 'error');
+    }
+  };
+
+  const handleUpdateStatus = (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'pending' ? 'paid' : currentStatus === 'paid' ? 'due' : 'pending';
+    setStatusConfirm({ id, nextStatus: nextStatus as 'pending' | 'paid' | 'due' });
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusConfirm) return;
+    try {
+      await expenseService.updateExpenseStatus(statusConfirm.id, statusConfirm.nextStatus);
+      toast('Status updated', 'success');
+      fetchData();
+    } catch (error) {
+      toast('Failed to update status', 'error');
+    } finally {
+      setStatusConfirm(null);
     }
   };
 
@@ -242,20 +277,23 @@ export default function ExpensesPage() {
             <table className="w-full text-left">
               <thead className="bg-slate-50/50">
                 <tr>
-                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Timeline')}</th>
+                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Expense Date</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Registry')}</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Category')}</th>
+                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method</th>
+                  <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Status' as any)}</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Value')}</th>
                   <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">{t('Action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {loading ? (
-                  <tr><td colSpan={5} className="py-20 text-center text-slate-300 font-bold uppercase animate-pulse">Scanning Archive...</td></tr>
+                  <tr><td colSpan={7} className="py-20 text-center text-slate-300 font-bold uppercase animate-pulse">Scanning Archive...</td></tr>
                 ) : filteredExpenses.map(ex => (
                   <tr key={ex.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="text-[11px] font-black text-slate-900">{new Date(ex.expense_date).toLocaleDateString()}</div>
+                      <div className="text-[9px] font-bold text-slate-400 mt-0.5">{ex.expense_date}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs font-bold text-slate-900 uppercase">{ex.description}</div>
@@ -264,6 +302,19 @@ export default function ExpensesPage() {
                       <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[9px] font-black uppercase border border-slate-200">
                         {ex.category}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-bold text-slate-600">
+                        {paymentMethods.find(m => m.id === ex.payment_method)?.label || ex.payment_method || '—'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => handleUpdateStatus(ex.id, ex.status || 'pending')}
+                        className={`px-2 py-1 rounded text-[9px] font-black uppercase border transition-all hover:scale-105 active:scale-95 ${ex.status === 'paid' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : ex.status === 'due' ? 'bg-red-100 text-red-600 border-red-200' : 'bg-amber-100 text-amber-600 border-amber-200'}`}
+                      >
+                        {t((ex.status || 'pending') as any)}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -290,7 +341,7 @@ export default function ExpensesPage() {
                   </tr>
                 ))}
                 {!loading && filteredExpenses.length === 0 && (
-                  <tr><td colSpan={5} className="py-20 text-center text-slate-300 font-bold uppercase">Zero costs in this sector.</td></tr>
+                  <tr><td colSpan={7} className="py-20 text-center text-slate-300 font-bold uppercase">Zero costs in this sector.</td></tr>
                 )}
               </tbody>
             </table>
@@ -421,7 +472,7 @@ export default function ExpensesPage() {
                       </div>
                       <div className="absolute -bottom-4 right-2 text-[7px] font-black text-emerald-500 uppercase tracking-widest">{t('Live Reference')}</div>
                    </div>
-                </div>                <div className="grid grid-cols-1 gap-4 mt-5">
+                </div>                <div className="grid grid-cols-2 gap-4 mt-5">
                    <div className="space-y-2">
                       <label className="text-[9px] font-black text-slate-400 uppercase ml-1">{t('Registry Date')}</label>
                       <input 
@@ -431,6 +482,32 @@ export default function ExpensesPage() {
                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
                       />
                    </div>
+                   <div className="space-y-2">
+                      <label className="text-[9px] font-black text-slate-400 uppercase ml-1">{t('Status' as any)}</label>
+                      <select 
+                        value={newExpense.status}
+                        onChange={(e) => setNewExpense({...newExpense, status: e.target.value as 'pending' | 'paid' | 'due'})}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+                      >
+                        <option value="pending">{t('Pending' as any)}</option>
+                        <option value="paid">{t('Paid' as any)}</option>
+                        <option value="due">{t('Due' as any)}</option>
+                      </select>
+                   </div>
+                </div>
+
+                <div className="space-y-2 mt-4">
+                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Payment Method</label>
+                   <select 
+                     value={newExpense.payment_method}
+                     onChange={(e) => setNewExpense({...newExpense, payment_method: e.target.value})}
+                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+                   >
+                     <option value="">— Select method —</option>
+                     {paymentMethods.map(m => (
+                       <option key={m.id} value={m.id}>{m.label} ({m.currency})</option>
+                     ))}
+                   </select>
                 </div>
 
                 <div className="pt-4 flex gap-3">
@@ -453,6 +530,17 @@ export default function ExpensesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!statusConfirm}
+        title="Change Status"
+        message={statusConfirm ? `Change status to "${statusConfirm.nextStatus.toUpperCase()}"? This will update the record immediately.` : ''}
+        confirmLabel="Yes, Update"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={confirmStatusChange}
+        onCancel={() => setStatusConfirm(null)}
+      />
 
     </div>
   );
