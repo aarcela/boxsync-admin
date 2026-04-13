@@ -71,8 +71,40 @@ export interface Profile {
   inscription_paid: boolean;
   created_at: string;
   avatar_url: string | null;
+  qr_code?: string | null;
+  birth_date?: string | null;
+  sex?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  level?: string | null;
+  crossfit_years?: number | null;
+  home_box?: string | null;
+  has_allergies?: boolean | null;
+  allergies_text?: string | null;
+  has_medical_condition?: boolean | null;
+  medical_condition_text?: string | null;
+  has_injury?: boolean | null;
+  injury_text?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  onboarding_affidavit_accepted_at?: string | null;
+  onboarding_affidavit_version?: number;
+  onboarding_affidavit_truth?: boolean;
+  onboarding_affidavit_fit?: boolean;
+  onboarding_affidavit_release?: boolean;
+  instagram?: string | null;
+  admin_note?: string | null;
+  inscription_cost?: number;
   discount?: number | null;
-  bookings?: { status: string; created_at: string }[];
+  bookings?: { 
+    id: string;
+    status: string; 
+    created_at: string;
+    classes?: {
+      class_type: string;
+      start_time: string;
+    }
+  }[];
   last_payment_date?: string;
 }
 

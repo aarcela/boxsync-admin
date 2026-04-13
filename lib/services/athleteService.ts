@@ -60,5 +60,27 @@ export const athleteService = {
       .eq('id', id);
 
     if (error) throw error;
-  }
+  },
+  /**
+   * Fetches a single profile by ID with extended information.
+   */
+  async getProfileById(id: string): Promise<Profile> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`*, bookings!left(status, created_at, class_id, classes(class_type, start_time))`)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    
+    const profile = data as Profile;
+    
+    // Fetch last payment date
+    const lastPaymentDates = await financialService.getLastPaymentDates([id]);
+    
+    return {
+      ...profile,
+      last_payment_date: lastPaymentDates[id]
+    };
+  },
 };

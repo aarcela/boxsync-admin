@@ -17,9 +17,11 @@ interface NewsItem {
 
 export default function NewsPage() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const fetchNews = async () => {
     setLoading(true);
@@ -40,11 +42,15 @@ export default function NewsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchNews();
   }, []);
 
+  if (!mounted) return null;
+
   const deleteNews = async (id: string) => {
-    if (!confirm('Remove this announcement?')) return;
+    if (!window.confirm('Remove this announcement?')) return;
+
     try {
       const { error } = await supabase
         .from('news')
@@ -52,9 +58,11 @@ export default function NewsPage() {
         .eq('id', id);
         
       if (error) throw error;
+      
       toast('Announcement removed', 'success');
       fetchNews();
-    } catch {
+    } catch (error) {
+      console.error('Error deleting news:', error);
       toast('Could not remove news item.', 'error');
     }
   };
@@ -125,11 +133,18 @@ export default function NewsPage() {
                 </div>
 
                 <button 
-                  onClick={() => deleteNews(item.id)}
-                  className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  id={`delete-news-${item.id}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteNews(item.id);
+                  }}
+                  className="p-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all relative z-[100] cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
                   title="Remove"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={20} />
                 </button>
 
               </div>

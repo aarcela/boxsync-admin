@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, UserPlus, Filter, Check, X, Edit2, Award, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
@@ -9,6 +10,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { useAthletes, SortKey } from './hooks/useAthletes';
 
 export default function AthletesPage() {
+  const router = useRouter();
   const {
     profiles,
     loading,
@@ -145,7 +147,11 @@ export default function AthletesPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredProfiles.map((profile) => (
-                  <tr key={profile.id} className={`transition-colors border-l-4 ${!profile.is_solvent ? 'border-l-pits-red bg-red-50/30' : 'border-l-transparent hover:bg-gray-50'}`}>
+                  <tr 
+                    key={profile.id} 
+                    onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
+                    className={`transition-colors border-l-4 cursor-pointer ${!profile.is_solvent ? 'border-l-pits-red bg-red-50/30 font-medium' : 'border-l-transparent hover:bg-gray-50'}`}
+                  >
                     
                     {/* NAME + CONTACT */}
                     <td className="px-6 py-4">
@@ -173,6 +179,7 @@ export default function AthletesPage() {
                               rel="noreferrer"
                               className="p-1 text-green-500 hover:bg-green-50 rounded-md transition-colors"
                               title="Text on WhatsApp"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <MessageCircle size={14} />
                             </a>
@@ -190,6 +197,7 @@ export default function AthletesPage() {
                         <select
                           value={profile.plan || 'unlimited'}
                           onChange={(e) => changePlan(profile.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
                           className="bg-transparent border-none text-gray-700 text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors"
                         >
                           <option value="unlimited">Unlimited</option>
@@ -312,7 +320,8 @@ export default function AthletesPage() {
                     <td className="px-6 py-4 text-right">
                        <div className="flex items-center justify-end gap-1">
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedUserId(profile.id);
                             setIsEditModalOpen(true);
                           }}
