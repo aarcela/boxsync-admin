@@ -54,18 +54,19 @@ export default function WodEditorPage() {
 
         if (data) {
           setWodId(data.id);
+          setTitle(data.title || '');
+          setScoreType(data.score_type || 'none');
+          
           try {
             const contentObj = JSON.parse(data.content);
-            setTitle(data.title || '');
             setWarmUp(contentObj.warm_up || '');
             setTechnique(contentObj.technique || '');
             setStrength(contentObj.strength || '');
             setMetcon(contentObj.metcon || '');
             setScaling(contentObj.scaling || '');
-            setStimulus(contentObj.stimulus || ''); // Load the new field if it exists
-            setScoreType(contentObj.score_type || 'none');
+            setStimulus(contentObj.stimulus || ''); 
           } catch (e) {
-            setTitle(data.title || '');
+            console.error('Error parsing WOD content:', e);
           }
         }
       } catch (error) {
