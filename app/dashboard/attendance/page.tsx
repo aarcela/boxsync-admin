@@ -27,51 +27,55 @@ export default function AttendancePage() {
   } = useAttendance();
 
   return (
-    <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
+    <div className="space-y-6 lg:h-[calc(100vh-140px)] flex flex-col">
       
       {/* HEADER */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
         <div>
-          <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter">
+          <h2 className="text-xl md:text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-tight">
             Daily Attendance
           </h2>
-          <p className="text-pits-dim font-medium text-sm">
+          <p className="text-pits-dim font-medium text-xs md:text-sm">
             Check-in athletes and manage roster.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Tooltip content="Previous day">
-            <button
-              onClick={prevDay}
-              className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </Tooltip>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="date" 
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 focus:border-pits-red outline-none shadow-sm"
-            />
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-2">
+            <Tooltip content="Previous day">
+              <button
+                onClick={prevDay}
+                className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            </Tooltip>
+            
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="date" 
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 focus:border-pits-red outline-none shadow-sm text-sm"
+              />
+            </div>
+
+            <Tooltip content="Next day">
+              <button
+                onClick={nextDay}
+                className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </Tooltip>
           </div>
-          <Tooltip content="Next day">
-            <button
-              onClick={nextDay}
-              className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </Tooltip>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 h-full min-h-0">
+      <div className="flex flex-col lg:flex-row gap-6 lg:h-full min-h-0">
         
         {/* LEFT: CLASSES LIST */}
-        <div className="w-full md:w-1/3 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="w-full lg:w-1/3 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col max-h-[400px] lg:max-h-none">
           <div className="p-4 bg-gray-50 border-b border-gray-200">
             <h3 className="font-bold text-pits-dim text-xs uppercase tracking-wider">
               Classes ({classes.length})
@@ -149,9 +153,9 @@ export default function AttendancePage() {
         {/* RIGHT: ROSTER */}
         <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-4 bg-gray-50 border-b border-gray-200">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
               <div>
-                <h3 className="font-black text-pits-text text-sm uppercase italic tracking-tighter">
+                <h3 className="font-black text-pits-text text-sm md:text-base uppercase italic tracking-tighter">
                   {selectedClassId ? (
                     classes.find(c => c.id === selectedClassId)?.class_type + " @ " + 
                     new Date(classes.find(c => c.id === selectedClassId)?.start_time || "").toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })
@@ -165,41 +169,43 @@ export default function AttendancePage() {
               </div>
               
               {selectedClassId && roster.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="relative mr-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="relative flex-1 sm:w-48">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                     <input 
                       type="text"
                       placeholder="Search athlete..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 pr-4 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium focus:border-pits-red outline-none w-48 transition-all"
+                      className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium focus:border-pits-red outline-none transition-all"
                     />
                   </div>
-                  <Tooltip content="Mark all as attended">
-                    <button
-                      onClick={() => markAll('attended')}
-                      className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-green-700 transition-all shadow-sm active:scale-95"
-                    >
-                      <CheckCheck size={14} className="mr-1.5" />
-                      All Check-in
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Mark all as no-show">
-                    <button
-                      onClick={() => markAll('no_show')}
-                      className="flex items-center px-3 py-1.5 bg-white border border-gray-200 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
-                    >
-                      <Ban size={14} className="mr-1.5" />
-                      All Missed
-                    </button>
-                  </Tooltip>
+                  <div className="flex gap-2">
+                    <Tooltip content="Mark all as attended">
+                      <button
+                        onClick={() => markAll('attended')}
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-green-700 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                      >
+                        <CheckCheck size={14} className="mr-1.5" />
+                        Check-in All
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Mark all as no-show">
+                      <button
+                        onClick={() => markAll('no_show')}
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-white border border-gray-200 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all whitespace-nowrap"
+                      >
+                        <Ban size={14} className="mr-1.5" />
+                        Missed All
+                      </button>
+                    </Tooltip>
+                  </div>
                 </div>
               )}
             </div>
             {/* Attendance Summary Bar */}
             {selectedClassId && roster.length > 0 && (
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-200">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 pt-3 border-t border-gray-200">
                 <div className="flex items-center gap-1.5 text-xs font-bold">
                   <CheckCircle size={14} className="text-green-600" />
                   <span className="text-green-700">{roster.filter(b => b.status === 'attended').length}</span>
@@ -230,77 +236,136 @@ export default function AttendancePage() {
             ) : roster.length === 0 ? (
               <div className="p-12 text-center text-gray-400">No bookings for this class yet.</div>
             ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-400 uppercase bg-gray-50/50 sticky top-0">
-                  <tr>
-                    <th className="px-6 py-3 font-bold">Athlete</th>
-                    <th className="px-6 py-3 font-bold text-center">Status</th>
-                    <th className="px-6 py-3 font-bold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-gray-400 uppercase bg-gray-50/50 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3 font-bold">Athlete</th>
+                        <th className="px-6 py-3 font-bold text-center">Status</th>
+                        <th className="px-6 py-3 font-bold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {filteredRoster.map((booking) => (
+                        <tr key={booking.id} className={`transition-colors group ${booking.status === 'attended' ? 'bg-green-50/30' : booking.status === 'no_show' ? 'opacity-60' : 'hover:bg-gray-50'}`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                                {booking.profiles.avatar_url ? (
+                                  <img src={booking.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  booking.profiles.full_name?.charAt(0)
+                                )}
+                              </div>
+                              <span className="font-bold text-pits-text">{booking.profiles.full_name}</span>
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border
+                              ${booking.status === 'attended' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                booking.status === 'no_show' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-blue-50 text-blue-700 border-blue-200'}
+                            `}>
+                              {booking.status === 'attended' && <CheckCircle size={12} className="mr-1" />}
+                              {booking.status === 'no_show' && <XCircle size={12} className="mr-1" />}
+                              {booking.status === 'booked' && <Clock size={12} className="mr-1" />}
+                              {booking.status}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <Tooltip content="Check-in">
+                                <button 
+                                  onClick={() => updateStatus(booking.id, 'attended')}
+                                  className={`p-2 rounded-lg transition-all ${booking.status === 'attended' ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-green-50 hover:text-green-600'}`}
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                              </Tooltip>
+
+                              <Tooltip content="Reset to Booked">
+                                <button 
+                                  onClick={() => updateStatus(booking.id, 'booked')}
+                                  className={`p-2 rounded-lg transition-colors ${booking.status === 'booked' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:bg-blue-50 hover:text-blue-600'}`}
+                                >
+                                  <MinusCircle size={18} />
+                                </button>
+                              </Tooltip>
+
+                              <Tooltip content="Mark as Missed">
+                                <button 
+                                  onClick={() => updateStatus(booking.id, 'no_show')}
+                                  className={`p-2 rounded-lg transition-colors ${booking.status === 'no_show' ? 'bg-red-600 text-white shadow-md' : 'text-gray-300 hover:bg-red-50 hover:text-red-600'}`}
+                                >
+                                  <XCircle size={18} />
+                                </button>
+                              </Tooltip>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-gray-100">
                   {filteredRoster.map((booking) => (
-                    <tr key={booking.id} className={`transition-colors group ${booking.status === 'attended' ? 'bg-green-50/30' : booking.status === 'no_show' ? 'opacity-60' : 'hover:bg-gray-50'}`}>
-                      <td className="px-6 py-4">
+                    <div key={booking.id} className={`p-4 transition-colors ${booking.status === 'attended' ? 'bg-green-50/30' : booking.status === 'no_show' ? 'opacity-60' : 'active:bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden shadow-sm">
                             {booking.profiles.avatar_url ? (
                               <img src={booking.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
                             ) : (
                               booking.profiles.full_name?.charAt(0)
                             )}
                           </div>
-                          <span className="font-bold text-pits-text">{booking.profiles.full_name}</span>
+                          <div>
+                            <p className="font-bold text-pits-text">{booking.profiles.full_name}</p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border mt-1
+                              ${booking.status === 'attended' ? 'bg-green-50 text-green-700 border-green-200' : 
+                                booking.status === 'no_show' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-blue-50 text-blue-700 border-blue-200'}
+                            `}>
+                              {booking.status}
+                            </span>
+                          </div>
                         </div>
-                      </td>
+                        
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => updateStatus(booking.id, 'attended')}
+                            className={`p-2.5 rounded-xl transition-all ${booking.status === 'attended' ? 'bg-green-600 text-white shadow-md' : 'bg-gray-50 text-gray-300 border border-gray-100'}`}
+                          >
+                            <CheckCircle size={20} />
+                          </button>
+                          <button 
+                            onClick={() => updateStatus(booking.id, 'no_show')}
+                            className={`p-2.5 rounded-xl transition-all ${booking.status === 'no_show' ? 'bg-red-600 text-white shadow-md' : 'bg-gray-50 text-gray-300 border border-gray-100'}`}
+                          >
+                            <XCircle size={20} />
+                          </button>
+                        </div>
+                      </div>
                       
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border
-                          ${booking.status === 'attended' ? 'bg-green-50 text-green-700 border-green-200' : 
-                            booking.status === 'no_show' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-blue-50 text-blue-700 border-blue-200'}
-                        `}>
-                          {booking.status === 'attended' && <CheckCircle size={12} className="mr-1" />}
-                          {booking.status === 'no_show' && <XCircle size={12} className="mr-1" />}
-                          {booking.status === 'booked' && <Clock size={12} className="mr-1" />}
-                          {booking.status}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Tooltip content="Check-in">
-                            <button 
-                              onClick={() => updateStatus(booking.id, 'attended')}
-                              className={`p-2 rounded-lg transition-all ${booking.status === 'attended' ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-green-50 hover:text-green-600'}`}
-                            >
-                              <CheckCircle size={18} />
-                            </button>
-                          </Tooltip>
-
-                          <Tooltip content="Reset to Booked">
-                            <button 
-                              onClick={() => updateStatus(booking.id, 'booked')}
-                              className={`p-2 rounded-lg transition-colors ${booking.status === 'booked' ? 'bg-blue-100 text-blue-700' : 'text-gray-300 hover:bg-blue-50 hover:text-blue-600'}`}
-                            >
-                              <MinusCircle size={18} />
-                            </button>
-                          </Tooltip>
-
-                          <Tooltip content="Mark as Missed">
-                            <button 
-                              onClick={() => updateStatus(booking.id, 'no_show')}
-                              className={`p-2 rounded-lg transition-colors ${booking.status === 'no_show' ? 'bg-red-600 text-white shadow-md' : 'text-gray-300 hover:bg-red-50 hover:text-red-600'}`}
-                            >
-                              <XCircle size={18} />
-                            </button>
-                          </Tooltip>
-                        </div>
-                      </td>
-                    </tr>
+                      {booking.status !== 'booked' && (
+                        <button 
+                          onClick={() => updateStatus(booking.id, 'booked')}
+                          className="w-full py-2 bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-gray-100 flex items-center justify-center gap-2"
+                        >
+                          <MinusCircle size={14} />
+                          Reset Status
+                        </button>
+                      )}
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </div>

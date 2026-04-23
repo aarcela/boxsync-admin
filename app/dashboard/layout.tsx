@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Wallet,
   ChevronDown,
-  Scale
+  Scale,
+  MessagesSquare
 } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
 import Image from 'next/image';
@@ -49,7 +50,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
       }
     });
+
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
   }, [pathname]);
+
+  // Initial responsive check
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -77,6 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
         { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
         { name: t('News'), href: '/dashboard/news', icon: Megaphone },
+        { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
       ]
     },
     { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
@@ -86,18 +100,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen bg-gray-50">
       
+      {/* MOBILE BACKDROP */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       {/* SIDEBAR */}
       <aside 
         className={`bg-gray-900 text-white transition-all duration-300 ease-in-out flex flex-col
-          ${isSidebarOpen ? 'w-64' : 'w-20'}
+          fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
+          ${isSidebarOpen 
+            ? 'w-64 translate-x-0' 
+            : '-translate-x-full lg:translate-x-0 lg:w-20'}
         `}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center justify-center border-b border-gray-800">
-          {isSidebarOpen ? (
-            <Image src="/assets/logo.png" alt="Logo" width={100} height={100} />
-          ) : (
-            <span className="font-black text-2xl text-[#FF2800]">P</span>
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
+          <div className={`flex-1 flex items-center ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
+            {isSidebarOpen ? (
+              <Image src="/assets/logo.png" alt="Logo" width={100} height={100} />
+            ) : (
+              <span className="font-black text-2xl text-[#FF2800]">P</span>
+            )}
+          </div>
+          
+          {/* Close button for mobile */}
+          {isSidebarOpen && (
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
           )}
         </div>
 
@@ -197,9 +234,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -238,7 +275,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Scrollable Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
       </div>
