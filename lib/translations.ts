@@ -396,9 +396,14 @@ export const translations = {
     'Are you sure you want to permanently delete this payment method? This action cannot be undone.': 'Are you sure you want to permanently delete this payment method? This action cannot be undone.',
     'Processing...': 'Processing...',
     'Save Changes': 'Save Changes',
-    'Confirm Method': 'Confirm Method',
     'Yes, Delete': 'Yes, Delete',
-    'Yes, Update': 'Yes, Update'
+    'Yes, Update': 'Yes, Update',
+    'Active': 'Active',
+    'Inactive': 'Inactive',
+    'Status': 'Status',
+    'Status updated': 'Status updated',
+    'Initializing Data Stream...': 'Initializing Data Stream...',
+    'No records found.': 'No records found.'
   },
   es: {
     // Auth / Login
@@ -797,9 +802,15 @@ export const translations = {
     'Are you sure you want to permanently delete this payment method? This action cannot be undone.': '¿Estás seguro de que quieres eliminar permanentemente este método de pago? Esta acción no se puede deshacer.',
     'Processing...': 'Procesando...',
     'Save Changes': 'Guardar Cambios',
-    'Confirm Method': 'Confirmar Método',
     'Yes, Delete': 'Sí, Eliminar',
-    'Yes, Update': 'Sí, Actualizar'
+    'Yes, Update': 'Sí, Actualizar',
+    'Active': 'Activo',
+    'Inactive': 'Inactivo',
+    'Status': 'Estado',
+    'Status updated': 'Estado actualizado',
+    'Method': 'Método',
+    'Initializing Data Stream...': 'Iniciando flujo de datos...',
+    'No records found.': 'No se encontraron registros.'
   }
 }
 

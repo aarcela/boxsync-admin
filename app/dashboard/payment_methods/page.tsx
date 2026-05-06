@@ -196,15 +196,15 @@ export default function PaymentMethodsPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Method</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Currency</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Method')}</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Currency')}</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('Status')}</th>
+                    <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">{t('Actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {loading ? (
-                    <tr><td colSpan={4} className="py-20 text-center text-slate-300 font-bold uppercase animate-pulse">Initializing Data Stream...</td></tr>
+                    <tr><td colSpan={4} className="py-20 text-center text-slate-300 font-bold uppercase animate-pulse">{t('Initializing Data Stream...')}</td></tr>
                   ) : filteredMethods.map(method => (
                     <tr key={method.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4">
@@ -251,7 +251,7 @@ export default function PaymentMethodsPage() {
                     </tr>
                   ))}
                   {!loading && filteredMethods.length === 0 && (
-                    <tr><td colSpan={4} className="py-20 text-center text-slate-300 font-bold uppercase">No records found.</td></tr>
+                    <tr><td colSpan={4} className="py-20 text-center text-slate-300 font-bold uppercase">{t('No records found.')}</td></tr>
                   )}
                 </tbody>
               </table>
