@@ -808,7 +808,6 @@ export const translations = {
     'Inactive': 'Inactivo',
     'Status': 'Estado',
     'Status updated': 'Estado actualizado',
-    'Method': 'Método',
     'Initializing Data Stream...': 'Iniciando flujo de datos...',
     'No records found.': 'No se encontraron registros.'
   }
