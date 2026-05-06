@@ -9,6 +9,7 @@ export interface PaymentMethod {
   currency: CurrencyType;
   details: string | null;
   is_active: boolean;
+  created_at: string;
 }
 
 export interface PaymentRecord {

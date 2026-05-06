@@ -91,6 +91,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
         { name: t('News'), href: '/dashboard/news', icon: Megaphone },
         { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
+        { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
       ]
     },
     { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },

@@ -26,6 +26,7 @@ export const translations = {
     Financial: 'Financial',
     Dashboard: 'Dashboard',
     'Box Management': 'Box Management',
+    'Payment Methods': 'Payment Methods',
 
     // Performance / Box Intelligence
     'Box Intelligence': 'Box Intelligence',
@@ -364,7 +365,40 @@ export const translations = {
     'wod_share': 'WOD Share',
     'announcement': 'Announcement',
     'Community': 'Community',
-    'Loading...': 'Loading...'
+    'Loading...': 'Loading...',
+    'Manage accepted payment channels and configurations': 'Manage accepted payment channels and configurations',
+    'Add Method': 'Add Method',
+    'System Config': 'System Config',
+    'Failed to load payment methods': 'Failed to load payment methods',
+    'Payment method updated': 'Payment method updated',
+    'Payment method created': 'Payment method created',
+    'Action failed': 'Action failed',
+    'Payment method deleted': 'Payment method deleted',
+    'Delete failed': 'Delete failed',
+    'Toggle failed': 'Toggle failed',
+    'Search methods...': 'Search methods...',
+    'No details provided': 'No details provided',
+    'Strategic Overview': 'Strategic Overview',
+    'Configure how your box receives payments. These methods will be available for athletes during check-out and for administrative manual registry.': 'Configure how your box receives payments. These methods will be available for athletes during check-out and for administrative manual registry.',
+    'Total Methods': 'Total Methods',
+    'Active Channels': 'Active Channels',
+    'System Tips': 'System Tips',
+    'Keep at least one EUR and one VES method active for operational flexibility.': 'Keep at least one EUR and one VES method active for operational flexibility.',
+    'Details appear on athlete invoices. Provide clear instructions for bank transfers.': 'Details appear on athlete invoices. Provide clear instructions for bank transfers.',
+    'Edit Method': 'Edit Method',
+    'Payment Channel Configuration': 'Payment Channel Configuration',
+    'Method Name / Label': 'Method Name / Label',
+    'e.g. Bank Transfer Zelle': 'e.g. Bank Transfer Zelle',
+    'Details / Instructions': 'Details / Instructions',
+    'Account number, bank name, etc.': 'Account number, bank name, etc.',
+    'Confirm Method': 'Confirm Method',
+    'Delete Method': 'Delete Method',
+    'Are you sure you want to permanently delete this payment method? This action cannot be undone.': 'Are you sure you want to permanently delete this payment method? This action cannot be undone.',
+    'Processing...': 'Processing...',
+    'Save Changes': 'Save Changes',
+    'Confirm Method': 'Confirm Method',
+    'Yes, Delete': 'Yes, Delete',
+    'Yes, Update': 'Yes, Update'
   },
   es: {
     // Auth / Login
@@ -393,6 +427,7 @@ export const translations = {
     Financial: 'Finanzas',
     Dashboard: 'Panel',
     'Box Management': 'Gestión del Box',
+    'Payment Methods': 'Métodos de Pago',
 
     // Performance / Box Intelligence
     'Box Intelligence': 'Box Intelligence',
@@ -731,9 +766,42 @@ export const translations = {
     'wod_share': 'WOD Compartido',
     'announcement': 'Anuncio',
     'Community': 'Comunidad',
-    'Loading...': 'Cargando...'
+    'Loading...': 'Cargando...',
+    'Manage accepted payment channels and configurations': 'Gestiona los canales de pago aceptados y sus configuraciones',
+    'Add Method': 'Agregar Método',
+    'System Config': 'Config. del Sistema',
+    'Failed to load payment methods': 'Error al cargar los métodos de pago',
+    'Payment method updated': 'Método de pago actualizado',
+    'Payment method created': 'Método de pago creado',
+    'Action failed': 'Acción fallida',
+    'Payment method deleted': 'Método de pago eliminado',
+    'Delete failed': 'Error al eliminar',
+    'Toggle failed': 'Error al cambiar estado',
+    'Search methods...': 'Buscar métodos...',
+    'No details provided': 'Sin detalles proporcionados',
+    'Strategic Overview': 'Visión Estratégica',
+    'Configure how your box receives payments. These methods will be available for athletes during check-out and for administrative manual registry.': 'Configura cómo tu box recibe pagos. Estos métodos estarán disponibles para los atletas durante el pago y para el registro manual administrativo.',
+    'Total Methods': 'Métodos Totales',
+    'Active Channels': 'Canales Activos',
+    'System Tips': 'Tips del Sistema',
+    'Keep at least one EUR and one VES method active for operational flexibility.': 'Mantén al menos un método EUR y uno VES activo para flexibilidad operativa.',
+    'Details appear on athlete invoices. Provide clear instructions for bank transfers.': 'Los detalles aparecen en las facturas de los atletas. Proporciona instrucciones claras para transferencias bancarias.',
+    'Edit Method': 'Editar Método',
+    'Payment Channel Configuration': 'Configuración de Canal de Pago',
+    'Method Name / Label': 'Nombre / Etiqueta del Método',
+    'e.g. Bank Transfer Zelle': 'ej. Transferencia Bancaria Zelle',
+    'Details / Instructions': 'Detalles / Instrucciones',
+    'Account number, bank name, etc.': 'Número de cuenta, nombre del banco, etc.',
+    'Confirm Method': 'Confirmar Método',
+    'Delete Method': 'Eliminar Método',
+    'Are you sure you want to permanently delete this payment method? This action cannot be undone.': '¿Estás seguro de que quieres eliminar permanentemente este método de pago? Esta acción no se puede deshacer.',
+    'Processing...': 'Procesando...',
+    'Save Changes': 'Guardar Cambios',
+    'Confirm Method': 'Confirmar Método',
+    'Yes, Delete': 'Sí, Eliminar',
+    'Yes, Update': 'Sí, Actualizar'
   }
-};
+}
 
 export type Language = keyof typeof translations;
 export type TranslationKey = keyof typeof translations['en'];
