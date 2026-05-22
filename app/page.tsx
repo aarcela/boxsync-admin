@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
+import Image from 'next/image';
 import { Loader2, Globe } from 'lucide-react';
 import { useLanguage } from '../components/LanguageContext';
 
@@ -85,9 +86,15 @@ export default function LoginPage() {
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
-             {/* Simple 'P' logo placeholder */}
-             <span className="text-white font-black text-3xl">P</span>
+          <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3">
+            <Image
+              src="/assets/logo.png"
+              alt="Pits CrossFit"
+              width={48}
+              height={48}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-black text-gray-900 uppercase italic tracking-tighter">
             Pits CrossFit

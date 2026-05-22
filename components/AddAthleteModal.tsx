@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Award } from 'lucide-react';
 import { useToast } from './Toast';
+import ConfirmDialog from './ConfirmDialog';
+
+const PLAN_LABELS: Record<string, string> = {
+  unlimited: 'Unlimited',
+  '3x_week': '3x / Week',
+  '4x_week': '4x / Week',
+  '5x_week': '5x / Week',
+  open_box: 'Open Box',
+  crossfit_kids: 'CrossFit Kids',
+};
 
 interface AddAthleteModalProps {
   isOpen: boolean;
@@ -12,6 +22,7 @@ interface AddAthleteModalProps {
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -25,26 +36,33 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     admin_note: ''
   });
 
-  // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
   useEffect(() => {
     if (formData.role === 'coach' || formData.role === 'manager') {
       setFormData(prev => ({ ...prev, plan: 'unlimited' }));
     }
   }, [formData.role]);
 
+  useEffect(() => {
+    if (!isOpen) setShowConfirm(false);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowConfirm(true);
+  };
+
+  const createAthlete = async () => {
+    setShowConfirm(false);
     setLoading(true);
 
     try {
-      // Ensure plan is always set: 'unlimited' for coaches/managers, or selected plan for members
       const submitData = {
         ...formData,
-        plan: formData.role === 'coach' || formData.role === 'manager' 
-          ? 'unlimited' 
-          : formData.plan
+        plan: formData.role === 'coach' || formData.role === 'manager'
+          ? 'unlimited'
+          : formData.plan,
       };
 
       const response = await fetch('/api/admin/users', {
@@ -62,9 +80,18 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       toast(`User ${formData.full_name} created successfully!`, 'success');
       onSuccess();
       onClose();
-      // Reset form
-      setFormData({ full_name: '', email: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_cost: '50', inscription_paid: false, discount: '', admin_note: ''   });
-
+      setFormData({
+        full_name: '',
+        email: '',
+        password: '',
+        role: 'member',
+        plan: 'unlimited',
+        inscription_plan: 'standard',
+        inscription_cost: '50',
+        inscription_paid: false,
+        discount: '',
+        admin_note: '',
+      });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create user';
       toast(errorMessage, 'error');
@@ -72,6 +99,16 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       setLoading(false);
     }
   };
+
+  const planLabel =
+    formData.role === 'coach' || formData.role === 'manager'
+      ? 'Unlimited'
+      : PLAN_LABELS[formData.plan] ?? formData.plan;
+
+  const confirmMessage =
+    formData.role === 'member'
+      ? `Create account for ${formData.full_name} (${formData.email}) as a Member with ${planLabel} plan?`
+      : `Create account for ${formData.full_name} (${formData.email}) as a ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}?`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -274,6 +311,15 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
         </form>
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="Create Athlete?"
+        message={confirmMessage}
+        confirmLabel="Create Account"
+        onConfirm={createAthlete}
+        onCancel={() => setShowConfirm(false)}
+      />
     </div>
   );
 }
