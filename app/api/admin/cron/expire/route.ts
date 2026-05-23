@@ -8,11 +8,15 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false } }
 );
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Optional: Add a secret token check here if using an external cron service
-    // const authHeader = request.headers.get('authorization');
-    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) return new Response('Unauthorized', { status: 401 });
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     const { data, error } = await supabaseAdmin.rpc('expire_monthly_memberships');
 

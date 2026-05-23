@@ -1,72 +1,105 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useLanguage } from '../components/LanguageContext';
-import { AuthLanguageToggle } from '../components/AuthLanguageToggle';
-import { isStaffRole, resolveLoginError } from '../lib/auth';
+import { supabase } from '../../lib/supabase';
+import { useLanguage } from '../../components/LanguageContext';
+import { AuthLanguageToggle } from '../../components/AuthLanguageToggle';
+import {
+  isStaffRole,
+  MIN_RESET_PASSWORD_LENGTH,
+  resolvePasswordResetError,
+} from '../../lib/auth';
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (!session) {
+        router.replace('/forgot-password?error=link_expired');
+        return;
+      }
+
+      setCheckingSession(false);
+    }
+
+    checkSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    const trimmedEmail = email.trim().toLowerCase();
+    if (password.length < MIN_RESET_PASSWORD_LENGTH) {
+      setError(t('Password must be at least 8 characters.'));
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(t('Passwords do not match.'));
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      // 1. Authenticate
-      const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
 
-      if (authError) throw authError;
-      if (!user) throw new Error('auth_failed');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('session_missing');
 
-      // 2. Authorization Check (RBAC)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (profileError) throw new Error('auth_failed');
-
-      if (!isStaffRole(profile?.role)) {
+      if (profileError || !isStaffRole(profile?.role)) {
         await supabase.auth.signOut();
         throw new Error(t('Unauthorized: Staff access only.'));
       }
 
-      // 3. Redirect to Dashboard
       router.push('/dashboard');
       router.refresh();
-
     } catch (err: unknown) {
-      setError(resolveLoginError(err, t));
+      setError(resolvePasswordResetError(err, t));
     } finally {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-pits-red" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
       <AuthLanguageToggle />
 
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3">
             <Image
@@ -79,42 +112,24 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-2xl font-black text-gray-900 uppercase italic tracking-tighter">
-            Pits CrossFit
+            {t('Set new password')}
           </h1>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">
             {t('Command Center')}
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              {t('Staff Email')}
-            </label>
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all outline-none disabled:opacity-60"
-              placeholder="coach@pitscrossfit.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              {t('Password')}
+              {t('New password')}
             </label>
             <input
               type="password"
               name="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
-              minLength={6}
+              minLength={MIN_RESET_PASSWORD_LENGTH}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -123,13 +138,22 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="text-right">
-            <Link
-              href="/forgot-password"
-              className="text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-pits-red transition-colors"
-            >
-              {t('Forgot password?')}
-            </Link>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              {t('Confirm password')}
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              required
+              minLength={MIN_RESET_PASSWORD_LENGTH}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all outline-none disabled:opacity-60"
+              placeholder="••••••••"
+            />
           </div>
 
           {error && (
@@ -146,15 +170,18 @@ export default function LoginPage() {
             `}
           >
             {loading && <Loader2 size={18} className="animate-spin mr-2" />}
-            {loading ? t('Verifying...') : t('Access Dashboard')}
+            {loading ? t('Updating...') : t('Update password')}
           </button>
-        </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-400">
-            {t('Authorized personnel only.')}
+          <p className="text-center">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-pits-red transition-colors"
+            >
+              {t('Request a new link')}
+            </Link>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

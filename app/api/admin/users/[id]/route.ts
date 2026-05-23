@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffApi } from '@/lib/require-staff-api';
 
 // Initialize the Admin Client (Bypasses RLS)
 const supabaseAdmin = createClient(
@@ -18,6 +19,9 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const staffAuth = await requireStaffApi();
+  if ('error' in staffAuth) return staffAuth.error;
+
   try {
     const { id } = await params;
 
@@ -78,6 +82,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const staffAuth = await requireStaffApi();
+  if ('error' in staffAuth) return staffAuth.error;
+
   try {
     const { id } = await params;
     const body = await request.json();

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffApi } from '@/lib/require-staff-api';
 
 // Initialize the Admin Client (Bypasses RLS)
 const supabaseAdmin = createClient(
@@ -14,6 +15,9 @@ const supabaseAdmin = createClient(
 );
 
 export async function PATCH(request: Request) {
+  const staffAuth = await requireStaffApi();
+  if ('error' in staffAuth) return staffAuth.error;
+
   try {
     const body = await request.json();
     const { bookingId, status } = body;

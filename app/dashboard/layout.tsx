@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { isStaffRole } from '../../lib/auth';
 import { 
   LayoutDashboard, 
   Users, 
@@ -63,6 +64,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setIsSidebarOpen(false);
     }
   }, []);
+
+  // Client-side guard (middleware is the primary enforcement)
+  useEffect(() => {
+    const verifyStaffSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (!isStaffRole(profile?.role)) {
+        await supabase.auth.signOut();
+        router.replace('/');
+      }
+    };
+    verifyStaffSession();
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
