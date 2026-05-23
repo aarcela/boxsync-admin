@@ -8,7 +8,8 @@ export const MIN_RESET_PASSWORD_LENGTH = 8;
 export function getPasswordResetRedirectUrl(request: Request): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   const origin = siteUrl || new URL(request.url).origin;
-  return `${origin}/auth/callback?next=/reset-password`;
+  // Default Supabase emails append tokens in the URL hash; only a client page can read those.
+  return `${origin}/reset-password`;
 }
 
 export function isStaffRole(role: string | null | undefined): role is StaffRole {

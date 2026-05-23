@@ -26,11 +26,34 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function checkSession() {
+    async function establishSession(): Promise<boolean> {
+      // Default Supabase recovery links redirect here with tokens in the hash (implicit flow).
+      const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : '';
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          window.history.replaceState(null, '', window.location.pathname);
+          if (!error) return true;
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
+      return !!session;
+    }
+
+    async function checkSession() {
+      const hasSession = await establishSession();
       if (cancelled) return;
 
-      if (!session) {
+      if (!hasSession) {
         router.replace('/forgot-password?error=link_expired');
         return;
       }
