@@ -76,6 +76,7 @@ export const translations = {
     'Are you sure you want to permanently delete this PR movement? Movements linked to athlete records cannot be deleted.':
       'Are you sure you want to permanently delete this PR movement? Movements linked to athlete records cannot be deleted.',
     'Slug': 'Slug',
+    'Name': 'Name',
     'e.g. back_squat': 'e.g. back_squat',
     'e.g. Back Squat': 'e.g. Back Squat',
     'Sort Order': 'Sort Order',
@@ -327,7 +328,7 @@ export const translations = {
     'No athletes have booked yet.': 'No athletes have booked yet.',
     'Class Details': 'Class Details',
     'Type': 'Type',
-    'Time': 'Time',
+    'Class Time': 'Time',
     'Coach': 'Coach',
     'Capacity': 'Capacity',
     'No bookings yet.': 'No bookings yet.',
@@ -544,6 +545,7 @@ export const translations = {
     'Are you sure you want to permanently delete this PR movement? Movements linked to athlete records cannot be deleted.':
       '¿Eliminar este movimiento PR? No se puede eliminar si está vinculado a records de atletas.',
     'Slug': 'Slug',
+    'Name': 'Nombre',
     'e.g. back_squat': 'ej. back_squat',
     'e.g. Back Squat': 'ej. Back Squat',
     'Sort Order': 'Orden',
@@ -795,7 +797,7 @@ export const translations = {
     'No athletes have booked yet.': 'Aún no hay atletas inscritos.',
     'Class Details': 'Detalles de la Clase',
     'Type': 'Tipo',
-    'Time': 'Hora',
+    'Class Time': 'Hora',
     'Coach': 'Coach',
     'Capacity': 'Capacidad',
     'No bookings yet.': 'Aún no hay reservas.',

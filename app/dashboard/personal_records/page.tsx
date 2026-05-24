@@ -171,10 +171,10 @@ export default function PersonalRecordsPage() {
   };
 
   const categoryLabel = (category: PrCategory) =>
-    PR_CATEGORIES.find((c) => c.value === category)?.label ?? category;
+    PR_CATEGORIES.find((c) => c.value === category)?.label ?? 'Weightlifting';
 
   const recordTypeLabel = (type: PrRecordType) =>
-    PR_RECORD_TYPES.find((r) => r.value === type)?.label ?? type;
+    PR_RECORD_TYPES.find((r) => r.value === type)?.label ?? 'Weight';
 
   const filteredMovements = movements.filter(
     (m) =>

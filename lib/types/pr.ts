@@ -1,3 +1,5 @@
+import type { TranslationKey } from '@/lib/translations';
+
 export type PrCategory =
   | 'weightlifting'
   | 'gymnastics'
@@ -17,7 +19,7 @@ export interface PrMovement {
   created_at: string;
 }
 
-export const PR_CATEGORIES: { value: PrCategory; label: string }[] = [
+export const PR_CATEGORIES: { value: PrCategory; label: TranslationKey }[] = [
   { value: 'weightlifting', label: 'Weightlifting' },
   { value: 'gymnastics', label: 'Gymnastics' },
   { value: 'conditioning', label: 'Conditioning' },
@@ -25,7 +27,7 @@ export const PR_CATEGORIES: { value: PrCategory; label: string }[] = [
   { value: 'bodyweight', label: 'Bodyweight' },
 ];
 
-export const PR_RECORD_TYPES: { value: PrRecordType; label: string }[] = [
+export const PR_RECORD_TYPES: { value: PrRecordType; label: TranslationKey }[] = [
   { value: 'weight', label: 'Weight' },
   { value: 'reps', label: 'Reps' },
   { value: 'time', label: 'Time' },

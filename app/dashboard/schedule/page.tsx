@@ -249,7 +249,7 @@ export default function SchedulePage() {
                         <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.class_type}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Time')}</p>
+                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Class Time')}</p>
                         <p className="font-bold text-pits-text text-sm italic">
                           {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
                         </p>
