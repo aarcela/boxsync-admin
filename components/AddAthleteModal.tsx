@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Award } from 'lucide-react';
 import { useToast } from './Toast';
 import ConfirmDialog from './ConfirmDialog';
+import { useLanguage } from './LanguageContext';
 
 const PLAN_LABELS: Record<string, string> = {
   unlimited: 'Unlimited',
@@ -21,11 +22,13 @@ interface AddAthleteModalProps {
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const { toast } = useToast();
+  const { lang } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
+    phone: '',
     password: '',
     role: 'member',
     plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids',
@@ -60,6 +63,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     try {
       const submitData = {
         ...formData,
+        language: lang,
         plan: formData.role === 'coach' || formData.role === 'manager'
           ? 'unlimited'
           : formData.plan,
@@ -77,12 +81,17 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         throw new Error(data.error || 'Failed to create user');
       }
 
+      if (data.whatsappWarning) {
+        toast(data.whatsappWarning, 'warning');
+      }
+
       toast(`User ${formData.full_name} created successfully!`, 'success');
       onSuccess();
       onClose();
       setFormData({
         full_name: '',
         email: '',
+        phone: '',
         password: '',
         role: 'member',
         plan: 'unlimited',
@@ -154,6 +163,22 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
                 placeholder="athlete@example.com"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={e => setFormData({...formData, phone: e.target.value})}
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                placeholder="+58 412 123 4567"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Include country code. A welcome WhatsApp is sent when provided.
+              </p>
             </div>
 
             <div>

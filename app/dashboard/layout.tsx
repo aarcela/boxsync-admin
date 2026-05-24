@@ -22,7 +22,8 @@ import {
   Wallet,
   ChevronDown,
   Scale,
-  MessagesSquare
+  MessagesSquare,
+  Trophy
 } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
 import Image from 'next/image';
@@ -114,6 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: t('News'), href: '/dashboard/news', icon: Megaphone },
         { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
         { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
+        { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy },
       ]
     },
     { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },

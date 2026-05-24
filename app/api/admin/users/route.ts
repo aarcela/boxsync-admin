@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { requireStaffApi } from '@/lib/require-staff-api';
+import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
+import type { Language } from '@/lib/translations';
 
 // Initialize the Admin Client (Bypasses RLS)
 const supabaseAdmin = createClient(
@@ -20,7 +22,22 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { email, password, full_name, role, plan, inscription_plan, inscription_cost, inscription_paid, discount } = body;
+    const {
+      email,
+      password,
+      full_name,
+      phone,
+      language,
+      role,
+      plan,
+      inscription_plan,
+      inscription_cost,
+      inscription_paid,
+      discount,
+    } = body;
+
+    const messageLanguage: Language =
+      language === 'es' || language === 'en' ? language : 'en';
 
     // 1. Validation
     if (!email || !password || !full_name) {
@@ -52,6 +69,7 @@ export async function POST(request: Request) {
       inscription_cost: number;
       inscription_paid: boolean;
       discount?: number | null;
+      phone?: string;
     } = { 
       role: role || 'member',
       is_solvent: true,
@@ -62,6 +80,10 @@ export async function POST(request: Request) {
 
     if (discount !== undefined) {
       profileUpdate.discount = discount === '' ? null : parseFloat(discount);
+    }
+
+    if (phone?.trim()) {
+      profileUpdate.phone = phone.trim();
     }
 
     // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
@@ -80,7 +102,27 @@ export async function POST(request: Request) {
 
     if (profileError) throw profileError;
 
-    return NextResponse.json({ success: true, user: user.user });
+    let whatsappWarning: string | undefined;
+    if (phone?.trim()) {
+      try {
+        await sendWelcomeWhatsApp({
+          phone: phone.trim(),
+          fullName: full_name,
+          email,
+          language: messageLanguage,
+        });
+      } catch (whatsappError) {
+        console.error('Welcome WhatsApp failed:', whatsappError);
+        whatsappWarning =
+          'User created, but the welcome WhatsApp message could not be sent.';
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: user.user,
+      ...(whatsappWarning ? { whatsappWarning } : {}),
+    });
 
   } catch (error: unknown) {
     console.error('Create User Error:', error);
