@@ -1,0 +1,29 @@
+---
+description: EN/ES internationalization conventions
+globs: "**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# i18n (EN + ES)
+
+All user-visible strings go through the translation system.
+
+## Adding copy
+
+1. Add key to **both** `en` and `es` in `lib/translations.ts`
+2. Key = English phrase (existing convention): `'Add Athlete'`, `'Log Out'`
+3. Use in components: `const { t } = useLanguage();` then `t('Add Athlete')`
+4. Params: `t('Hello {name}', { name: 'Ana' })`
+
+## Rules
+
+- Never hardcode UI strings in JSX (except proper nouns like "CrossFit")
+- Server-side user messages: pass `Language` or use both locales in API responses
+- Auth pages use `AuthLanguageToggle` or dashboard header toggle
+- New dashboard nav items need sidebar translation keys
+
+## Languages
+
+Currently `en` | `es`. Default from localStorage, fallback browser `es`, else `en`.
+
+When adding a third locale later, extend `Language` type and all translation entries together.

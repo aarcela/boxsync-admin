@@ -1,0 +1,41 @@
+---
+description: Extreme token-saving rules for AI agents
+alwaysApply: true
+---
+
+# Token efficiency (strict)
+
+## Before acting
+
+- Read only files directly needed for the task — never bulk-read the repo
+- Use targeted search (grep/glob) instead of opening large files whole
+- Prefer reading 1 relevant file over 5 possibly-relevant files
+- Do not re-read files already in context unless they changed
+
+## During work
+
+- No exploratory subagents or broad codebase scans for simple tasks
+- No parallel reads "just in case" — batch only truly independent lookups
+- Skip reading README, lockfiles, or config unless the task requires them
+- Do not dump file contents in responses — cite line ranges only when needed
+- Avoid repeating context the user already provided
+
+## Output
+
+- Short, direct answers — no preamble ("Great question!", "I'll help you…")
+- No summarizing every file you opened
+- No mermaid/ascii diagrams unless complexity demands it
+- No optional follow-up lists — one clear next step if needed
+- Code citations: smallest useful snippet, not whole files
+
+## Tool discipline
+
+- One lint pass on edited files only, not the whole project
+- Do not run build unless verifying a fix or explicitly asked
+- Do not create todos for ≤3 step tasks
+- Do not write tests/docs unless requested
+
+## When stuck
+
+- Try one alternative approach before expanding scope
+- Ask one focused question instead of investigating 10 files

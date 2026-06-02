@@ -276,7 +276,7 @@ export default function FinancialInsightsPage() {
             {t('High-impact decisions to recover revenue and protect growth.')}
           </p>
         </div>
-        <div className="bg-pits-text text-white px-4 py-2 rounded-lg flex items-center shadow-lg">
+        <div className="bg-pits-panel text-white px-4 py-2 rounded-lg flex items-center shadow-lg">
           <Zap size={16} className="text-yellow-400 mr-2 animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-widest">
             {visibleRecs.filter(r => r.priority === 'urgent' || r.priority === 'high').length} {t('Critical Actions')}
@@ -321,7 +321,7 @@ export default function FinancialInsightsPage() {
             onClick={() => setActiveFilter(tab.key)}
             className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
               activeFilter === tab.key 
-                ? 'bg-pits-text text-white shadow-md' 
+                ? 'bg-pits-panel text-white shadow-md' 
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -404,7 +404,7 @@ export default function FinancialInsightsPage() {
                     className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 shadow-sm
                       ${rec.type === 'recovery' || rec.priority === 'urgent'
                         ? 'bg-red-600 text-white hover:bg-black' 
-                        : 'bg-pits-text text-white hover:bg-black'}
+                        : 'bg-pits-panel text-white hover:bg-black'}
                     `}
                   >
                     {rec.type !== 'inscription' && rec.id !== 'ins-bulk' && (

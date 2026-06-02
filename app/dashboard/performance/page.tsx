@@ -261,7 +261,7 @@ export default function PerformancePage() {
           </p>
         </div>
         <div className="flex bg-white/50 backdrop-blur-sm border border-gray-100 p-1 rounded-xl shadow-sm">
-           <div className="px-4 py-2 bg-pits-text text-white rounded-lg text-[10px] font-black uppercase tracking-tighter">
+           <div className="px-4 py-2 bg-pits-panel text-white rounded-lg text-[10px] font-black uppercase tracking-tighter">
              {t('Last 30 Days')}
            </div>
         </div>
@@ -271,7 +271,7 @@ export default function PerformancePage() {
       {insights.length > 0 && (
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
           {insights.map((insight, idx) => (
-            <div key={idx} className="flex items-center gap-3 bg-pits-text text-white px-4 py-3 rounded-2xl shrink-0 shadow-lg border-l-4 border-pits-red min-w-[280px]">
+            <div key={idx} className="flex items-center gap-3 bg-pits-panel text-white px-4 py-3 rounded-2xl shrink-0 shadow-lg border-l-4 border-pits-red min-w-[280px]">
               <div className="bg-pits-red/20 p-2 rounded-lg">
                 <Zap size={16} className="text-pits-red fill-current" />
               </div>
@@ -332,7 +332,7 @@ export default function PerformancePage() {
                            if (a.phone) window.open(`https://wa.me/${a.phone.replace(/\D/g, '')}`, '_blank');
                            else toast(t('No phone on file'), 'warning');
                          }}
-                         className="px-3 py-1.5 bg-pits-text text-white text-[9px] font-black uppercase rounded-lg hover:bg-pits-red transition-all"
+                         className="px-3 py-1.5 bg-pits-panel text-white text-[9px] font-black uppercase rounded-lg hover:bg-pits-red transition-all"
                        >
                          {t('Contact')}
                        </button>
@@ -433,7 +433,7 @@ export default function PerformancePage() {
                     </div>
                     <button 
                       onClick={() => router.push('/dashboard/news')}
-                      className="px-4 py-2 bg-white border border-gray-200 text-pits-text text-[9px] font-black uppercase rounded-lg hover:bg-pits-text hover:text-white transition-all shadow-sm"
+                      className="px-4 py-2 bg-white border border-gray-200 text-pits-text text-[9px] font-black uppercase rounded-lg hover:bg-pits-black hover:text-white transition-all shadow-sm"
                     >
                       {t('Promote')}
                     </button>
@@ -459,7 +459,7 @@ export default function PerformancePage() {
           
           <div className="p-6 flex-1 flex flex-col justify-between gap-6">
             <div className="grid grid-cols-2 gap-4">
-               <div className="p-5 bg-pits-text rounded-3xl text-white relative overflow-hidden group">
+               <div className="p-5 bg-pits-panel rounded-3xl text-white relative overflow-hidden group">
                   <DollarSign size={80} className="absolute -bottom-4 -right-4 opacity-10 group-hover:scale-110 transition-transform" />
                   <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-2 truncate">{t('Revenue per Athlete')}</span>
                   <span className="text-3xl font-black">$42.5</span>
@@ -492,7 +492,7 @@ export default function PerformancePage() {
                         <span className="text-sm font-black text-pits-text">{plan.contribution}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                         <div className="h-full bg-pits-text transition-all duration-1000 ease-out" style={{ width: `${plan.contribution}%` }}></div>
+                         <div className="h-full bg-pits-primary transition-all duration-1000 ease-out" style={{ width: `${plan.contribution}%` }}></div>
                       </div>
                     </div>
                   </div>
@@ -512,7 +512,7 @@ export default function PerformancePage() {
       </div>
 
       {/* 5. METHODOLOGY & FORMULA REFERENCE */}
-      <section className="bg-pits-text rounded-[2.5rem] p-8 md:p-12 text-white/90 relative overflow-hidden mt-12 shadow-2xl">
+      <section className="bg-pits-panel rounded-[2.5rem] p-8 md:p-12 text-white/90 relative overflow-hidden mt-12 shadow-2xl">
         <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12">
           <Zap size={200} />
         </div>

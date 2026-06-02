@@ -128,7 +128,7 @@ export default function FinancialsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0">
+    <div className="space-y-6 max-w-7xl mx-auto min-w-0 w-full px-1 sm:px-0">
       
       {/* 1. COMMAND HEADER */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200/60">
@@ -192,10 +192,10 @@ export default function FinancialsPage() {
         <StatCard label={t('Efficiency')} value={efficiencyRate} symbol="%" trend={efficiencyRate > 80 ? 'positive' : 'warning'} color="purple" t={t} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
         
         {/* MAIN SECTION (LEFT 8 COLS) */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="lg:col-span-9 space-y-6 min-w-0">
           
           {/* CURRENCY HUB / COMPARISON */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,19 +245,20 @@ export default function FinancialsPage() {
                 <div className="flex bg-slate-100 p-1 rounded-xl">
                    <button 
                      onClick={() => setActiveCurrency(CurrencyType.EUR)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.EUR ? 'bg-white shadow-sm text-pits-red' : 'text-slate-400'}`}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400'}`}
                    >EUR</button>
                    <button 
                      onClick={() => setActiveCurrency(CurrencyType.VES)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.VES ? 'bg-white shadow-sm text-pits-red' : 'text-slate-400'}`}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.VES ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400'}`}
                    >VES</button>
                 </div>
              </div>
           </div>
 
           {/* THE LEDGER TABLE */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
-             <table className="w-full text-left border-collapse">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px] min-w-0">
+             <div className="overflow-x-auto">
+             <table className="w-full min-w-[720px] text-left border-collapse">
                 <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Timeline')}</th>
@@ -332,6 +333,7 @@ export default function FinancialsPage() {
                   )}
                 </tbody>
              </table>
+             </div>
 
              {/* PAGINATION */}
              {totalPages > 1 && (
@@ -350,12 +352,12 @@ export default function FinancialsPage() {
         </div>
 
         {/* SIDEBAR (RIGHT 3 COLS) */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6 min-w-0 bg-pits-surface-elevated">
           
           {/* CASH RECONCILIATION MOD */}
-          <div className="bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-800 relative overflow-hidden group">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 shadow-xl border border-slate-800 relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Wallet size={80} className="text-white" />
+                <Wallet size={20} />
              </div>
              
              <div className="relative z-10">
@@ -412,7 +414,7 @@ export default function FinancialsPage() {
                       </div>
                       <button 
                         onClick={handleAudit}
-                        className="bg-pits-red text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all"
+                        className="bg-pits-primary text-slate-800 px-4 py-2 font-black rounded-xl text-[10px] uppercase shadow-lg active:scale-95 transition-all"
                       >
                          {t('Audit Now')}
                       </button>
@@ -422,7 +424,7 @@ export default function FinancialsPage() {
           </div>
 
           {/* INSIGHTS & ACTIONS */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-pits-edge shadow-sm space-y-6">
              <div>
                 <h3 className="text-xs font-black text-slate-900 uppercase mb-4 flex items-center justify-between">
                    <div className="flex items-center gap-2">
@@ -520,18 +522,18 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any)
   return (
     <div 
       onClick={onClick}
-      className={`relative p-6 rounded-3xl border cursor-pointer transition-all duration-500 group overflow-hidden ${active ? 'bg-slate-900 border-slate-800 shadow-2xl ring-2 ring-pits-red ring-offset-2' : 'bg-white border-slate-200 shadow-sm hover:border-slate-400'}`}
+      className={`relative p-6 rounded-3xl border-2 cursor-pointer transition-all duration-300 group overflow-hidden bg-pits-surface-elevated shadow-sm ${active ? 'border-pits-primary' : 'border-pits-edge hover:border-pits-edge'}`}
     >
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-slate-100/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
       
       <div className="flex justify-between items-start relative z-10">
         <div>
-          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${active ? 'text-slate-400' : 'text-slate-500'}`}>{title}</h3>
-          <p className={`text-2xl font-black tracking-tighter ${active ? 'text-white' : 'text-slate-900'}`}>
+          <h3 className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-500">{title}</h3>
+          <p className="text-2xl font-black tracking-tighter text-slate-900">
             {symbol}{stats.totalRevenue.toLocaleString()}
           </p>
         </div>
-        <button className={`p-2 rounded-xl border ${active ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+        <button type="button" className="p-2 rounded-xl border bg-slate-50 border-slate-100 text-slate-400">
           <BarChart3 size={16} />
         </button>
       </div>
@@ -539,11 +541,11 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any)
       <div className="mt-6 flex items-center justify-between relative z-10">
         <div className="space-y-0.5">
            <p className="text-[9px] font-black text-slate-500 uppercase">{t('Pending Flow')}</p>
-           <p className={`text-xs font-black ${active ? 'text-amber-400' : 'text-amber-600'}`}>
+           <p className="text-xs font-black text-amber-600">
              {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[10px]">({stats.pendingCount} units)</span>
            </p>
         </div>
-        <div className={`h-1.5 w-24 rounded-full overflow-hidden ${active ? 'bg-slate-800' : 'bg-slate-100'}`}>
+        <div className="h-1.5 w-24 rounded-full overflow-hidden bg-slate-100">
            <div className={`h-full rounded-full bg-gradient-to-r ${colors[color]} transition-all duration-1000`} style={{ width: '65%' }} />
         </div>
       </div>
@@ -564,17 +566,21 @@ function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, h
           </span>
         )}
       </div>
-      <div className="relative">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-black">{symbol}</span>
+      <div className="relative min-w-0">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-black pointer-events-none">{symbol}</span>
         <input 
           type="number" 
           placeholder="0.00"
           value={value}
           readOnly={isReadOnly}
           onChange={(e) => onChange && onChange(e.target.value)}
-          className={`w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-slate-700 focus:outline-none ${isReadOnly ? 'bg-slate-800/20 border-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-800/50 border-slate-700 text-white focus:border-pits-red'}`}
+          className={`w-full max-w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-slate-700 focus:outline-none ${isReadOnly ? 'bg-slate-800/20 border-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-800/50 border-slate-700 text-white focus:border-pits-red'}`}
         />
-        {!hideExpected && <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[8px] font-black text-slate-500 uppercase">{t('Expected')}: {systemValue.toLocaleString()}</div>}
+        {!hideExpected && (
+          <p className="mt-1.5 text-[8px] font-black text-slate-500 uppercase text-right truncate">
+            {t('Expected')}: {systemValue.toLocaleString()}
+          </p>
+        )}
       </div>
     </div>
   );

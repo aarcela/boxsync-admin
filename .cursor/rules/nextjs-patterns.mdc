@@ -1,0 +1,42 @@
+---
+description: Next.js App Router and React patterns for this repo
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js patterns
+
+## Server vs client
+
+- `'use client'` only when hooks, browser APIs, or event handlers are needed
+- `'use server'` actions in colocated `actions.ts` — thin wrappers over services
+- After mutations: `revalidatePath('/dashboard/...')`
+
+## Data fetching
+
+- Page hooks: `app/dashboard/<feature>/hooks/use*.ts`
+- Shared logic stays in `lib/services/`, not duplicated in pages
+- Supabase `.select()` — specify columns; avoid `*` on large tables
+
+## API routes (`app/api/admin/`)
+
+```typescript
+export async function POST(request: Request) {
+  const staffAuth = await requireStaffApi();
+  if ('error' in staffAuth) return staffAuth.error;
+  const { supabase } = staffAuth;
+  // ...
+}
+```
+
+## UI conventions
+
+- Tailwind utility classes; `font-bold`, uppercase nav labels, rounded-lg inputs
+- Modals: fixed overlay + centered card pattern (see `components/*Modal.tsx`)
+- Loading: `Loader2` from lucide with `animate-spin`
+- Feedback: `useToast()` from Toast provider
+
+## Types
+
+- Domain types in `lib/types/` — import from there, don't inline duplicates
+- Supabase row casts: `data as Profile` after validated queries

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
 
 // Initialize the Admin Client (Bypasses RLS)
@@ -102,6 +103,23 @@ export async function PUT(
       return NextResponse.json(
         { error: 'Email and full name are required' },
         { status: 400 }
+      );
+    }
+
+    const { data: existingProfile, error: existingError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', id)
+      .single();
+
+    if (existingError || !existingProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (!canAssignProfileRole(staffAuth.profile.role, role, existingProfile.role)) {
+      return NextResponse.json(
+        { error: ADMIN_ROLE_ASSIGN_FORBIDDEN },
+        { status: 403 }
       );
     }
 

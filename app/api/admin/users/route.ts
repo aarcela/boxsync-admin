@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
@@ -44,6 +45,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    if (!canAssignProfileRole(staffAuth.profile.role, role)) {
+      return NextResponse.json(
+        { error: ADMIN_ROLE_ASSIGN_FORBIDDEN },
+        { status: 403 }
       );
     }
 

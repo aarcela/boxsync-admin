@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-pits-surface overflow-hidden">
       
       {/* MOBILE BACKDROP */}
       {isSidebarOpen && (
@@ -135,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       
       {/* SIDEBAR */}
       <aside 
-        className={`bg-gray-900 text-white transition-all duration-300 ease-in-out flex flex-col
+        className={`bg-pits-surface-elevated text-pits-grey transition-all duration-300 ease-in-out flex flex-col border-r border-pits-edge
           fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
           ${isSidebarOpen 
             ? 'w-64 translate-x-0' 
@@ -143,12 +143,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         `}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-pits-edge">
           <div className={`flex-1 flex items-center ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
             {isSidebarOpen ? (
-              <Image src="/assets/logo.png" alt="Logo" width={100} height={100} />
+              <Image src="/assets/logo.webp" alt="Logo" width={100} height={100} />
             ) : (
-              <span className="font-black text-2xl text-[#FF2800]">P</span>
+              <span className="font-black text-2xl text-pits-primary">P</span>
             )}
           </div>
           
@@ -156,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {isSidebarOpen && (
             <button 
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
+              className="lg:hidden p-2 text-pits-gunmetal hover:text-pits-primary transition-colors"
             >
               <X size={20} />
             </button>
@@ -177,13 +177,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {hasSubItems ? (
                   <button
                     onClick={() => toggleMenu(item.name)}
-                    className={`w-full flex items-center p-3 rounded-lg transition-colors group
-                      ${isActive && !isMenuOpen
-                        ? 'bg-gray-800 text-white' 
-                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
+                    className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
+                      ${isActive
+                        ? 'border-pits-primary text-pits-ink'
+                        : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
                     `}
                   >
-                    <item.icon size={20} className={isActive ? 'text-pits-red' : 'text-gray-400 group-hover:text-white'} />
+                    <item.icon size={20} className={isActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
                     {isSidebarOpen && (
                       <>
                         <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
@@ -199,13 +199,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ) : (
                   <Link
                     href={(item as any).href}
-                    className={`flex items-center p-3 rounded-lg transition-colors group
+                    className={`flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                       ${isActive 
-                        ? 'bg-pits-red text-white' 
-                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'}
+                        ? 'border-pits-primary text-pits-ink' 
+                        : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
                     `}
                   >
-                    <item.icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'} />
+                    <item.icon size={20} className={isActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
                     {isSidebarOpen && (
                       <span className="ml-3 font-bold text-sm uppercase tracking-wide">
                         {item.name}
@@ -215,20 +215,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
 
                 {hasSubItems && isMenuOpen && isSidebarOpen && (
-                  <div className="ml-4 space-y-1 border-l border-gray-800 pl-2">
+                  <div className="ml-4 space-y-1 border-l border-pits-edge pl-2">
                     {(item as any).subItems.map((sub: any) => {
                       const isSubActive = pathname === sub.href;
                       return (
                         <Link
                           key={sub.name}
                           href={sub.href}
-                          className={`flex items-center p-2 rounded-lg transition-colors group
+                          className={`flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
                             ${isSubActive 
-                              ? 'bg-pits-red text-white' 
-                              : 'text-gray-500 hover:bg-gray-800 hover:text-white'}
+                              ? 'border-pits-primary text-pits-ink' 
+                              : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
                           `}
                         >
-                          <sub.icon size={16} className={isSubActive ? 'text-white' : 'text-gray-500 group-hover:text-white'} />
+                          <sub.icon size={16} className={isSubActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
                           <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
                             {sub.name}
                           </span>
@@ -243,10 +243,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Footer / Logout */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-pits-edge">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full p-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-[#FF2800] transition-colors"
+            className="flex items-center w-full p-2 rounded-lg text-pits-ink-muted hover:border hover:border-pits-edge hover:text-pits-primary transition-colors"
           >
             <LogOut size={20} />
             {isSidebarOpen && (
@@ -261,21 +261,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 shadow-sm flex-shrink-0">
+        <header className="h-16 bg-pits-surface-elevated border-b border-pits-edge flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+              className="p-2 rounded-md hover:bg-pits-surface-muted text-pits-grey hover:text-pits-primary transition-colors"
             >
               {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             
             {/* Language Toggle */}
-            <div className="flex items-center bg-gray-50 border border-gray-100 rounded-full p-1 ml-2">
+            <div className="flex items-center bg-pits-surface border border-pits-edge rounded-full p-1 ml-2">
               <button
                 onClick={() => setLanguage('en')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'en' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  lang === 'en' ? 'bg-pits-primary text-pits-black shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
                 }`}
               >
                 EN
@@ -283,7 +283,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setLanguage('es')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'es' ? 'bg-pits-red text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                  lang === 'es' ? 'bg-pits-primary text-pits-black shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
                 }`}
               >
                 ES
@@ -292,15 +292,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-pits-red rounded-full flex items-center justify-center text-white font-bold text-xs">
+            <div className="w-8 h-8 bg-pits-primary rounded-full flex items-center justify-center text-pits-black font-bold text-xs">
               AD
             </div>
-            <span className="ml-3 font-bold text-sm text-gray-700">{t('Admin')}</span>
+            <span className="ml-3 font-bold text-sm text-pits-grey">{t('Admin')}</span>
           </div>
         </header>
 
         {/* Scrollable Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="dashboard-main flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6 bg-pits-surface text-pits-ink">
           {children}
         </main>
       </div>

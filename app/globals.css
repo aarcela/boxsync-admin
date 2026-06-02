@@ -1,25 +1,62 @@
 @import "tailwindcss";
+@config "../tailwind.config.ts";
 
 @theme {
-  --color-pits-bg: #F3F4F6;
-  --color-pits-card: #FFFFFF;
-  --color-pits-text: #111827;
-  --color-pits-dim: #6B7280;
-  --color-pits-red: #FF2800;
-  --color-pits-red-dark: #CC2000;
-  --color-pits-success: #10B981;
-  --color-pits-error: #EF4444;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-jakarta: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+  --color-pits-black: #000000;
+  --color-pits-secondary: #A8C400;
+  --color-pits-card: #1A1A1C;
+  --color-pits-grey: #C9C9C9;
+  --color-pits-panel: #1A1A1A;
+  --color-pits-dark-grey: #151515;
+  --color-pits-gunmetal: #6E6E6E;
+  --color-pits-primary: #D7FF00;
+  --color-pits-red-dark: #B00500;
+  --color-pits-accent: #9BA1A6;
+  --color-pits-surface: #0C0C0C;
+  --color-pits-surface-elevated: #1A1A1A;
+  --color-pits-surface-muted: #262626;
+  --color-pits-edge: #505050;
+  --color-pits-ink: #FFFFFF;
+  --color-pits-ink-muted: #A8ACA4;
+  --color-pits-primary-soft: #2A3318;
+  /* Legacy tokens used across the app */
+  --color-pits-bg: #151515;
+  --color-pits-text: #FFFFFF;
+  --color-pits-dim: #6E6E6E;
+  --color-pits-red: #D7FF00;
+  --color-pits-success: #A8C400;
+  --color-pits-error: #B00500;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: white;
+  color: var(--color-pits-ink);
+  background-color: var(--color-pits-surface);
+  overflow-x: hidden;
 }
 
 @keyframes slide-in-right {
@@ -35,4 +72,72 @@ body {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
+}
+
+/*
+ * Dashboard dark theme: rebind Tailwind color tokens so utilities resolve
+ * to dark surfaces + readable text (not fighting @layer specificity).
+ */
+.dashboard-main {
+  --tw-ring-offset-color: var(--color-pits-surface);
+  --color-pits-dim: #9ca39a;
+  --color-black: #ffffff;
+  --color-gray-50: #1a1a1a;
+  --color-gray-100: #262626;
+  --color-gray-200: #505050;
+  --color-gray-300: #606060;
+  --color-gray-400: #787874;
+  --color-gray-500: #a8aca4;
+  --color-gray-600: #c6c6c2;
+  --color-gray-700: #e2e2e0;
+  --color-gray-800: #ffffff;
+  --color-gray-900: #ffffff;
+  --color-slate-50: #1a1a1a;
+  --color-slate-100: #262626;
+  --color-slate-200: #505050;
+  --color-slate-300: #606060;
+  --color-slate-400: #787874;
+  --color-slate-500: #a8aca4;
+  --color-slate-600: #c6c6c2;
+  --color-slate-700: #e2e2e0;
+  --color-slate-800: #ffffff;
+  --color-slate-900: #ffffff;
+  --color-red-50: #2a1414;
+  --color-green-50: #1a2214;
+  --color-emerald-50: #142218;
+  --color-emerald-100: #1a2e20;
+  --color-orange-50: #2a1c14;
+  --color-blue-50: #141a2a;
+  --color-blue-100: #1a2236;
+  --color-amber-100: #2a2414;
+}
+
+.dashboard-main :where(.bg-white, .focus\:bg-white:focus, .hover\:bg-white:hover) {
+  background-color: var(--color-pits-surface-elevated) !important;
+}
+
+.dashboard-main :where(.border-white) {
+  border-color: var(--color-pits-edge) !important;
+}
+
+.dashboard-main :where(.bg-white\/5, .bg-white\/10) {
+  background-color: color-mix(in srgb, var(--color-pits-edge) 35%, transparent) !important;
+}
+
+.dashboard-main :where(.bg-white\/20, .hover\:bg-white\/20:hover) {
+  background-color: color-mix(in srgb, var(--color-pits-edge) 55%, transparent) !important;
+}
+
+.dashboard-main :where(.bg-white\/50) {
+  background-color: var(--color-pits-surface-muted) !important;
+}
+
+.dashboard-main .shadow-sm {
+  box-shadow:
+    0 0 0 1px var(--color-pits-edge),
+    0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+.dashboard-main :where(.shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl) {
+  --tw-shadow-color: rgb(0 0 0 / 0.55);
 }

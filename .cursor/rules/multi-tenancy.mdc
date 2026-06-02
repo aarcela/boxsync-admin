@@ -1,0 +1,44 @@
+---
+description: Multi-tenant box isolation rules for BoxSync
+globs: "lib/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Multi-tenancy implementation
+
+BoxSync serves many CrossFit boxes from one deployment. **Every tenant-scoped feature must be box-aware.**
+
+## Data model
+
+- `boxes` table: name, slug, timezone, currency defaults, branding, locale
+- Tenant tables get `box_id UUID NOT NULL REFERENCES boxes(id)`
+- Staff profile links to home box; super-admin role may span boxes (future)
+
+## Resolving active box
+
+Priority (implement consistently):
+1. Subdomain: `{slug}.boxsync.app`
+2. Staff session: `profiles.box_id`
+3. Explicit switcher in dashboard header (staff with multi-box access)
+
+Pass `boxId` down: middleware context → layout → services.
+
+## Service layer
+
+```typescript
+// lib/services/athleteService.ts
+async getProfiles(boxId: string): Promise<Profile[]> {
+  return supabase.from('profiles').select('...').eq('box_id', boxId);
+}
+```
+
+- First param `boxId` on all tenant service methods
+- Never cache cross-tenant data in module-level variables
+- Financial stats respect per-box currency config (EUR, VES, USD, …)
+
+## Migrations from single-box
+
+When adding `box_id` to existing tables:
+1. Backfill existing rows to default box
+2. Add NOT NULL + index `(box_id, ...)`
+3. Update RLS before deploying app code that filters

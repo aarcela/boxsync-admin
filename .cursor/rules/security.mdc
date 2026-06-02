@@ -1,0 +1,43 @@
+---
+description: Auth, secrets, and multi-tenant data isolation
+alwaysApply: true
+---
+
+# Security
+
+## Auth layers
+
+1. `middleware.ts` — session + staff role for `/dashboard/*`, `/api/admin/*`
+2. `requireStaffApi()` — every admin API route
+3. Client guard in `app/dashboard/layout.tsx` — backup only
+
+Staff roles: `admin`, `manager` (`lib/auth.ts`). Sign out non-staff immediately.
+
+## Secrets
+
+- **Never** commit `.env`, keys, or service-role tokens
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only via `lib/supabase-admin.ts`
+- Cron routes: validate `CRON_SECRET` header, not user session
+- Auth errors: use `resolveLoginError` / `resolvePasswordResetError` — no internal leak
+
+## Supabase clients
+
+| Client | Where | Use |
+|--------|-------|-----|
+| `lib/supabase.ts` | Browser | RLS-protected reads/writes |
+| Cookie server client | middleware, requireStaffApi | Session-aware |
+| `supabaseAdmin` | Server API only | Auth admin, RLS bypass — minimal use |
+
+## Multi-tenant isolation (mandatory for new code)
+
+```typescript
+// ❌ BAD — cross-tenant data leak
+.from('profiles').select('*')
+
+// ✅ GOOD
+.from('profiles').select('*').eq('box_id', boxId)
+```
+
+- Never trust client-supplied `box_id` alone — verify staff belongs to that box
+- RLS must mirror app-level filters
+- Admin bypass (`supabaseAdmin`) still filters by `box_id` in application code

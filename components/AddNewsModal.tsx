@@ -109,7 +109,7 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
               type="submit"
               disabled={loading}
               className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-text hover:bg-black shadow-gray-300'}
+                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-panel hover:bg-black shadow-gray-300'}
               `}
             >
               {loading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Send size={18} className="mr-2" />}

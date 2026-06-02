@@ -3,6 +3,8 @@ import { X, Loader2, Save, Award } from 'lucide-react';
 import { useToast } from './Toast';
 import ConfirmDialog from './ConfirmDialog';
 import { useLanguage } from './LanguageContext';
+import { supabase } from '@/lib/supabase';
+import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
 
 const PLAN_LABELS: Record<string, string> = {
   unlimited: 'Unlimited',
@@ -22,8 +24,9 @@ interface AddAthleteModalProps {
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const { toast } = useToast();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [callerRole, setCallerRole] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -40,10 +43,34 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
   });
 
   useEffect(() => {
-    if (formData.role === 'coach' || formData.role === 'manager') {
+    if (isStaffProfileRole(formData.role)) {
       setFormData(prev => ({ ...prev, plan: 'unlimited' }));
     }
   }, [formData.role]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowConfirm(false);
+      return;
+    }
+    const loadCallerRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setCallerRole(profile?.role ?? null);
+    };
+    loadCallerRole();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (callerRole !== 'admin' && formData.role === 'admin') {
+      setFormData(prev => ({ ...prev, role: 'member' }));
+    }
+  }, [callerRole, formData.role]);
 
   useEffect(() => {
     if (!isOpen) setShowConfirm(false);
@@ -57,6 +84,11 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
   };
 
   const createAthlete = async () => {
+    if (!canAssignProfileRole(callerRole, formData.role)) {
+      toast(t('Only admins can assign the admin role.'), 'error');
+      return;
+    }
+
     setShowConfirm(false);
     setLoading(true);
 
@@ -64,7 +96,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       const submitData = {
         ...formData,
         language: lang,
-        plan: formData.role === 'coach' || formData.role === 'manager'
+        plan: isStaffProfileRole(formData.role)
           ? 'unlimited'
           : formData.plan,
       };
@@ -109,8 +141,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     }
   };
 
-  const planLabel =
-    formData.role === 'coach' || formData.role === 'manager'
+  const planLabel = isStaffProfileRole(formData.role)
       ? 'Unlimited'
       : PLAN_LABELS[formData.plan] ?? formData.plan;
 
@@ -210,6 +241,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 <option value="member">Member</option>
                 <option value="coach">Coach</option>
                 <option value="manager">Manager</option>
+                {callerRole === 'admin' && <option value="admin">Admin</option>}
               </select>
             </div>
 
@@ -296,7 +328,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
             )}
 
             {/* Show plan info for coaches/managers */}
-            {(formData.role === 'coach' || formData.role === 'manager') && (
+            {isStaffProfileRole(formData.role) && (
               <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
                   Plan: Unlimited (Auto-assigned for {formData.role}s)

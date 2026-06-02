@@ -1,0 +1,34 @@
+---
+description: BoxSync Admin project context and conventions
+alwaysApply: true
+---
+
+# BoxSync Admin
+
+Multi-tenant staff dashboard for CrossFit boxes worldwide. Stack: Next.js 16 App Router, React 19, TypeScript, Supabase, Tailwind 4.
+
+## Structure
+
+- `lib/services/` — Supabase queries (athleteService, classService, financialService, …)
+- `lib/types/gym.ts` — domain types (Profile, Booking, ExpenseRecord, …)
+- `app/dashboard/<feature>/` — pages, optional `hooks/`, `actions.ts`
+- `app/api/admin/` — staff API; use `requireStaffApi()` first
+
+## Code style
+
+- Functional components, custom hooks for page data
+- Services export plain objects with async methods — no classes
+- Throw on Supabase errors in services; map to safe user messages in UI/auth helpers
+- Use `@/` path alias for imports
+- Brand color: `pits-red` (Tailwind). Sidebar: dark gray-900, main: gray-50
+
+## Scope
+
+- Minimal diffs only — no drive-by refactors or unrelated files
+- Reuse existing modals, Toast, ConfirmDialog, Tooltip
+- No new dependencies without explicit request
+- No markdown/docs files unless requested
+
+## Multi-tenant (all new work)
+
+Add `box_id` to tenant data. Every query/mutation must scope by active box. See `AGENTS.md` for full tenancy plan.

@@ -61,16 +61,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-pits-surface flex items-center justify-center p-4 relative">
       <AuthLanguageToggle />
 
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+      <div className="max-w-md w-full bg-pits-surface-elevated rounded-2xl shadow-xl p-8 border border-pits-edge">
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3">
+          <div className="w-16 h-16 bg-pits-black rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3 ring-1 ring-pits-edge">
             <Image
-              src="/assets/logo.png"
+              src="/assets/logo.webp"
               alt="Pits CrossFit"
               width={48}
               height={48}
@@ -78,10 +78,10 @@ export default function LoginPage() {
               priority
             />
           </div>
-          <h1 className="text-2xl font-black text-gray-900 uppercase italic tracking-tighter">
+          <h1 className="text-2xl font-black text-pits-ink uppercase italic tracking-tighter">
             Pits CrossFit
           </h1>
-          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">
+          <p className="text-pits-ink-muted text-xs font-bold uppercase tracking-widest mt-1">
             {t('Command Center')}
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
               {t('Staff Email')}
             </label>
             <input
@@ -100,13 +100,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all outline-none disabled:opacity-60"
+              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
               placeholder="coach@pitscrossfit.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
               {t('Password')}
             </label>
             <input
@@ -118,7 +118,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all outline-none disabled:opacity-60"
+              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
               placeholder="••••••••"
             />
           </div>
@@ -126,7 +126,7 @@ export default function LoginPage() {
           <div className="text-right">
             <Link
               href="/forgot-password"
-              className="text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-pits-red transition-colors"
+              className="text-xs font-bold text-pits-ink-muted uppercase tracking-wider hover:text-pits-primary transition-colors"
             >
               {t('Forgot password?')}
             </Link>
@@ -141,8 +141,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-bold uppercase tracking-widest text-sm shadow-lg transition-all
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
+            className={`w-full py-4 rounded-lg flex items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg transition-all
+              ${loading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-black hover:brightness-95 shadow-pits-primary/20'}
             `}
           >
             {loading && <Loader2 size={18} className="animate-spin mr-2" />}
@@ -151,7 +151,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-pits-ink-muted/70">
             {t('Authorized personnel only.')}
           </p>
         </div>

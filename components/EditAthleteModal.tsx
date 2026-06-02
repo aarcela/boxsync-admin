@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save } from 'lucide-react';
 import { useToast } from './Toast';
 import { AthletePlan, InscriptionPlan } from '../lib/types/gym';
+import { supabase } from '@/lib/supabase';
+import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
+import { useLanguage } from './LanguageContext';
 
 interface EditAthleteModalProps {
   isOpen: boolean;
@@ -12,8 +15,11 @@ interface EditAthleteModalProps {
 
 export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }: EditAthleteModalProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [callerRole, setCallerRole] = useState<string | null>(null);
+  const [loadedUserRole, setLoadedUserRole] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -32,17 +38,38 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     if (isOpen && userId) {
       fetchUserData();
     } else if (!isOpen) {
-      // Reset form when modal closes
       setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
+      setLoadedUserRole(null);
+      setCallerRole(null);
     }
   }, [isOpen, userId]);
 
-  // Automatically set plan to 'unlimited' when role is 'coach' or 'manager'
   useEffect(() => {
-    if (formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin') {
+    if (!isOpen) return;
+    const loadCallerRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setCallerRole(profile?.role ?? null);
+    };
+    loadCallerRole();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isStaffProfileRole(formData.role)) {
       setFormData(prev => ({ ...prev, plan: 'unlimited' }));
     }
   }, [formData.role]);
+
+  useEffect(() => {
+    if (callerRole !== 'admin' && formData.role === 'admin' && loadedUserRole !== 'admin') {
+      setFormData(prev => ({ ...prev, role: 'member' }));
+    }
+  }, [callerRole, formData.role, loadedUserRole]);
 
   const fetchUserData = async () => {
     if (!userId) return;
@@ -56,12 +83,14 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         throw new Error(data.error || 'Failed to fetch user data');
       }
 
+      const userRole = data.role || 'member';
+      setLoadedUserRole(userRole);
       setFormData({
         full_name: data.full_name || '',
         email: data.email || '',
         phone: data.phone || '',
         password: '', // Don't pre-fill password
-        role: data.role || 'member',
+        role: userRole,
         plan: data.plan || 'unlimited',
         inscription_plan: data.inscription_plan || 'standard',
         inscription_paid: data.inscription_paid ?? false,
@@ -81,14 +110,19 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canAssignProfileRole(callerRole, formData.role, loadedUserRole)) {
+      toast(t('Only admins can assign the admin role.'), 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Ensure plan is always set: 'unlimited' for coaches/managers/admins, or selected plan for members
       const submitData = {
         ...formData,
-        plan: formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin'
-          ? 'unlimited' 
+        plan: isStaffProfileRole(formData.role)
+          ? 'unlimited'
           : formData.plan
       };
 
@@ -215,16 +249,25 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Role
               </label>
-              <select
-                value={formData.role}
-                onChange={e => setFormData({...formData, role: e.target.value as 'member' | 'coach' | 'manager' | 'admin'})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
-              >
-                <option value="member">Member</option>
-                <option value="coach">Coach</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
-              </select>
+              {callerRole !== 'admin' && loadedUserRole === 'admin' ? (
+                <input
+                  type="text"
+                  disabled
+                  value="Admin"
+                  className="w-full p-3 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 cursor-not-allowed"
+                />
+              ) : (
+                <select
+                  value={formData.role}
+                  onChange={e => setFormData({...formData, role: e.target.value as 'member' | 'coach' | 'manager' | 'admin'})}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                >
+                  <option value="member">Member</option>
+                  <option value="coach">Coach</option>
+                  <option value="manager">Manager</option>
+                  {callerRole === 'admin' && <option value="admin">Admin</option>}
+                </select>
+              )}
             </div>
 
             {/* Plan selector - only show for members (athletes) */}
@@ -299,7 +342,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               </div>
 
             {/* Show plan info for coaches/managers/admins */}
-            {(formData.role === 'coach' || formData.role === 'manager' || formData.role === 'admin') && (
+            {isStaffProfileRole(formData.role) && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
                   Plan: Unlimited (Auto-assigned for {formData.role}s)

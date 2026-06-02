@@ -230,7 +230,7 @@ export default function DashboardPage() {
         {/* Signal 5: Active Roster */}
         <button 
            onClick={() => openModal('Active Roster', 'athletes', stats.totalMembers.filter(m => m.is_solvent))}
-           className="bg-pits-text p-6 rounded-3xl shadow-2xl shadow-pits-red/20 flex flex-col justify-between border-b-4 border-b-pits-red group transition-all hover:shadow-pits-red/40"
+           className="bg-pits-panel p-6 rounded-3xl shadow-2xl shadow-pits-red/20 flex flex-col justify-between border-b-4 border-b-pits-red group transition-all hover:shadow-pits-red/40"
         >
           <div className="flex justify-between items-start mb-6">
             <p className="text-white/60 font-black text-[10px] uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded">Roster</p>
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                       </button>
                       <button 
                         onClick={() => handleApprove(payment.id, payment.user_id)}
-                        className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-pits-text text-white hover:bg-black font-black text-[10px] tracking-[0.05em] transition-all shadow-lg hover:shadow-black/10 active:scale-95"
+                        className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-pits-panel text-white hover:bg-black font-black text-[10px] tracking-[0.05em] transition-all shadow-lg hover:shadow-black/10 active:scale-95"
                       >
                         <CheckCircle size={16} className="mr-2 text-green-400" />
                         VERIFY & UNLOCK

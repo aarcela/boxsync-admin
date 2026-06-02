@@ -311,7 +311,7 @@ export default function FeedbackPage() {
       </div>
 
       {/* COMPACT SEARCH & FILTERS */}
-      <div className="bg-pits-text px-4 py-3 rounded-xl shadow-lg flex flex-col md:flex-row gap-2 items-center shrink-0">
+      <div className="bg-pits-panel px-4 py-3 rounded-xl shadow-lg flex flex-col md:flex-row gap-2 items-center shrink-0">
            <div className="relative flex-1 w-full">
              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={16} />
              <input 
@@ -366,7 +366,7 @@ export default function FeedbackPage() {
             <h3 className="font-black text-pits-text text-[10px] uppercase tracking-widest italic">
               {t('All Feedback')}
             </h3>
-            <span className="bg-pits-text text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
+            <span className="bg-pits-panel text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
           </div>
           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-wider text-pits-dim">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> {t('Critical')}</span>

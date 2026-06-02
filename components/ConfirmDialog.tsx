@@ -24,7 +24,7 @@ const VARIANT_STYLES = {
   },
   default: {
     icon: 'bg-gray-100 text-gray-600',
-    button: 'bg-pits-text hover:bg-black text-white shadow-gray-200',
+    button: 'bg-pits-panel hover:bg-black text-white shadow-gray-200',
   },
 };
 

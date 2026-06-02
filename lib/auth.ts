@@ -16,6 +16,34 @@ export function isStaffRole(role: string | null | undefined): role is StaffRole 
   return role === 'admin' || role === 'manager';
 }
 
+export const PROFILE_ROLES = ['member', 'coach', 'manager', 'admin'] as const;
+export type ProfileRole = (typeof PROFILE_ROLES)[number];
+
+export const ADMIN_ROLE_ASSIGN_FORBIDDEN =
+  'Only admins can assign the admin role.' as const;
+
+/**
+ * Whether caller may set a profile to targetRole (server + UI guard).
+ * When existingRole is provided (updates), non-admins may keep an existing admin unchanged.
+ */
+export function canAssignProfileRole(
+  callerRole: string | null | undefined,
+  targetRole: string | null | undefined,
+  existingRole?: string | null | undefined
+): boolean {
+  const role = targetRole || 'member';
+  if (!PROFILE_ROLES.includes(role as ProfileRole)) return false;
+  if (role === 'admin') {
+    if (callerRole === 'admin') return true;
+    return existingRole === 'admin';
+  }
+  return true;
+}
+
+export function isStaffProfileRole(role: string): boolean {
+  return role === 'coach' || role === 'manager' || role === 'admin';
+}
+
 /** Maps errors to safe, user-facing login messages (avoids leaking auth internals). */
 export function resolveLoginError(
   err: unknown,
