@@ -185,6 +185,11 @@ export const translations = {
     'Quantitative assessment only': 'Quantitative assessment only',
     'Filters': 'Filters',
     'This Month': 'This Month',
+    Today: 'Today',
+    'This Week': 'This Week',
+    'Custom Range': 'Custom Range',
+    From: 'From',
+    To: 'To',
 
     // Misc
     Admin: 'Admin',
@@ -655,6 +660,11 @@ export const translations = {
     'Quantitative assessment only': 'Evaluación cuantitativa solamente',
     'Filters': 'Filtros',
     'This Month': 'Este Mes',
+    Today: 'Hoy',
+    'This Week': 'Esta Semana',
+    'Custom Range': 'Rango Personalizado',
+    From: 'Desde',
+    To: 'Hasta',
 
     // Misc
     Admin: 'Administrador',

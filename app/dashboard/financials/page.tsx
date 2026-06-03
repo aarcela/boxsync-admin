@@ -6,7 +6,7 @@ import {
   ExternalLink, RefreshCw, Clock, 
   TrendingUp, AlertTriangle, CreditCard,
   Download, BarChart3, ChevronLeft, ChevronRight,
-  Zap, Info, Wallet
+  Zap, Info, Wallet, Calendar
 } from 'lucide-react';
 import { useToast } from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -16,17 +16,35 @@ import { CurrencyType } from '@/lib/types/gym';
 import { useLanguage } from '../../../components/LanguageContext';
 
 const ITEMS_PER_PAGE = 12;
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+type Period = 'today' | 'week' | 'month' | 'custom';
+
+function toDateInputValue(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseRangeDate(value: string, endOfDay: boolean) {
+  const [y, m, d] = value.split('-').map(Number);
+  return endOfDay
+    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+    : new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function formatExportRange(period: Period, customRange: { start: Date; end: Date }) {
+  if (period === 'custom') {
+    return `${toDateInputValue(customRange.start)}_${toDateInputValue(customRange.end)}`;
+  }
+  return period;
+}
 
 export default function FinancialsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  // Date & Filter State
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+  const [period, setPeriod] = useState<Period>('month');
   const [customRange, setCustomRange] = useState<{ start: Date; end: Date }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     end: new Date()
@@ -122,7 +140,7 @@ export default function FinancialsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Ledger-${MONTHS[selectedMonth]}-${selectedYear}.csv`;
+    link.download = `Ledger-${formatExportRange(period, customRange)}.csv`;
     link.click();
     toast('Financial ledger exported.', 'success');
   };
@@ -165,13 +183,6 @@ export default function FinancialsPage() {
           </div>
 
           <div className="flex items-center gap-2 ml-auto lg:ml-0">
-             <select 
-               value={selectedMonth} 
-               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-               className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-[10px] font-black text-slate-700 uppercase cursor-pointer hover:border-slate-400 transition-all shadow-sm focus:ring-2 focus:ring-pits-red outline-none"
-             >
-               {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-             </select>
              <button onClick={handleExportCSV} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all active:scale-95">
                 <Download size={18} />
              </button>
@@ -180,6 +191,74 @@ export default function FinancialsPage() {
              </button>
           </div>
         </div>
+      </div>
+
+      {/* DATE RANGE FILTER */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+        <div className="flex items-center gap-2 text-slate-500 shrink-0">
+          <Calendar size={16} className="text-pits-red" />
+          <span className="text-[10px] font-black uppercase tracking-widest">{t('Filters')}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl">
+          {([
+            { id: 'today' as const, label: t('Today') },
+            { id: 'week' as const, label: t('This Week') },
+            { id: 'month' as const, label: t('This Month') },
+            { id: 'custom' as const, label: t('Custom Range') },
+          ]).map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setPeriod(id);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase transition-all ${
+                period === id ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {period === 'custom' && (
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <label className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase">{t('From')}</span>
+              <input
+                type="date"
+                value={toDateInputValue(customRange.start)}
+                max={toDateInputValue(customRange.end)}
+                onChange={(e) => {
+                  const start = parseRangeDate(e.target.value, false);
+                  setCustomRange(prev => ({
+                    start,
+                    end: start > prev.end ? start : prev.end,
+                  }));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+              />
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase">{t('To')}</span>
+              <input
+                type="date"
+                value={toDateInputValue(customRange.end)}
+                min={toDateInputValue(customRange.start)}
+                max={toDateInputValue(new Date())}
+                onChange={(e) => {
+                  setCustomRange(prev => ({
+                    ...prev,
+                    end: parseRangeDate(e.target.value, true),
+                  }));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       {/* 2. VITALS BAR (KPIs) */}
