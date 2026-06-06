@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync:theme": "node scripts/sync-color-theme.mjs",
+    "predev": "npm run sync:theme",
+    "prebuild": "npm run sync:theme",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -12,6 +15,8 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.89.0",
     "date-fns": "^4.1.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",

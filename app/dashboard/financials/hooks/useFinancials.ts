@@ -1,19 +1,31 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { financialService } from '@/lib/services/financialService';
+import { incomeService } from '@/lib/services/incomeService';
 import { 
   CurrencyType, 
   PaymentRecord, 
   PaymentMethod, 
   FinancialStats, 
-  CurrencyStats 
+  CurrencyStats,
+  IncomeRecord,
 } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
+
+function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): boolean {
+  if (!methodRef) return false;
+  const methodObj = methods.find(
+    (m) => m.id === methodRef || m.label.toLowerCase() === methodRef.toLowerCase()
+  );
+  const label = (methodObj?.label || methodRef).toLowerCase();
+  return label.includes('cash') || label.includes('efectivo');
+}
 
 export function useFinancials(period: string, customRange?: { start: Date; end: Date }) {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [officialRate, setOfficialRate] = useState<number>(545.9483);
   const [exchangeRate, setExchangeRate] = useState<number>(545.9483);
@@ -66,14 +78,19 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         endDate = now.toISOString();
       }
 
-      const [paymentsData, methodsData, memberStats, rate] = await Promise.all([
+      const incomeStart = startDate.slice(0, 10);
+      const incomeEnd = endDate.slice(0, 10);
+
+      const [paymentsData, incomesData, methodsData, memberStats, rate] = await Promise.all([
         financialService.getPayments(startDate, endDate),
+        incomeService.getIncomes(incomeStart, incomeEnd),
         financialService.getPaymentMethods(),
         financialService.getMemberStats(),
         financialService.getOfficialExchangeRate()
       ]);
 
       setPayments(paymentsData);
+      setIncomes(incomesData);
       setPaymentMethods(methodsData);
       setOfficialRate(rate);
       setExchangeRate(rate);
@@ -99,6 +116,20 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
           targetStats.pendingCount++;
         }
       });
+
+      incomesData
+        .filter((inc) => inc.status === 'confirmed')
+        .forEach((inc) => {
+          const targetStats = inc.currency === CurrencyType.VES ? VESStats : EURStats;
+          targetStats.totalRevenue += inc.amount;
+          if (inc.payment_method) {
+            targetStats.methodCounts[inc.payment_method] =
+              (targetStats.methodCounts[inc.payment_method] || 0) + inc.amount;
+          }
+          if (isCashMethod(inc.payment_method, methodsData)) {
+            targetStats.cashAmount += inc.amount;
+          }
+        });
 
       const totalMembers = memberStats.active + memberStats.inactive;
 
@@ -176,6 +207,8 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
   return {
     loading,
     payments,
+    incomes,
+    paymentMethods,
     stats,
     exchangeRate,
     setExchangeRate,

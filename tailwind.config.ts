@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { pitsTailwindColors } from "./lib/constants/colorTokens";
 
 const config: Config = {
   content: [
@@ -9,26 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pits: {
-          black: "#000000",
-          secondary: "#A8C400",
-          card: "#1A1A1C",
-          grey: "#C9C9C9",
-          panel: "#1A1A1A",
-          darkGrey: "#151515",
-          gunmetal: "#6E6E6E",
-          primary: "#D7FF00",
-          redDark: "#B00500",
-          accent: "#9BA1A6",
-          /* Dark content area — pairs with fluorescent primary */
-          surface: "#0C0C0C",
-          surfaceElevated: "#1A1A1A",
-          surfaceMuted: "#262626",
-          edge: "#505050",
-          ink: "#FFFFFF",
-          inkMuted: "#A8ACA4",
-          primarySoft: "#2A3318",
-        },
+        pits: pitsTailwindColors,
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],

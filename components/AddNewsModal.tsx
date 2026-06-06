@@ -46,7 +46,7 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         
         {/* Header */}
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -94,7 +94,7 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
                       ? t === 'ALERT' ? 'bg-red-100 border-red-500 text-red-700' 
                       : t === 'EVENT' ? 'bg-blue-100 border-blue-500 text-blue-700'
                       : 'bg-gray-200 border-gray-400 text-gray-700'
-                      : 'bg-white border-gray-200 text-gray-400'
+                      : 'bg-pits-surface-elevated border-gray-200 text-gray-400'
                     }
                   `}
                 >

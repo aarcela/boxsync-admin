@@ -1,0 +1,32 @@
+/* AUTO-GENERATED — do not edit. Run: npm run sync:theme */
+@theme {
+  --color-pits-primary: #D7FF00;
+  --color-pits-primary-dark: #A8C400;
+  --color-pits-secondary: #A8C400;
+  --color-pits-gunmetal: #6E6E6E;
+  --color-pits-grey: #C9C9C9;
+  --color-pits-card: #1A1A1C;
+  --color-pits-black: #000000;
+  --color-pits-dark-grey: #151515;
+  --color-pits-border: #2D2D30;
+  --color-pits-text-main: #F5F5F5;
+  --color-pits-text-sub: #9BA1A6;
+  --color-pits-accent: #9BA1A6;
+  --color-pits-background: #0D0D0D;
+  --color-pits-dark-text: #0D0D0D;
+  --color-pits-panel: #1A1A1C;
+  --color-pits-surface: #0D0D0D;
+  --color-pits-surface-elevated: #1A1A1C;
+  --color-pits-surface-muted: #2D2D30;
+  --color-pits-edge: #2D2D30;
+  --color-pits-ink: #F5F5F5;
+  --color-pits-ink-muted: #9BA1A6;
+  --color-pits-primary-soft: #2A3318;
+  --color-pits-red-dark: #B00500;
+  --color-pits-error: #B00500;
+  --color-pits-bg: #151515;
+  --color-pits-text: #F5F5F5;
+  --color-pits-dim: #6E6E6E;
+  --color-pits-red: #D7FF00;
+  --color-pits-success: #A8C400;
+}

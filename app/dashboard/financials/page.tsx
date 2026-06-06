@@ -65,6 +65,8 @@ export default function FinancialsPage() {
     filteredPayments,
     currentPage,
     setCurrentPage,
+    incomes,
+    paymentMethods,
     runningExpiry,
     approve,
     reject,
@@ -80,10 +82,35 @@ export default function FinancialsPage() {
     actual: 0
   });
 
-  // Calculate today's EUR cash received automatically
-  const todayEURCashReceived = filteredPayments
-    .filter(p => p.status === 'approved' && p.currency_type === 'EUR' && (p.method?.toLowerCase().includes('cash') || p.method?.toLowerCase().includes('efectivo')))
-    .reduce((sum, p) => sum + p.amount, 0);
+  const todayStr = toDateInputValue(new Date());
+
+  const isCashRef = (methodRef: string | undefined) => {
+    if (!methodRef) return false;
+    const methodObj = paymentMethods.find(
+      (m) => m.id === methodRef || m.label.toLowerCase() === methodRef.toLowerCase()
+    );
+    const label = (methodObj?.label || methodRef).toLowerCase();
+    return label.includes('cash') || label.includes('efectivo');
+  };
+
+  const todayEURCashReceived =
+    filteredPayments
+      .filter(
+        (p) =>
+          p.status === 'approved' &&
+          p.currency_type === 'EUR' &&
+          (p.method?.toLowerCase().includes('cash') || p.method?.toLowerCase().includes('efectivo'))
+      )
+      .reduce((sum, p) => sum + p.amount, 0) +
+    incomes
+      .filter(
+        (inc) =>
+          inc.status === 'confirmed' &&
+          inc.currency === 'EUR' &&
+          inc.income_date === todayStr &&
+          isCashRef(inc.payment_method)
+      )
+      .reduce((sum, inc) => sum + inc.amount, 0);
 
   const expectedClosingCash = (Number(reconState.opening) + todayEURCashReceived) - Number(reconState.withdrawals);
   const reconDifference = Number(reconState.actual || 0) - expectedClosingCash;
@@ -164,7 +191,7 @@ export default function FinancialsPage() {
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Exchange Rate Master */}
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
+          <div className="flex items-center bg-pits-surface-elevated border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
              <div className="text-[10px] font-black text-slate-400 uppercase mr-3 group-hover:text-pits-red flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 {t('Official Rate')}
@@ -183,7 +210,7 @@ export default function FinancialsPage() {
           </div>
 
           <div className="flex items-center gap-2 ml-auto lg:ml-0">
-             <button onClick={handleExportCSV} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all active:scale-95">
+             <button onClick={handleExportCSV} className="p-2.5 bg-pits-surface-elevated border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all active:scale-95">
                 <Download size={18} />
              </button>
              <button onClick={refresh} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-black text-white shadow-md transition-all active:scale-95">
@@ -194,7 +221,7 @@ export default function FinancialsPage() {
       </div>
 
       {/* DATE RANGE FILTER */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+      <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
         <div className="flex items-center gap-2 text-slate-500 shrink-0">
           <Calendar size={16} className="text-pits-red" />
           <span className="text-[10px] font-black uppercase tracking-widest">{t('Filters')}</span>
@@ -299,7 +326,7 @@ export default function FinancialsPage() {
           </div>
 
           {/* TABLE FILTERS */}
-          <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center">
+          <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center">
              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input 
@@ -335,7 +362,7 @@ export default function FinancialsPage() {
           </div>
 
           {/* THE LEDGER TABLE */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px] min-w-0">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px] min-w-0">
              <div className="overflow-x-auto">
              <table className="w-full min-w-[720px] text-left border-collapse">
                 <thead className="bg-slate-50/50 border-b border-slate-100">
@@ -419,11 +446,11 @@ export default function FinancialsPage() {
                <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
                   <p className="text-[10px] font-black text-slate-400 uppercase">{t('Sector Coverage')}: {filteredPayments.length} Units</p>
                   <nav className="flex gap-1.5">
-                     <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronLeft size={16}/></button>
-                     <div className="flex bg-white border border-slate-200 rounded-lg p-0.5 px-3 items-center text-[11px] font-black">
+                     <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-pits-surface-elevated border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronLeft size={16}/></button>
+                     <div className="flex bg-pits-surface-elevated border border-slate-200 rounded-lg p-0.5 px-3 items-center text-[11px] font-black">
                         {currentPage} <span className="mx-2 text-slate-300">/</span> {totalPages}
                      </div>
-                     <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronRight size={16}/></button>
+                     <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-1.5 bg-pits-surface-elevated border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronRight size={16}/></button>
                   </nav>
                </div>
              )}
@@ -493,7 +520,7 @@ export default function FinancialsPage() {
                       </div>
                       <button 
                         onClick={handleAudit}
-                        className="bg-pits-primary text-slate-800 px-4 py-2 font-black rounded-xl text-[10px] uppercase shadow-lg active:scale-95 transition-all"
+                        className="bg-pits-primary text-pits-dark-text px-4 py-2 font-black rounded-xl text-[10px] uppercase shadow-lg active:scale-95 transition-all"
                       >
                          {t('Audit Now')}
                       </button>
@@ -573,7 +600,7 @@ function StatCard({ label, value, symbol, trend, color, info, t }: any) {
   };
 
   return (
-    <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+    <div className="bg-pits-surface-elevated p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
       <div className="flex justify-between items-start mb-4">
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">{label}</p>
         <div className={`p-1.5 rounded-lg border ${colors[color]}`}>

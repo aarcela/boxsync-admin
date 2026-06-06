@@ -5,15 +5,8 @@ import ConfirmDialog from './ConfirmDialog';
 import { useLanguage } from './LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
-
-const PLAN_LABELS: Record<string, string> = {
-  unlimited: 'Unlimited',
-  '3x_week': '3x / Week',
-  '4x_week': '4x / Week',
-  '5x_week': '5x / Week',
-  open_box: 'Open Box',
-  crossfit_kids: 'CrossFit Kids',
-};
+import { membershipPlanService } from '@/lib/services/membershipPlanService';
+import { MembershipPlan } from '@/lib/types/gym';
 
 interface AddAthleteModalProps {
   isOpen: boolean;
@@ -26,7 +19,9 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
   const { toast } = useToast();
   const { lang, t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [plansLoading, setPlansLoading] = useState(false);
   const [callerRole, setCallerRole] = useState<string | null>(null);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -34,7 +29,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     phone: '',
     password: '',
     role: 'member',
-    plan: 'unlimited' as 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids',
+    plan: '',
     inscription_plan: 'standard',
     inscription_cost: '50',
     inscription_paid: false,
@@ -44,27 +39,54 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
   useEffect(() => {
     if (isStaffProfileRole(formData.role)) {
-      setFormData(prev => ({ ...prev, plan: 'unlimited' }));
+      setFormData(prev =>
+        prev.plan === 'unlimited' ? prev : { ...prev, plan: 'unlimited' }
+      );
+      return;
     }
-  }, [formData.role]);
+    if (membershipPlans.length === 0) return;
+    setFormData(prev => {
+      if (membershipPlans.some((p) => p.id === prev.plan)) return prev;
+      return { ...prev, plan: membershipPlans[0].id };
+    });
+  }, [formData.role, membershipPlans]);
 
   useEffect(() => {
     if (!isOpen) {
       setShowConfirm(false);
       return;
     }
-    const loadCallerRole = async () => {
+    const loadContext = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .single();
       setCallerRole(profile?.role ?? null);
+
+      if (!profile?.tenant_id) return;
+
+      setPlansLoading(true);
+      try {
+        const plans = await membershipPlanService.getActiveMembershipPlans(profile.tenant_id);
+        setMembershipPlans(plans);
+        if (plans.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            plan: plans.some((p) => p.id === prev.plan) ? prev.plan : plans[0].id,
+          }));
+        }
+      } catch (error) {
+        console.error(error);
+        toast(t('Failed to load membership plans'), 'error');
+      } finally {
+        setPlansLoading(false);
+      }
     };
-    loadCallerRole();
-  }, [isOpen]);
+    loadContext();
+  }, [isOpen, toast, t]);
 
   useEffect(() => {
     if (callerRole !== 'admin' && formData.role === 'admin') {
@@ -86,6 +108,11 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
   const createAthlete = async () => {
     if (!canAssignProfileRole(callerRole, formData.role)) {
       toast(t('Only admins can assign the admin role.'), 'error');
+      return;
+    }
+
+    if (formData.role === 'member' && !formData.plan) {
+      toast(t('Failed to load membership plans'), 'error');
       return;
     }
 
@@ -126,7 +153,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         phone: '',
         password: '',
         role: 'member',
-        plan: 'unlimited',
+        plan: membershipPlans[0]?.id ?? '',
         inscription_plan: 'standard',
         inscription_cost: '50',
         inscription_paid: false,
@@ -141,9 +168,10 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
     }
   };
 
+  const selectedPlan = membershipPlans.find((p) => p.id === formData.plan);
   const planLabel = isStaffProfileRole(formData.role)
-      ? 'Unlimited'
-      : PLAN_LABELS[formData.plan] ?? formData.plan;
+    ? 'Unlimited'
+    : selectedPlan?.name ?? formData.plan;
 
   const confirmMessage =
     formData.role === 'member'
@@ -151,11 +179,11 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       : `Create account for ${formData.full_name} (${formData.email}) as a ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}?`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hiddem">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
         
         {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
           <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
             Register New Athlete
           </h3>
@@ -165,9 +193,10 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-8">
+        <div className="overflow-y-auto overflow-x-hidden p-6 sm:p-8 flex-1 min-h-0">
+        <form onSubmit={handleSubmit}>
           
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Full Name
@@ -254,15 +283,25 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                   </label>
                   <select
                     value={formData.plan}
-                    onChange={e => setFormData({...formData, plan: e.target.value as typeof formData.plan})}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    onChange={e => setFormData({...formData, plan: e.target.value})}
+                    disabled={plansLoading || membershipPlans.length === 0}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none disabled:opacity-50"
                   >
-                    <option value="unlimited">Unlimited</option>
-                    <option value="3x_week">3x / Week</option>
-                    <option value="4x_week">4x / Week</option>
-                    <option value="5x_week">5x / Week</option>
-                    <option value="open_box">Open Box</option>
-                    <option value="crossfit_kids">CrossFit Kids</option>
+                    {plansLoading ? (
+                      <option value="">{t('Loading...')}</option>
+                    ) : membershipPlans.length === 0 ? (
+                      <option value="">{t('No records found.')}</option>
+                    ) : (
+                      membershipPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name}
+                          {plan.weekly_limit === null
+                            ? ` (${t('Unlimited')})`
+                            : ` (${plan.weekly_limit}x / ${t('Week')})`}
+                          {` — $${plan.price_usd.toFixed(2)}`}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 
@@ -353,9 +392,9 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
           <button
             type="submit"
-            disabled={loading}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
+            disabled={loading || (formData.role === 'member' && !formData.plan)}
+            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
             `}
           >
             {loading ? (
@@ -367,6 +406,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
           </button>
 
         </form>
+        </div>
       </div>
 
       <ConfirmDialog

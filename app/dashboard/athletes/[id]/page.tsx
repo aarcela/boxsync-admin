@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -25,6 +26,7 @@ import {
   Activity
 } from 'lucide-react';
 import { athleteService } from '@/lib/services/athleteService';
+import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { Profile } from '@/lib/types/gym';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/components/Toast';
@@ -34,6 +36,7 @@ export default function AthleteDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [planDisplayName, setPlanDisplayName] = useState<string>('None');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +45,12 @@ export default function AthleteDetailPage() {
       try {
         const data = await athleteService.getProfileById(id as string);
         setProfile(data);
+        const profileWithTenant = data as Profile & { tenant_id?: string };
+        const name = await membershipPlanService.resolvePlanDisplayName(
+          profileWithTenant.plan,
+          profileWithTenant.tenant_id
+        );
+        setPlanDisplayName(name ?? 'None');
       } catch (error) {
         console.error('Error fetching athlete:', error);
         toast('Failed to load athlete details', 'error');
@@ -93,22 +102,27 @@ export default function AthleteDetailPage() {
       </div>
 
       {/* HEADER CARD */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
-        <div className="h-32 bg-gradient-to-r from-black via-gray-900 to-pits-red" />
+      <div className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+        <div className="h-32 from-black via-gray-900 to-pits-red" />
         <div className="px-8 pb-8 -mt-16">
           <div className="flex flex-col md:flex-row items-end gap-6">
             <div className="relative">
-              <div className="w-32 h-32 rounded-3xl bg-white p-1 shadow-2xl border border-gray-100">
-                <div className="w-full h-full rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 overflow-hidden">
+              <div className="w-32 h-32 rounded-3xl bg-pits-surface-elevated p-1 shadow-2xl border border-gray-100">
+                <div className="relative w-full h-full rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 overflow-hidden">
                   {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.full_name}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <User size={48} />
                   )}
                 </div>
               </div>
               <div className={`absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg ${
-                profile.is_solvent ? 'bg-green-500 text-white' : 'bg-pits-red text-white'
+                profile.is_solvent ? 'bg-green-500 text-white' : 'bg-pits-primary text-pits-dark-text'
               }`}>
                 {profile.is_solvent ? 'Solvent' : 'Overdue'}
               </div>
@@ -174,7 +188,7 @@ export default function AthleteDetailPage() {
         {/* LEFT COLUMN: MEMBERSHIP & LEGAL */}
         <div className="md:col-span-1 space-y-8">
           {/* MEMBERSHIP */}
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
+          <div className="bg-pits-surface-elevated p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-4 flex items-center">
               <Shield size={14} className="mr-2" /> Membership Radar
             </h3>
@@ -187,7 +201,7 @@ export default function AthleteDetailPage() {
                   </div>
                   <div>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Current Plan</p>
-                    <p className="text-sm font-black text-black uppercase">{profile.plan?.replace('_', ' ') || 'None'}</p>
+                    <p className="text-sm font-black text-black uppercase">{planDisplayName}</p>
                   </div>
                 </div>
               </div>
@@ -228,14 +242,14 @@ export default function AthleteDetailPage() {
               {profile.admin_note && (
                 <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-2xl">
                   <p className="text-[10px] text-yellow-700 font-black uppercase tracking-wider mb-1">Coach Notes</p>
-                  <p className="text-xs text-yellow-900 leading-relaxed font-medium">"{profile.admin_note}"</p>
+                  <p className="text-xs text-yellow-900 leading-relaxed font-medium">&quot;{profile.admin_note}&quot;</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* EMERGENCY CONTACT */}
-          <div className="bg-black text-white p-6 rounded-3xl shadow-xl space-y-6">
+          <div className="bg-pits-card text-white p-6 rounded-3xl shadow-xl space-y-6">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] border-b border-white/10 pb-4 flex items-center">
               <AlertSquare size={14} className="mr-2 text-pits-red" /> In Case of Emergency
             </h3>
@@ -252,7 +266,7 @@ export default function AthleteDetailPage() {
           </div>
 
           {/* LEGAL & AFFIDAVITS */}
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
+          <div className="bg-pits-surface-elevated p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-4 flex items-center">
               <FileCheck size={14} className="mr-2" /> Legal & Onboarding
             </h3>
@@ -286,7 +300,7 @@ export default function AthleteDetailPage() {
         {/* MIDDLE COLUMN: PHYSICAL PROFILE & HEALTH */}
         <div className="md:col-span-1 space-y-8">
            {/* PHYSICAL PROFILE */}
-           <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
+           <div className="bg-pits-surface-elevated p-6 rounded-3xl border border-gray-100 shadow-xl space-y-6">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50 pb-4 flex items-center">
               <Ruler size={14} className="mr-2 text-pits-red" /> Physical Profile
             </h3>
@@ -311,7 +325,7 @@ export default function AthleteDetailPage() {
                </div>
                <div className="space-y-1">
                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">CF Level</p>
-                 <span className="px-2 py-0.5 bg-pits-red text-white rounded text-[10px] font-black uppercase tracking-tighter italic">
+                 <span className="px-2 py-0.5 bg-pits-primary text-pits-dark-text rounded text-[10px] font-black uppercase tracking-tighter italic">
                    {profile.level || 'Beginner'}
                  </span>
                </div>
@@ -332,7 +346,7 @@ export default function AthleteDetailPage() {
               <Activity size={14} className="mr-2" /> Health & Safety
             </h3>
             <div className="space-y-4">
-              <div className="p-3 bg-white rounded-2xl">
+              <div className="p-3 bg-pits-surface-elevated rounded-2xl">
                  <div className="flex justify-between items-center mb-1">
                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Allergies</p>
                    {profile.has_allergies ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-green-500" />}
@@ -340,7 +354,7 @@ export default function AthleteDetailPage() {
                  <p className="text-xs font-bold text-gray-900">{profile.allergies_text || 'No known allergies'}</p>
               </div>
 
-              <div className="p-3 bg-white rounded-2xl">
+              <div className="p-3 bg-pits-surface-elevated rounded-2xl">
                  <div className="flex justify-between items-center mb-1">
                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Medical Conditions</p>
                    {profile.has_medical_condition ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-green-500" />}
@@ -348,7 +362,7 @@ export default function AthleteDetailPage() {
                  <p className="text-xs font-bold text-gray-900">{profile.medical_condition_text || 'No known conditions'}</p>
               </div>
 
-              <div className="p-3 bg-white rounded-2xl">
+              <div className="p-3 bg-pits-surface-elevated rounded-2xl">
                  <div className="flex justify-between items-center mb-1">
                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Current Injuries</p>
                    {profile.has_injury ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-green-500" />}
@@ -363,7 +377,7 @@ export default function AthleteDetailPage() {
         <div className="md:col-span-1 space-y-8">
           {/* STATS GRID */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-black text-white p-6 rounded-3xl shadow-xl">
+            <div className="bg-pits-card text-white p-6 rounded-3xl shadow-xl">
               <TrendingUp className="text-pits-red mb-4" size={24} />
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Attendance</p>
               <div className="flex items-baseline gap-2">
@@ -371,7 +385,7 @@ export default function AthleteDetailPage() {
                 <span className="text-gray-500 text-xs font-bold">Visits</span>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100">
+            <div className="bg-pits-surface-elevated p-6 rounded-3xl shadow-xl border border-gray-100">
               <Clock className="text-pits-red mb-4" size={24} />
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">No Shows</p>
               <div className="flex items-baseline gap-2">
@@ -382,7 +396,7 @@ export default function AthleteDetailPage() {
           </div>
 
           {/* ACTIVITY LOG */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-xs font-black text-black uppercase tracking-widest flex items-center">
                 <Calendar size={14} className="mr-2 text-pits-red" />
@@ -394,7 +408,7 @@ export default function AthleteDetailPage() {
                 profile.bookings
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .slice(0, 20)
-                  .map((booking: any, idx) => (
+                  .map((booking, idx) => (
                     <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className={`w-2 h-2 rounded-full ${

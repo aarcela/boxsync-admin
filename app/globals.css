@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
+@import "../lib/constants/pits-theme.css";
 
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -7,30 +8,6 @@
   --font-heading: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-jakarta: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
-  --color-pits-black: #000000;
-  --color-pits-secondary: #A8C400;
-  --color-pits-card: #1A1A1C;
-  --color-pits-grey: #C9C9C9;
-  --color-pits-panel: #1A1A1A;
-  --color-pits-dark-grey: #151515;
-  --color-pits-gunmetal: #6E6E6E;
-  --color-pits-primary: #D7FF00;
-  --color-pits-red-dark: #B00500;
-  --color-pits-accent: #9BA1A6;
-  --color-pits-surface: #0C0C0C;
-  --color-pits-surface-elevated: #1A1A1A;
-  --color-pits-surface-muted: #262626;
-  --color-pits-edge: #505050;
-  --color-pits-ink: #FFFFFF;
-  --color-pits-ink-muted: #A8ACA4;
-  --color-pits-primary-soft: #2A3318;
-  /* Legacy tokens used across the app */
-  --color-pits-bg: #151515;
-  --color-pits-text: #FFFFFF;
-  --color-pits-dim: #6E6E6E;
-  --color-pits-red: #D7FF00;
-  --color-pits-success: #A8C400;
-  --color-pits-error: #B00500;
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
@@ -75,61 +52,57 @@ body {
 }
 
 /*
- * Dashboard dark theme: rebind Tailwind color tokens so utilities resolve
- * to dark surfaces + readable text (not fighting @layer specificity).
+ * Dashboard dark theme: legacy slate/gray utilities map to pits tokens
+ * (source of truth: lib/constants/colorTokens.js → pits-theme.css).
  */
 .dashboard-main {
   --tw-ring-offset-color: var(--color-pits-surface);
-  --color-pits-dim: #9ca39a;
-  --color-black: #ffffff;
-  --color-gray-50: #1a1a1a;
-  --color-gray-100: #262626;
-  --color-gray-200: #505050;
-  --color-gray-300: #606060;
-  --color-gray-400: #787874;
-  --color-gray-500: #a8aca4;
-  --color-gray-600: #c6c6c2;
-  --color-gray-700: #e2e2e0;
-  --color-gray-800: #ffffff;
-  --color-gray-900: #ffffff;
-  --color-slate-50: #1a1a1a;
-  --color-slate-100: #262626;
-  --color-slate-200: #505050;
-  --color-slate-300: #606060;
-  --color-slate-400: #787874;
-  --color-slate-500: #a8aca4;
-  --color-slate-600: #c6c6c2;
-  --color-slate-700: #e2e2e0;
-  --color-slate-800: #ffffff;
-  --color-slate-900: #ffffff;
-  --color-red-50: #2a1414;
-  --color-green-50: #1a2214;
-  --color-emerald-50: #142218;
-  --color-emerald-100: #1a2e20;
-  --color-orange-50: #2a1c14;
-  --color-blue-50: #141a2a;
-  --color-blue-100: #1a2236;
-  --color-amber-100: #2a2414;
+  --color-black: var(--color-pits-ink);
+  --color-gray-50: var(--color-pits-surface-muted);
+  --color-gray-100: color-mix(in srgb, var(--color-pits-edge) 45%, var(--color-pits-surface-elevated));
+  --color-gray-200: var(--color-pits-edge);
+  --color-gray-300: var(--color-pits-dim);
+  --color-gray-400: var(--color-pits-ink-muted);
+  --color-gray-500: var(--color-pits-grey);
+  --color-gray-600: var(--color-pits-grey);
+  --color-gray-700: var(--color-pits-ink);
+  --color-gray-800: var(--color-pits-ink);
+  --color-gray-900: var(--color-pits-ink);
+  --color-slate-50: var(--color-pits-surface-muted);
+  --color-slate-100: color-mix(in srgb, var(--color-pits-edge) 45%, var(--color-pits-surface-elevated));
+  --color-slate-200: var(--color-pits-edge);
+  --color-slate-300: var(--color-pits-ink-muted);
+  --color-slate-400: var(--color-pits-ink-muted);
+  --color-slate-500: var(--color-pits-grey);
+  --color-slate-600: var(--color-pits-grey);
+  --color-slate-700: var(--color-pits-ink);
+  --color-slate-800: var(--color-pits-ink);
+  --color-slate-900: var(--color-pits-ink);
+  --color-red-50: var(--color-pits-primary-soft);
+  --color-green-50: var(--color-pits-primary-soft);
+  --color-emerald-50: var(--color-pits-primary-soft);
+  --color-emerald-100: color-mix(in srgb, var(--color-pits-success) 25%, var(--color-pits-surface-elevated));
+  --color-orange-50: var(--color-pits-primary-soft);
+  --color-blue-50: var(--color-pits-surface-muted);
+  --color-blue-100: var(--color-pits-surface-muted);
+  --color-amber-100: var(--color-pits-primary-soft);
 }
 
-.dashboard-main :where(.bg-white, .focus\:bg-white:focus, .hover\:bg-white:hover) {
-  background-color: var(--color-pits-surface-elevated) !important;
+/* slate-900 is remapped to ink for text; keep dark when used as a background */
+.dashboard-main :where(.bg-slate-900, .bg-gray-900) {
+  background-color: var(--color-pits-surface-muted) !important;
+}
+
+.dashboard-main :where(.bg-slate-50, .bg-gray-50) {
+  background-color: var(--color-pits-surface-muted) !important;
+}
+
+.dashboard-main :where(.bg-slate-100, .bg-gray-100) {
+  background-color: color-mix(in srgb, var(--color-pits-edge) 45%, var(--color-pits-surface-elevated)) !important;
 }
 
 .dashboard-main :where(.border-white) {
   border-color: var(--color-pits-edge) !important;
-}
-
-.dashboard-main :where(.bg-white\/5, .bg-white\/10) {
-  background-color: color-mix(in srgb, var(--color-pits-edge) 35%, transparent) !important;
-}
-
-.dashboard-main :where(.bg-white\/20, .hover\:bg-white\/20:hover) {
-  background-color: color-mix(in srgb, var(--color-pits-edge) 55%, transparent) !important;
-}
-
-.dashboard-main :where(.bg-white\/50) {
-  background-color: var(--color-pits-surface-muted) !important;
 }
 
 .dashboard-main .shadow-sm {

@@ -94,6 +94,34 @@ export const classService = {
     await Promise.all(promises);
   },
 
+  async createBooking(classId: string, userId: string): Promise<Booking> {
+    const response = await fetch('/api/admin/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, userId }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to add athlete');
+    }
+
+    return data.booking as Booking;
+  },
+
+  async deleteBooking(bookingId: string): Promise<void> {
+    const response = await fetch('/api/admin/bookings', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to remove athlete');
+    }
+  },
+
   /**
    * Deletes a class (if needed by other views)
    */

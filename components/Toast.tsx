@@ -50,7 +50,7 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
       <span className="flex-1">{item.message}</span>
       <button
         onClick={() => onDismiss(item.id)}
-        className="p-1 rounded-lg hover:bg-white/20 transition-colors shrink-0"
+        className="p-1 rounded-lg hover:bg-pits-ink/20 transition-colors shrink-0"
       >
         <X size={14} />
       </button>

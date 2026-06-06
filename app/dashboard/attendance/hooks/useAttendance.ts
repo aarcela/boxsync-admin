@@ -81,9 +81,15 @@ export function useAttendance() {
     }
   }, [selectedClassId, fetchRoster]);
 
-  // Actions
+  const updateClassBookingCount = (classId: string, delta: number) => {
+    setClasses(prev => prev.map(c => {
+      if (c.id !== classId) return c;
+      const current = c.bookings[0]?.count || 0;
+      return { ...c, bookings: [{ count: Math.max(0, current + delta) }] };
+    }));
+  };
+
   const updateStatus = async (bookingId: string, newStatus: BookingStatus) => {
-    // Optimistic Update
     const previousRoster = [...roster];
     setRoster((prev: Booking[]) => prev.map((b: Booking) => 
       b.id === bookingId ? { ...b, status: newStatus } : b
@@ -93,8 +99,47 @@ export function useAttendance() {
       await classService.updateBookingStatus(bookingId, newStatus);
     } catch (error) {
       console.error(error);
-      setRoster(previousRoster); // Rollback
+      setRoster(previousRoster);
       toast('Failed to update status', 'error');
+    }
+  };
+
+  const addAthlete = async (userId: string) => {
+    if (!selectedClassId) return;
+
+    const selectedClass = classes.find(c => c.id === selectedClassId);
+    const count = selectedClass?.bookings[0]?.count ?? roster.length;
+    if (selectedClass && count >= selectedClass.max_capacity) {
+      toast('Class is at full capacity', 'error');
+      return;
+    }
+
+    try {
+      const booking = await classService.createBooking(selectedClassId, userId);
+      setRoster(prev => [...prev, booking]);
+      updateClassBookingCount(selectedClassId, 1);
+      toast('Athlete added to class', 'success');
+    } catch (error) {
+      console.error(error);
+      toast(error instanceof Error ? error.message : 'Failed to add athlete', 'error');
+      throw error;
+    }
+  };
+
+  const removeAthlete = async (bookingId: string) => {
+    if (!selectedClassId) return;
+
+    const previousRoster = [...roster];
+    setRoster(prev => prev.filter(b => b.id !== bookingId));
+
+    try {
+      await classService.deleteBooking(bookingId);
+      updateClassBookingCount(selectedClassId, -1);
+      toast('Athlete removed from class', 'success');
+    } catch (error) {
+      console.error(error);
+      setRoster(previousRoster);
+      toast('Failed to remove athlete', 'error');
     }
   };
 
@@ -148,6 +193,8 @@ export function useAttendance() {
     setSearchTerm,
     filteredRoster,
     updateStatus,
+    addAthlete,
+    removeAthlete,
     markAll,
     nextDay,
     prevDay

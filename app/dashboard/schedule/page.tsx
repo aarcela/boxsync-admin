@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users } from 'lucide-react';
 import CreateClassModal from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
@@ -57,7 +58,7 @@ export default function SchedulePage() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center px-6 py-3 bg-pits-red text-white rounded-lg font-black uppercase text-xs tracking-widest shadow-lg shadow-red-200 hover:bg-pits-red-dark transition-all"
+          className="flex items-center justify-center px-6 py-3 bg-pits-primary text-pits-dark-text rounded-lg font-black uppercase text-xs tracking-widest shadow-lg shadow-pits-primary/50 hover:bg-pits-primary-dark transition-all"
         >
           <Plus size={18} className="mr-2" />
           {t('Schedule Class')}
@@ -65,11 +66,11 @@ export default function SchedulePage() {
       </div>
 
       {/* List */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-400 font-bold italic uppercase tracking-widest text-xs">{t('Loading schedule...')}</div>
+          <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">{t('Loading schedule...')}</div>
         ) : classes.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 font-bold italic uppercase tracking-widest text-xs">
+          <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">
             {t('No upcoming classes found. Schedule one above.')}
           </div>
         ) : (
@@ -96,7 +97,7 @@ export default function SchedulePage() {
                   <div className="flex items-center gap-5 min-w-[280px]">
                     <div className={`
                       flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 shrink-0
-                      ${isToday ? 'bg-red-50 border-pits-red/20 text-pits-red animate-pulse-subtle' : 'bg-gray-50 border-gray-100 text-gray-400'}
+                      ${isToday ? 'bg-pits-card border-pits-red/20 text-pits-red animate-pulse-subtle' : 'bg-pits-background border-pits-border text-pits-primary'}
                     `}>
                       <span className="text-[10px] font-black uppercase tracking-widest">{dayStr}</span>
                       <span className="text-2xl font-black">{dateNumStr}</span>
@@ -104,7 +105,7 @@ export default function SchedulePage() {
 
                     <div className="space-y-1.5">
                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white shadow-sm
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-pits-dark-text shadow-sm
                             ${session.class_type === 'CrossFit' ? 'bg-pits-red' : 
                               session.class_type === 'Halterofilia' ? 'bg-blue-600' :
                               session.class_type === 'Gymnastic' ? 'bg-purple-600' :
@@ -220,18 +221,18 @@ export default function SchedulePage() {
 
       {isDetailsModalOpen && selectedClassId && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-pits-background/50 p-4 backdrop-blur-sm"
           onClick={() => setIsDetailsModalOpen(false)}
         >
           <div 
-            className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]"
+            className="bg-pits-background rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[95vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+            <div className="flex justify-between items-center p-4 border-b border-pits-border">
               <h3 className="text-xl font-black text-pits-text uppercase italic">{t('Class Details')}</h3>
               <button 
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="p-1 rounded bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1 rounded bg-pits-background text-pits-primary hover:text-pits-primary-dark transition-colors"
               >
                 <X size={20} />
               </button>
@@ -243,23 +244,23 @@ export default function SchedulePage() {
                 if (!cls) return null;
                 return (
                   <div className="space-y-6">
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-pits-background p-4 rounded-xl border border-pits-border grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Type')}</p>
+                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Type')}</p>
                         <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.class_type}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Class Time')}</p>
+                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Class Time')}</p>
                         <p className="font-bold text-pits-text text-sm italic">
                           {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Coach')}</p>
+                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Coach')}</p>
                         <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.coach?.full_name || t('Staff')}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400 uppercase font-black tracking-wider">{t('Capacity')}</p>
+                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Capacity')}</p>
                         <p className="font-bold text-pits-text text-sm italic">{cls.bookings[0]?.count || 0} / {cls.max_capacity}</p>
                       </div>
                     </div>
@@ -267,17 +268,22 @@ export default function SchedulePage() {
                     <div>
                       <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic">{t('Athletes')}</h4>
                       {loadingRoster ? (
-                        <p className="text-gray-400 text-sm p-4 bg-gray-50 rounded-lg text-center font-bold uppercase italic tracking-widest">{t('Loading schedule...')}</p>
+                        <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('Loading schedule...')}</p>
                       ) : roster.length === 0 ? (
-                        <p className="text-gray-400 text-sm p-4 bg-gray-50 rounded-lg text-center font-bold uppercase italic tracking-widest">{t('No bookings yet.')}</p>
+                        <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('No bookings yet.')}</p>
                       ) : (
                         <div className="space-y-2">
                           {roster.map(booking => (
-                            <div key={booking.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 bg-white shadow-sm">
+                            <div key={booking.id} className="flex justify-between items-center p-3 rounded-lg border border-pits-border bg-pits-background shadow-sm">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                                <div className="relative w-8 h-8 rounded-full bg-pits-background flex items-center justify-center text-xs font-bold text-pits-primary overflow-hidden">
                                   {booking.profiles.avatar_url ? (
-                                    <img src={booking.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    <Image
+                                      src={booking.profiles.avatar_url}
+                                      alt={booking.profiles.full_name || ''}
+                                      fill
+                                      className="object-cover"
+                                    />
                                   ) : (
                                     booking.profiles.full_name?.charAt(0)
                                   )}
@@ -304,7 +310,7 @@ export default function SchedulePage() {
             <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50 rounded-b-xl">
               <button
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="px-6 py-2 bg-white border border-gray-200 text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
+                className="px-6 py-2 bg-pits-surface-elevated border border-gray-200 text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
               >
                 {t('Close')}
               </button>

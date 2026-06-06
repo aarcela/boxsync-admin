@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { X, Loader2, Save, Calendar, Clock, Repeat } from 'lucide-react';
 import { addDays, format, isSameDay, parseISO } from 'date-fns';
 import { useToast } from './Toast';
+import { CLASS_TYPES } from '@/lib/constants/classTypes';
 
 interface CreateClassModalProps {
   isOpen: boolean;
@@ -15,7 +16,6 @@ interface Coach {
   full_name: string;
 }
 
-const CLASS_TYPES = ['CrossFit', 'Halterofilia', 'Gymnastic', 'Open Box', 'Endurance'];
 const DAYS_OF_WEEK = [
   { label: 'M', value: 1 },
   { label: 'T', value: 2 },
@@ -119,13 +119,13 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pits-background/50 backdrop-blur-sm">
+      <div className="bg-pits-background rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div className="bg-pits-background px-6 py-4 border-b border-pits-border flex justify-between items-center">
           <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
             Schedule Classes
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">
+          <button onClick={onClose} className="p-2 hover:bg-pits-background rounded-full text-pits-primary">
             <X size={20} />
           </button>
         </div>
@@ -171,7 +171,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           </div>
 
           {/* RECURRING SECTION */}
-          <div className={`p-4 rounded-xl border-2 transition-all ${isRecurring ? 'bg-red-50/50 border-pits-red/20' : 'bg-gray-50 border-transparent'}`}>
+          <div className={`p-4 rounded-xl border-2 transition-all ${isRecurring ? 'bg-pits-card border-pits-red/20' : 'bg-gray-50 border-transparent'}`}>
             <label className="flex items-center cursor-pointer mb-3">
               <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-4 h-4 text-pits-red rounded border-gray-300 focus:ring-pits-red" />
               <span className="ml-3 text-sm font-black text-pits-text uppercase italic tracking-tight flex items-center">
@@ -190,7 +190,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
                         key={day.value}
                         type="button"
                         onClick={() => toggleDay(day.value)}
-                        className={`w-9 h-9 rounded-full font-bold text-xs border-2 transition-all ${selectedDays.includes(day.value) ? 'bg-pits-red border-pits-red text-white' : 'bg-white border-gray-200 text-gray-400'}`}
+                        className={`w-9 h-9 rounded-full font-bold text-xs border-2 transition-all ${selectedDays.includes(day.value) ? 'bg-pits-primary border-pits-primary text-pits-dark-text' : 'bg-pits-surface-elevated border-gray-200 text-gray-400'}`}
                       >
                         {day.label}
                       </button>
@@ -199,7 +199,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Until Date</label>
-                  <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red" />
+                  <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className="w-full p-2 bg-pits-background border border-pits-border rounded-lg text-sm font-bold outline-none focus:border-pits-red" />
                 </div>
               </div>
             )}
@@ -208,7 +208,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg ${loading ? 'bg-gray-400' : 'bg-pits-red hover:bg-red-700 shadow-red-200'}`}
+            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg ${loading ? 'bg-gray-400' : 'bg-pits-primary hover:bg-pits-primary-dark '}`}
           >
             {loading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
             {isRecurring ? 'Bulk Schedule' : 'Schedule Single Class'}

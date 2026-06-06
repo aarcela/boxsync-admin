@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
@@ -23,7 +23,10 @@ import {
   ChevronDown,
   Scale,
   MessagesSquare,
-  Trophy
+  Trophy,
+  Tags,
+  Banknote,
+  Receipt
 } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
 import Image from 'next/image';
@@ -34,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { lang, setLanguage, t } = useLanguage();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const toggleMenu = (menuName: string) => {
     setOpenMenus(prev => 
@@ -82,7 +86,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!isStaffRole(profile?.role)) {
         await supabase.auth.signOut();
         router.replace('/');
+        return;
       }
+      setUserRole(profile?.role ?? null);
     };
     verifyStaffSession();
   }, [router]);
@@ -92,35 +98,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/');
   };
 
-  const navItems = [
-    { name: t('Overview'), href: '/dashboard', icon: LayoutDashboard },
-    { name: t('Attendance'), href: '/dashboard/attendance', icon: ClipboardCheck },
-    { 
-      name: t('Financial'), 
-      icon: DollarSign,
-      subItems: [
-        { name: t('Dashboard'), href: '/dashboard/financials', icon: DollarSign },
-        { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
-        { name: t('Accountability'), href: '/dashboard/accountability', icon: Scale },
-        { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap },
-      ]
-    },
-    { name: t('Athletes'), href: '/dashboard/athletes', icon: Users },
-    { 
-      name: t('Box Management'), 
-      icon: Dumbbell,
-      subItems: [
-        { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
-        { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
-        { name: t('News'), href: '/dashboard/news', icon: Megaphone },
-        { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
-        { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
-        { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy },
-      ]
-    },
-    { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
-    { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
-  ];
+  const navItems = useMemo(() => {
+    const financialSubItems = [
+      { name: t('Dashboard'), href: '/dashboard/financials', icon: DollarSign },
+      { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
+      { name: t('Incomes'), href: '/dashboard/income', icon: TrendingUp },
+      { name: t('Accountability'), href: '/dashboard/accountability', icon: Scale },
+      { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap },
+    ];
+
+    if (userRole === 'admin') {
+      financialSubItems.push({
+        name: t('Salary'),
+        href: '/dashboard/salary',
+        icon: Banknote,
+      });
+      financialSubItems.push({
+        name: t('Payroll'),
+        href: '/dashboard/payroll',
+        icon: Receipt,
+      });
+    }
+
+    return [
+      { name: t('Overview'), href: '/dashboard', icon: LayoutDashboard },
+      { name: t('Attendance'), href: '/dashboard/attendance', icon: ClipboardCheck },
+      {
+        name: t('Financial'),
+        icon: DollarSign,
+        subItems: financialSubItems,
+      },
+      { name: t('Athletes'), href: '/dashboard/athletes', icon: Users },
+      {
+        name: t('Box Management'),
+        icon: Dumbbell,
+        subItems: [
+          { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
+          { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
+          { name: t('News'), href: '/dashboard/news', icon: Megaphone },
+          { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
+          { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
+          { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags },
+          { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy },
+        ],
+      },
+      { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
+      { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
+    ];
+  }, [t, userRole]);
 
   return (
     <div className="flex h-screen bg-pits-surface overflow-hidden">
@@ -275,7 +300,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setLanguage('en')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'en' ? 'bg-pits-primary text-pits-black shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
+                  lang === 'en' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
                 }`}
               >
                 EN
@@ -283,7 +308,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setLanguage('es')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'es' ? 'bg-pits-primary text-pits-black shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
+                  lang === 'es' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
                 }`}
               >
                 ES
@@ -292,7 +317,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-pits-primary rounded-full flex items-center justify-center text-pits-black font-bold text-xs">
+            <div className="w-8 h-8 bg-pits-primary rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
               AD
             </div>
             <span className="ml-3 font-bold text-sm text-pits-grey">{t('Admin')}</span>

@@ -189,7 +189,7 @@ export default function ResetPasswordPage() {
             type="submit"
             disabled={loading}
             className={`w-full py-4 rounded-lg flex items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg transition-all
-              ${loading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-black hover:brightness-95 shadow-pits-primary/20'}
+              ${loading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20'}
             `}
           >
             {loading && <Loader2 size={18} className="animate-spin mr-2" />}

@@ -1,12 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { 
   Calendar, Clock, CheckCircle, XCircle, MinusCircle, 
-  Users, ChevronLeft, ChevronRight, CheckCheck, Ban, Search 
+  Users, ChevronLeft, ChevronRight, CheckCheck, Ban, Search, UserPlus, UserMinus
 } from 'lucide-react';
 import { useAttendance } from './hooks/useAttendance';
 import Tooltip from '@/components/Tooltip';
-
+import AddToClassModal from '@/components/AddToClassModal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 export default function AttendancePage() {
   const {
     date,
@@ -21,16 +23,45 @@ export default function AttendancePage() {
     setSearchTerm,
     filteredRoster,
     updateStatus,
+    addAthlete,
+    removeAthlete,
     markAll,
     nextDay,
     prevDay
   } = useAttendance();
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addingAthlete, setAddingAthlete] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
+
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+  const bookingCount = selectedClass?.bookings[0]?.count ?? roster.length;
+  const isClassFull = selectedClass ? bookingCount >= selectedClass.max_capacity : false;
+  const rosterUserIds = roster.map(b => b.profiles.id);
+
+  const handleAddAthlete = async (userId: string) => {
+    setAddingAthlete(true);
+    try {
+      await addAthlete(userId);
+      setIsAddModalOpen(false);
+    } catch {
+      // Error toast handled in hook
+    } finally {
+      setAddingAthlete(false);
+    }
+  };
+
+  const handleRemoveConfirm = async () => {
+    if (!removeConfirm) return;
+    const { id } = removeConfirm;
+    setRemoveConfirm(null);
+    await removeAthlete(id);
+  };
   return (
     <div className="space-y-6 lg:h-[calc(100vh-140px)] flex flex-col">
       
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-pits-surface-elevated p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-tight">
             Daily Attendance
@@ -75,7 +106,7 @@ export default function AttendancePage() {
       <div className="flex flex-col lg:flex-row gap-6 lg:h-full min-h-0">
         
         {/* LEFT: CLASSES LIST */}
-        <div className="w-full lg:w-1/3 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col max-h-[400px] lg:max-h-none">
+        <div className="w-full lg:w-1/3 bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col max-h-[400px] lg:max-h-none">
           <div className="p-4 bg-gray-50 border-b border-gray-200">
             <h3 className="font-bold text-pits-dim text-xs uppercase tracking-wider">
               Classes ({classes.length})
@@ -104,7 +135,7 @@ export default function AttendancePage() {
                     className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer group
                       ${selectedClassId === cls.id 
                         ? 'bg-red-50 border-red-200 ring-1 ring-pits-red' 
-                        : 'bg-white border-gray-100 hover:border-gray-200'}
+                        : 'bg-pits-surface-elevated border-gray-100 hover:border-gray-200'}
                     `}
                   >
                     <div className="flex justify-between items-start mb-1">
@@ -151,7 +182,7 @@ export default function AttendancePage() {
         </div>
 
         {/* RIGHT: ROSTER */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex-1 bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-4 bg-gray-50 border-b border-gray-200">
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
               <div>
@@ -168,8 +199,21 @@ export default function AttendancePage() {
                 )}
               </div>
               
-              {selectedClassId && roster.length > 0 && (
+              {selectedClassId && (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <Tooltip content={isClassFull ? 'Class is at full capacity' : 'Add athlete to class'}>
+                    <button
+                      onClick={() => setIsAddModalOpen(true)}
+                      disabled={isClassFull}
+                      className="flex items-center justify-center px-3 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <UserPlus size={14} className="mr-1.5" />
+                      Add Athlete
+                    </button>
+                  </Tooltip>
+
+                  {roster.length > 0 && (
+                    <>
                   <div className="relative flex-1 sm:w-48">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                     <input 
@@ -177,7 +221,7 @@ export default function AttendancePage() {
                       placeholder="Search athlete..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium focus:border-pits-red outline-none transition-all"
+                      className="w-full pl-8 pr-4 py-2 bg-pits-surface-elevated border border-gray-200 rounded-lg text-xs font-medium focus:border-pits-red outline-none transition-all"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -193,13 +237,15 @@ export default function AttendancePage() {
                     <Tooltip content="Mark all as no-show">
                       <button
                         onClick={() => markAll('no_show')}
-                        className="flex-1 flex items-center justify-center px-3 py-2 bg-white border border-gray-200 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all whitespace-nowrap"
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-pits-surface-elevated border border-gray-200 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all whitespace-nowrap"
                       >
                         <Ban size={14} className="mr-1.5" />
                         Missed All
                       </button>
                     </Tooltip>
                   </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -234,7 +280,17 @@ export default function AttendancePage() {
             ) : loadingRoster ? (
               <div className="p-12 text-center text-gray-400">Loading roster...</div>
             ) : roster.length === 0 ? (
-              <div className="p-12 text-center text-gray-400">No bookings for this class yet.</div>
+              <div className="p-12 text-center text-gray-400 flex flex-col items-center gap-4">
+                <p>No bookings for this class yet.</p>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  disabled={isClassFull}
+                  className="flex items-center px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-xs font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all disabled:opacity-50"
+                >
+                  <UserPlus size={16} className="mr-2" />
+                  Add Athlete
+                </button>
+              </div>
             ) : (
               <>
                 {/* Desktop Table View */}
@@ -304,6 +360,15 @@ export default function AttendancePage() {
                                   <XCircle size={18} />
                                 </button>
                               </Tooltip>
+
+                              <Tooltip content="Remove from class">
+                                <button 
+                                  onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name })}
+                                  className="p-2 rounded-lg text-gray-300 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                >
+                                  <UserMinus size={18} />
+                                </button>
+                              </Tooltip>
                             </div>
                           </td>
                         </tr>
@@ -362,6 +427,14 @@ export default function AttendancePage() {
                           Reset Status
                         </button>
                       )}
+
+                      <button 
+                        onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name })}
+                        className="w-full mt-2 py-2 bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-orange-100 flex items-center justify-center gap-2"
+                      >
+                        <UserMinus size={14} />
+                        Remove from Class
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -372,6 +445,23 @@ export default function AttendancePage() {
 
       </div>
 
-      </div>
+      <AddToClassModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSelect={handleAddAthlete}
+        excludedUserIds={rosterUserIds}
+        adding={addingAthlete}
+      />
+
+      <ConfirmDialog
+        isOpen={!!removeConfirm}
+        title="Remove Athlete"
+        message={`Remove ${removeConfirm?.name ?? 'this athlete'} from the class? Their booking will be deleted.`}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleRemoveConfirm}
+        onCancel={() => setRemoveConfirm(null)}
+      />
+    </div>
   );
 }

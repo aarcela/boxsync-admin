@@ -48,7 +48,7 @@ export default function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+        className="bg-pits-surface-elevated rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 text-center">
@@ -65,7 +65,7 @@ export default function ConfirmDialog({
         <div className="flex gap-3 p-4 bg-gray-50 border-t border-gray-100">
           <button
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl bg-white border border-gray-200 text-pits-text font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
+            className="flex-1 py-3 rounded-xl bg-pits-surface-elevated border border-gray-200 text-pits-text font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
           >
             {cancelLabel}
           </button>

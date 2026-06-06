@@ -17,6 +17,45 @@ const supabaseAdmin = createClient(
   }
 );
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolvePlanIdForTenant(
+  tenantId: string,
+  plan: string | undefined,
+  role: string
+): Promise<string | null> {
+  const isStaffRole =
+    role === 'coach' || role === 'manager' || role === 'admin';
+
+  if (plan && UUID_RE.test(plan)) {
+    const { data, error } = await supabaseAdmin
+      .from('membership_plans')
+      .select('id')
+      .eq('id', plan)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data?.id) return data.id;
+    if (!isStaffRole) return null;
+  }
+
+  const { data: unlimitedPlan, error: unlimitedError } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .is('weekly_limit', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (unlimitedError) throw unlimitedError;
+  return unlimitedPlan?.id ?? null;
+}
+
 export async function POST(request: Request) {
   const staffAuth = await requireStaffApi();
   if ('error' in staffAuth) return staffAuth.error;
@@ -55,6 +94,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const tenantId = staffAuth.profile.tenant_id as string | null;
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Missing tenant context.' },
+        { status: 400 }
+      );
+    }
+
     // 2. Create Auth User
     const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -72,6 +119,7 @@ export async function POST(request: Request) {
     const profileUpdate: {
       role: string;
       is_solvent: boolean;
+      tenant_id: string;
       plan?: string;
       inscription_plan: string;
       inscription_cost: number;
@@ -81,6 +129,7 @@ export async function POST(request: Request) {
     } = { 
       role: role || 'member',
       is_solvent: true,
+      tenant_id: tenantId,
       inscription_paid: inscription_paid || false,
       inscription_plan: inscription_plan || 'standard',
       inscription_cost: inscription_cost ? parseFloat(inscription_cost) : 0
@@ -94,14 +143,20 @@ export async function POST(request: Request) {
       profileUpdate.phone = phone.trim();
     }
 
-    // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
-    if (role === 'coach' || role === 'manager' || role === 'admin') {
-      profileUpdate.plan = 'unlimited';
-    } else if (plan) {
-      profileUpdate.plan = plan;
-    } else {
-      profileUpdate.plan = 'unlimited'; // Default for members
+    const planId = await resolvePlanIdForTenant(
+      tenantId,
+      plan,
+      role || 'member'
+    );
+
+    if (!planId) {
+      return NextResponse.json(
+        { error: 'Invalid membership plan for this tenant.' },
+        { status: 400 }
+      );
     }
+
+    profileUpdate.plan = planId;
 
     const { error: profileError } = await supabaseAdmin
       .from('profiles')

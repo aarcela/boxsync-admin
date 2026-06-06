@@ -152,7 +152,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         
         {/* Header */}
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -382,8 +382,8 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               <button
                 type="submit"
                 disabled={loading || fetching}
-                className={`px-8 py-3 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-                  ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-red hover:bg-pits-red-dark shadow-red-200'}
+                className={`px-8 py-3 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg
+                  ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
                 `}
               >
                 {loading ? (

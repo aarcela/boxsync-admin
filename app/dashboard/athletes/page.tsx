@@ -7,7 +7,14 @@ import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import { formatDistanceToNow, format } from 'date-fns';
-import { useAthletes, SortKey } from './hooks/useAthletes';
+import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
+
+function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
+  return sortDir === 'asc'
+    ? <ChevronUp size={12} className="ml-1 text-pits-red" />
+    : <ChevronDown size={12} className="ml-1 text-pits-red" />;
+}
 
 export default function AthletesPage() {
   const router = useRouter();
@@ -47,13 +54,6 @@ export default function AthletesPage() {
     await toggleSolvency(id, currentStatus);
   };
 
-  const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
-    return sortDir === 'asc' 
-      ? <ChevronUp size={12} className="ml-1 text-pits-red" /> 
-      : <ChevronDown size={12} className="ml-1 text-pits-red" />;
-  };
-
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -71,14 +71,14 @@ export default function AthletesPage() {
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center px-4 py-3 bg-black text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-xl hover:bg-gray-900 transition-all active:scale-95">
+          className="flex items-center justify-center px-4 py-3 bg-pits-primary text-pits-dark-text rounded-xl font-bold uppercase text-xs tracking-widest shadow-xl hover:bg-pits-primary-dark transition-all active:scale-95">
           <UserPlus size={18} className="mr-2" />
           Add Athlete
         </button>
       </div>
 
       {/* FILTERS & SEARCH */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-pits-surface-elevated p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input 
@@ -107,7 +107,7 @@ export default function AthletesPage() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400">Loading roster...</div>
         ) : (
@@ -117,27 +117,27 @@ export default function AthletesPage() {
                 <tr>
                   <th className="px-6 py-4">
                     <button onClick={() => handleSort('full_name')} className="flex items-center hover:text-pits-red transition-colors">
-                      Athlete / <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" />
+                      Athlete / <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4">
                      <button onClick={() => handleSort('plan')} className="flex items-center hover:text-pits-red transition-colors">
-                      Plan <SortIcon column="plan" />
+                      Plan <SortIcon column="plan" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4">
                     <button onClick={() => handleSort('is_solvent')} className="flex items-center hover:text-pits-red transition-colors">
-                      Status <SortIcon column="is_solvent" />
+                      Status <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleSort('created_at')} className="flex items-center hover:text-pits-red transition-colors">
-                      Registered <SortIcon column="created_at" />
+                      Registered <SortIcon column="created_at" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleSort('last_payment_date')} className="flex items-center hover:text-pits-red transition-colors">
-                      Last Payment <SortIcon column="last_payment_date" />
+                      Last Payment <SortIcon column="last_payment_date" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4">Utilization</th>
@@ -166,7 +166,7 @@ export default function AthletesPage() {
                           </div>
                           {profile.role !== 'member' && (
                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-black border-2 border-white rounded-full flex items-center justify-center">
-                               <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                               <div className="w-1.5 h-1.5 bg-pits-surface-elevated rounded-full" />
                              </div>
                           )}
                         </div>
@@ -228,8 +228,8 @@ export default function AthletesPage() {
                         })}
                         className={`group relative flex items-center justify-center w-full max-w-[100px] px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${
                           profile.is_solvent 
-                            ? 'bg-white border-green-500 text-green-600 hover:bg-green-500 hover:text-white' 
-                            : 'bg-pits-red border-pits-red text-white hover:bg-black hover:border-black'
+                            ? 'bg-pits-surface-elevated border-green-500 text-green-600 hover:bg-green-500 hover:text-white' 
+                            : 'bg-pits-primary border-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:border-pits-primary-dark'
                         }`}
                       >
                         {profile.is_solvent ? 'Solvent / Paid' : 'Debt / Unpaid'}

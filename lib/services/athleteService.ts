@@ -1,11 +1,23 @@
 import { supabase } from '../supabase';
 import { Profile, AthletePlan } from '../types/gym';
 import { financialService } from './financialService';
+import { membershipPlanService } from './membershipPlanService';
 
 export const athleteService = {
   /**
    * Fetches all user profiles, including limited booking history and payment info.
    */
+  async getBookableMembers(): Promise<Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'is_solvent'>[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, is_solvent')
+      .eq('role', 'member')
+      .order('full_name', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
   async getProfiles(): Promise<Profile[]> {
     const { data, error } = await supabase
       .from('profiles')
@@ -72,15 +84,18 @@ export const athleteService = {
       .single();
 
     if (error) throw error;
-    
-    const profile = data as Profile;
-    
-    // Fetch last payment date
+
+    const profile = data as Profile & { tenant_id?: string };
+    const plan_name = await membershipPlanService.resolvePlanDisplayName(
+      profile.plan,
+      profile.tenant_id
+    );
     const lastPaymentDates = await financialService.getLastPaymentDates([id]);
-    
+
     return {
       ...profile,
-      last_payment_date: lastPaymentDates[id]
+      plan_name,
+      last_payment_date: lastPaymentDates[id],
     };
   },
 };

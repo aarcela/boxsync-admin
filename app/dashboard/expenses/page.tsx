@@ -199,7 +199,7 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex items-center gap-4 w-full lg:w-auto">
-          <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm transition-all hover:border-pits-red group">
+          <div className="flex items-center bg-pits-surface-elevated border border-slate-200 rounded-2xl px-4 py-2 shadow-sm transition-all hover:border-pits-red group">
             <Calendar size={16} className="text-slate-400 group-hover:text-pits-red mr-2" />
             <input 
               type="month" 
@@ -210,7 +210,7 @@ export default function ExpensesPage() {
           </div>
           <button 
             onClick={() => setIsFormOpen(true)}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-pits-red text-white rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
           >
             <Plus size={18} />
             {t('Add Expense')}
@@ -250,7 +250,7 @@ export default function ExpensesPage() {
         
         {/* LEFT: THE LEDGER (8 COLS) */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
             <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row justify-between gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
@@ -265,11 +265,11 @@ export default function ExpensesPage() {
               <div className="flex bg-slate-100 p-1 rounded-xl">
                  <button 
                    onClick={() => setViewCurrency(CurrencyType.EUR)}
-                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.EUR ? 'bg-white text-pits-red shadow-sm' : 'text-slate-400'}`}
+                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-slate-400'}`}
                  >{t('EUR DISPLAY')}</button>
                  <button 
                    onClick={() => setViewCurrency(CurrencyType.VES)}
-                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.VES ? 'bg-white text-pits-red shadow-sm' : 'text-slate-400'}`}
+                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-slate-400'}`}
                  >{t('VES DISPLAY')}</button>
               </div>
             </div>
@@ -380,7 +380,7 @@ export default function ExpensesPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-xs font-black text-slate-900 uppercase flex items-center gap-2">
               <Info size={14} className="text-pits-red" /> {t('Expenditure Insights')}
             </h3>
@@ -404,7 +404,7 @@ export default function ExpensesPage() {
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
-          <div className="relative bg-white rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-slate-200">
+          <div className="relative bg-pits-surface-elevated rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-slate-200">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
                 <div>
@@ -423,7 +423,7 @@ export default function ExpensesPage() {
                      required
                      value={newExpense.description}
                      onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-white transition-all placeholder:text-slate-300"
+                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-slate-300"
                    />
                 </div>
 
@@ -461,7 +461,7 @@ export default function ExpensesPage() {
                         required
                         value={newExpense.amount}
                         onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-white transition-all"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all"
                       />
                    </div>
                    <div className="space-y-2 relative">
@@ -520,7 +520,7 @@ export default function ExpensesPage() {
                   </button>
                   <button 
                     type="submit"
-                    className="flex-[2] py-4 bg-pits-red text-white rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="flex-[2] py-4 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     {t('Authorize Cost Entry')}
                   </button>
@@ -556,7 +556,7 @@ function StatBlock({ label, value, symbol, info, color, icon }: any) {
   };
 
   return (
-    <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+    <div className="bg-pits-surface-elevated p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
       <div className="flex justify-between items-start mb-6">
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>

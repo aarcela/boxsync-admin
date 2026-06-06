@@ -313,7 +313,7 @@ export default function FinancialInsightsPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-100 shadow-sm overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 bg-pits-surface-elevated p-2 rounded-xl border border-gray-100 shadow-sm overflow-x-auto no-scrollbar">
         <Filter size={16} className="text-gray-400 shrink-0 ml-2" />
         {FILTER_TABS.map(tab => (
           <button
@@ -328,7 +328,7 @@ export default function FinancialInsightsPage() {
             {tab.label}
             {tab.count > 0 && (
               <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black ${
-                activeFilter === tab.key ? 'bg-white text-black' : 'bg-gray-100 text-gray-500'
+                activeFilter === tab.key ? 'bg-pits-surface-elevated text-black' : 'bg-gray-100 text-gray-500'
               }`}>
                 {tab.count}
               </span>
@@ -347,7 +347,7 @@ export default function FinancialInsightsPage() {
           visibleRecs.map((rec) => (
             <div 
               key={rec.id} 
-              className={`bg-white border rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden
+              className={`bg-pits-surface-elevated border rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden
                 ${rec.priority === 'urgent' ? 'border-2 border-red-500 shadow-red-50' : 'border-gray-100'}
               `}
             >
@@ -421,7 +421,7 @@ export default function FinancialInsightsPage() {
       </div>
 
       {visibleRecs.length === 0 && !loading && (
-        <div className="bg-white p-20 rounded-2xl border border-dashed border-gray-200 text-center flex flex-col items-center">
+        <div className="bg-pits-surface-elevated p-20 rounded-2xl border border-dashed border-gray-200 text-center flex flex-col items-center">
            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
              <UserCheck size={32} className="text-gray-200" />
            </div>

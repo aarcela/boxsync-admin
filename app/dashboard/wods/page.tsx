@@ -229,7 +229,7 @@ export default function WodEditorPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
 
       {/* WEEK CALENDAR */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="bg-pits-surface-elevated p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-4">
           <button
             type="button"
@@ -269,10 +269,10 @@ export default function WodEditorPage() {
                 onClick={() => selectDay(day)}
                 className={`flex flex-col items-center py-2 sm:py-3 px-1 rounded-xl border transition-all
                   ${selected
-                    ? 'bg-pits-red border-pits-red text-white shadow-lg shadow-red-100'
+                    ? 'bg-pits-primary border-pits-primary text-pits-dark-text shadow-lg shadow-pits-primary/20'
                     : today
                       ? 'bg-red-50 border-pits-red/30 text-pits-text hover:border-pits-red/50'
-                      : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-white hover:border-gray-200'
+                      : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-pits-surface-elevated hover:border-gray-200'
                   }`}
               >
                 <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-white/80' : 'text-gray-400'}`}>
@@ -282,7 +282,7 @@ export default function WodEditorPage() {
                   {format(day, 'd')}
                 </span>
                 <span
-                  className={`mt-1 w-1.5 h-1.5 rounded-full ${hasWod ? (selected ? 'bg-white' : 'bg-emerald-500') : 'bg-transparent'}`}
+                  className={`mt-1 w-1.5 h-1.5 rounded-full ${hasWod ? (selected ? 'bg-pits-surface-elevated' : 'bg-emerald-500') : 'bg-transparent'}`}
                   aria-hidden={!hasWod}
                 />
               </button>
@@ -304,7 +304,7 @@ export default function WodEditorPage() {
       </div>
       
       {/* HEADER & DATE PICKER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-pits-red rounded-xl flex items-center justify-center shadow-lg shadow-red-100">
             <Dumbbell className="text-white" size={24} />
@@ -331,7 +331,7 @@ export default function WodEditorPage() {
           </div>
           <button 
             onClick={() => setView(view === 'edit' ? 'preview' : 'edit')}
-            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-panel text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-panel text-white' : 'bg-pits-surface-elevated text-gray-500 hover:bg-gray-50'}`}
             title="Toggle Preview"
           >
             <Eye size={20} />
@@ -363,7 +363,7 @@ export default function WodEditorPage() {
                 <button
                   type="button"
                   onClick={requestUnlock}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-emerald-200 text-emerald-800 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all shrink-0"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pits-surface-elevated border border-emerald-200 text-emerald-800 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all shrink-0"
                 >
                   <Pencil size={14} />
                   Edit workout
@@ -382,7 +382,7 @@ export default function WodEditorPage() {
             
             {/* Title & Score Type Block */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
                 <div className="absolute top-0 left-0 w-1 h-full bg-pits-red"></div>
                 <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
                   Workout Theme or Naming
@@ -394,7 +394,7 @@ export default function WodEditorPage() {
                   disabled={isLocked}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. 'Stronger Together' or 'Engine Builder'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
                 />
                 <div className="text-right mt-1.5">
                   <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-red-500' : 'text-gray-400'}`}>
@@ -403,7 +403,7 @@ export default function WodEditorPage() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
                 <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
                   Score Type
                 </label>
@@ -411,7 +411,7 @@ export default function WodEditorPage() {
                   value={scoreType}
                   disabled={isLocked}
                   onChange={(e) => setScoreType(e.target.value)}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-white focus:border-pits-red outline-none transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   <option value="none">None</option>
                   <option value="amrap">AMRAP</option>
@@ -433,7 +433,7 @@ export default function WodEditorPage() {
             />
 
             {/* Technique Section */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative group overflow-visible">
+            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm relative group overflow-visible">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mr-3">
@@ -461,12 +461,12 @@ export default function WodEditorPage() {
                   }}
                   onBlur={() => setTimeout(() => setTechniqueDropdownOpen(false), 200)}
                   placeholder="Select primary skill focus..."
-                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-white focus:border-purple-600 outline-none transition-all disabled:cursor-not-allowed"
+                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-purple-600 outline-none transition-all disabled:cursor-not-allowed"
                 />
               </div>
 
               {techniqueDropdownOpen && (
-                <div className="absolute z-50 left-6 right-6 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                <div className="absolute z-50 left-6 right-6 mt-2 bg-pits-surface-elevated border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
                   {UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).map((t) => (
                     <div 
                       key={t}
@@ -511,7 +511,7 @@ export default function WodEditorPage() {
 
             {/* Stimulus & Scaling */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+               <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-3">
                   <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mr-3">
                     <Sparkles size={16} />
@@ -524,10 +524,10 @@ export default function WodEditorPage() {
                   onChange={(e) => setStimulus(e.target.value)}
                   rows={3}
                   placeholder="e.g. 'Fast & Unbroken. Heart rate 90%+'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-white focus:border-emerald-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-emerald-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
                 />
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-3">
                   <div className="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center mr-3">
                     <Scale size={16} />
@@ -540,7 +540,7 @@ export default function WodEditorPage() {
                   onChange={(e) => setScaling(e.target.value)}
                   rows={3}
                   placeholder="e.g. 'Scale Pull-ups to Ring Rows...'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-white focus:border-slate-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-slate-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -557,7 +557,7 @@ export default function WodEditorPage() {
                  <div className="w-10 h-1 bg-gray-700 rounded-full"></div>
               </div>
               
-              <div className="bg-white rounded-[1.8rem] h-[600px] overflow-hidden relative flex flex-col pt-8">
+              <div className="bg-pits-surface-elevated rounded-[1.8rem] h-[600px] overflow-hidden relative flex flex-col pt-8">
                 {/* Simulated In-App Content */}
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                   <div className="uppercase font-black text-2xl italic tracking-tighter text-pits-text leading-none">
@@ -599,12 +599,12 @@ export default function WodEditorPage() {
             </div>
             
             {/* Save Action */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
               <button
                 onClick={isLocked ? requestUnlock : handleSave}
                 disabled={saving}
-                className={`w-full py-4 rounded-xl flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-xl transition-all
-                  ${saving ? 'bg-gray-400 cursor-not-allowed' : isLocked ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-pits-red hover:bg-pits-red-dark hover:scale-[1.02] active:scale-[0.98] shadow-red-100'}
+                className={`w-full py-4 rounded-xl flex items-center justify-center font-black uppercase tracking-widest text-sm shadow-xl transition-all
+                  ${saving ? 'bg-gray-400 text-white cursor-not-allowed' : isLocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100' : 'bg-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:scale-[1.02] active:scale-[0.98] shadow-pits-primary/20'}
                 `}
               >
                 {saving ? (
@@ -685,7 +685,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
   disabled?: boolean;
 }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm transition-all hover:border-gray-300">
+    <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm transition-all hover:border-gray-300">
       <div className="flex items-center mb-4">
         <div className={`w-8 h-8 ${color} text-white rounded-lg flex items-center justify-center mr-3 shadow-sm`}>
           {icon}
@@ -700,7 +700,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-white focus:border-gray-400 outline-none resize-none transition-all placeholder:text-gray-300 font-mono disabled:cursor-not-allowed"
+        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-gray-400 outline-none resize-none transition-all placeholder:text-gray-300 font-mono disabled:cursor-not-allowed"
       />
     </div>
   );

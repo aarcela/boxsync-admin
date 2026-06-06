@@ -20,7 +20,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden"
+        className="bg-pits-surface-elevated rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
@@ -33,7 +33,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
           </div>
           <button 
             onClick={onClose}
-            className="p-2 rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-pits-red hover:border-red-100 transition-all shadow-sm"
+            className="p-2 rounded-lg bg-pits-surface-elevated border border-gray-100 text-gray-400 hover:text-pits-red hover:border-red-100 transition-all shadow-sm"
           >
             <X size={20} />
           </button>
@@ -49,7 +49,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
           ) : (
             <div className="space-y-3">
               {type === 'athletes' && (data as DashboardProfile[]).map((athlete) => (
-                <div key={athlete.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-50 bg-white hover:border-gray-200 hover:shadow-sm transition-all group">
+                <div key={athlete.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-50 bg-pits-surface-elevated hover:border-gray-200 hover:shadow-sm transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold overflow-hidden border border-gray-100">
                       {athlete.avatar_url ? (
@@ -70,10 +70,10 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
               ))}
 
               {type === 'classes' && (data as DashboardClass[]).map((cls) => (
-                <div key={cls.id} className="p-4 rounded-xl border border-gray-100 bg-white hover:border-blue-100 transition-all">
+                <div key={cls.id} className="p-4 rounded-xl border border-gray-100 bg-pits-surface-elevated hover:border-blue-100 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter text-white ${cls.class_type === 'CrossFit' ? 'bg-pits-red' : 'bg-blue-600'}`}>
+                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter text-pits-dark-text ${cls.class_type === 'CrossFit' ? 'bg-pits-primary' : 'bg-blue-600 text-white'}`}>
                          {cls.class_type}
                        </span>
                        <p className="text-sm font-black text-pits-text italic">
@@ -95,7 +95,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
               ))}
 
               {type === 'payments' && (data as DashboardPayment[]).map((payment) => (
-                <div key={payment.id} className="p-4 rounded-xl border border-gray-100 bg-white hover:border-pits-red/20 transition-all flex justify-between items-center">
+                <div key={payment.id} className="p-4 rounded-xl border border-gray-100 bg-pits-surface-elevated hover:border-pits-red/20 transition-all flex justify-between items-center">
                   <div className="flex flex-col">
                     <p className="text-sm font-bold text-pits-text">{payment.profiles?.full_name}</p>
                     <div className="flex items-center gap-2 text-[10px] text-pits-dim font-bold mt-1">
@@ -124,7 +124,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
         <div className="p-4 border-t border-gray-50 bg-gray-50/30 flex justify-end">
           <button 
             onClick={onClose}
-            className="px-6 py-2 bg-white border border-gray-200 text-pits-text font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+            className="px-6 py-2 bg-pits-surface-elevated border border-gray-200 text-pits-text font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all shadow-sm"
           >
             Close
           </button>

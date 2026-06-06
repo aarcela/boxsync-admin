@@ -114,7 +114,7 @@ export default function AccountabilityPage() {
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
               {t('Accountability')}
             </h1>
-            <div className="bg-pits-red px-2 py-0.5 rounded text-[10px] font-bold text-white border border-red-600 tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
                {t('Strategic balance and financial sustainability')}
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function AccountabilityPage() {
             <button 
               onClick={() => setActiveCurrency(CurrencyType.EUR)}
               className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
-                activeCurrency === CurrencyType.EUR ? 'bg-white text-pits-red shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               {t('EURO OPERATIONS')}
@@ -137,14 +137,14 @@ export default function AccountabilityPage() {
             <button 
               onClick={() => setActiveCurrency(CurrencyType.VES)}
               className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
-                activeCurrency === CurrencyType.VES ? 'bg-white text-pits-red shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                activeCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               {t('VES BOLIVARES')}
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
+          <div className="flex items-center gap-2 bg-pits-surface-elevated border border-slate-200 rounded-2xl p-1 shadow-sm">
             <button 
               onClick={() => changeMonth(-1)}
               className="p-2 hover:bg-slate-50 text-slate-400 hover:text-pits-red transition-all rounded-xl"
@@ -215,12 +215,12 @@ export default function AccountabilityPage() {
         
         {/* LEFT: P&L LEDGER (8 COLS) */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
             <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                 <Scale size={18} className="text-pits-red" /> {t('Monthly P&L')} - {activeCurrency}
               </h3>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-pits-surface-elevated rounded-xl border border-slate-200 shadow-sm">
                 <span className="text-[10px] font-black text-slate-400 uppercase">{t('Exchange Base')}:</span>
                 <span className="text-[10px] font-black text-slate-700">€1 = {stats.exchangeRate?.toFixed(2) || '---'} VES</span>
               </div>
@@ -312,7 +312,7 @@ export default function AccountabilityPage() {
 
         {/* RIGHT: COST STRUCTURE & ACTIONS (4 COLS) */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-slate-200 shadow-sm">
              <h3 className="text-xs font-black text-slate-900 uppercase mb-6 flex items-center gap-2">
                 <PieChart size={16} className="text-pits-red" /> {t('Financial Sustainability')}
              </h3>
@@ -367,7 +367,7 @@ export default function AccountabilityPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* % Gasto sobre ingresos */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                 <Percent size={16} className="text-pits-red" /> % Gasto sobre Ingresos
@@ -420,7 +420,7 @@ export default function AccountabilityPage() {
           </div>
 
           {/* Burn Rate Mensual */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                 <Flame size={16} className="text-orange-500" /> Burn Rate Mensual
@@ -465,7 +465,7 @@ export default function AccountabilityPage() {
         </div>
 
         {/* ROW B: Gasto por Categoría */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm p-6">
           <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2 mb-6">
             <Layers size={16} className="text-violet-500" /> Gasto por Categoría
           </h3>
@@ -522,7 +522,7 @@ export default function AccountabilityPage() {
 
 
         {/* ROW C: Gasto por Atleta — full width */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                 <Users size={16} className="text-sky-500" /> Gasto por Atleta
@@ -586,7 +586,7 @@ function BalanceCard({ label, value, symbol, type, info, color, highlight }: any
   };
 
   return (
-    <div className={`p-6 rounded-[32px] border shadow-sm transition-all hover:shadow-md relative overflow-hidden group ${highlight ? 'bg-slate-50 border-slate-200 ring-2 ring-pits-red/5' : 'bg-white border-slate-200'}`}>
+    <div className={`p-6 rounded-[32px] border shadow-sm transition-all hover:shadow-md relative overflow-hidden group ${highlight ? 'bg-slate-50 border-slate-200 ring-2 ring-pits-red/5' : 'bg-pits-surface-elevated border-slate-200'}`}>
       <div className="flex justify-between items-start mb-6">
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">{label}</p>

@@ -138,7 +138,7 @@ export default function DashboardPage() {
           </div>
           <button 
             onClick={handleRefresh}
-            className="p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 text-pits-text transition-all shadow-sm hover:shadow-md active:scale-95"
+            className="p-4 bg-pits-surface-elevated border border-gray-200 rounded-2xl hover:bg-gray-50 text-pits-text transition-all shadow-sm hover:shadow-md active:scale-95"
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
         {/* Signal 1: Awaiting Review */}
         <button 
           onClick={() => openModal('Awaiting Review', 'payments', stats.pendingPayments)}
-          className={`group bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.pendingPayments.length > 0 ? 'border-b-pits-red' : 'border-b-green-500'}`}
+          className={`group bg-pits-surface-elevated p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.pendingPayments.length > 0 ? 'border-b-pits-red' : 'border-b-green-500'}`}
         >
           <div className="flex justify-between items-start mb-6">
             <p className="text-pits-dim font-black text-[10px] uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded">Verification</p>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         {/* Signal 2: Access Blocked (Unpaid) */}
         <button 
           onClick={() => openModal('Access Blocked', 'athletes', stats.unpaidMembers)}
-          className={`group bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.unpaidMembers.length > 0 ? 'border-b-red-600' : 'border-b-green-500'}`}
+          className={`group bg-pits-surface-elevated p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.unpaidMembers.length > 0 ? 'border-b-red-600' : 'border-b-green-500'}`}
         >
           <div className="flex justify-between items-start mb-6">
             <p className="text-pits-dim font-black text-[10px] uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded">Blocked</p>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
         {/* Signal 3: Retention Risk (Inactive) */}
         <button 
           onClick={() => openModal('Retention Risk', 'athletes', stats.inactiveAthletes)}
-          className={`group bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.inactiveAthletes.length > 0 ? 'border-b-orange-500' : 'border-b-green-500'}`}
+          className={`group bg-pits-surface-elevated p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.inactiveAthletes.length > 0 ? 'border-b-orange-500' : 'border-b-green-500'}`}
         >
           <div className="flex justify-between items-start mb-6">
             <p className="text-pits-dim font-black text-[10px] uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded">Retention</p>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         {/* Signal 4: Growth Gaps (Low occupancy) */}
         <button 
           onClick={() => openModal('Growth Gaps', 'classes', stats.lowOccupancyClasses)}
-          className={`group bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.lowOccupancyClasses.length > 0 ? 'border-b-orange-400' : 'border-b-blue-500'}`}
+          className={`group bg-pits-surface-elevated p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-xl hover:-translate-y-1 text-left ${stats.lowOccupancyClasses.length > 0 ? 'border-b-orange-400' : 'border-b-blue-500'}`}
         >
           <div className="flex justify-between items-start mb-6">
             <p className="text-pits-dim font-black text-[10px] uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded">Efficiency</p>
@@ -233,8 +233,8 @@ export default function DashboardPage() {
            className="bg-pits-panel p-6 rounded-3xl shadow-2xl shadow-pits-red/20 flex flex-col justify-between border-b-4 border-b-pits-red group transition-all hover:shadow-pits-red/40"
         >
           <div className="flex justify-between items-start mb-6">
-            <p className="text-white/60 font-black text-[10px] uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded">Roster</p>
-            <div className="p-2.5 bg-white/10 rounded-2xl text-pits-red">
+            <p className="text-white/60 font-black text-[10px] uppercase tracking-widest bg-pits-ink/10 px-2 py-0.5 rounded">Roster</p>
+            <div className="p-2.5 bg-pits-ink/10 rounded-2xl text-pits-red">
               <CheckCircle size={20} />
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
       </div>
 
       {/* PRIORITY ACTION QUEUE */}
-      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/10">
           <div>
             <h3 className="text-xl font-black text-pits-text uppercase italic tracking-tighter flex items-center leading-none">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                       <div className="text-[10px] font-bold text-pits-dim uppercase italic mt-0.5">Verification Pending</div>
                     </td>
                     <td className="px-8 py-6">
-                      <span className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-white border border-gray-200 text-pits-dim shadow-sm group-hover:border-pits-text group-hover:text-pits-text transition-all">
+                      <span className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-pits-surface-elevated border border-gray-200 text-pits-dim shadow-sm group-hover:border-pits-text group-hover:text-pits-text transition-all">
                         {payment.method || 'Direct Transfer'}
                       </span>
                     </td>

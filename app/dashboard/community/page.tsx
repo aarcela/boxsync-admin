@@ -105,7 +105,7 @@ export default function CommunityPage() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
-              className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red transition-all"
+              className="pl-9 pr-4 py-2 bg-pits-surface-elevated border border-gray-200 rounded-xl text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red transition-all"
             >
               <option value="all">{t('All Types')}</option>
               <option value="general">{t('General')}</option>
@@ -118,7 +118,7 @@ export default function CommunityPage() {
           <button
             onClick={() => fetchPosts(true)}
             disabled={loading}
-            className="p-2 bg-white border border-gray-200 rounded-xl text-gray-600 hover:text-pits-red hover:border-pits-red transition-all disabled:opacity-50"
+            className="p-2 bg-pits-surface-elevated border border-gray-200 rounded-xl text-gray-600 hover:text-pits-red hover:border-pits-red transition-all disabled:opacity-50"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -127,7 +127,7 @@ export default function CommunityPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-pits-red/10 rounded-xl flex items-center justify-center text-pits-red">
             <MessageSquare size={24} />
           </div>
@@ -136,7 +136,7 @@ export default function CommunityPage() {
             <p className="text-2xl font-black text-pits-black">{posts.length}</p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
             <Heart size={24} />
           </div>
@@ -147,7 +147,7 @@ export default function CommunityPage() {
             </p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500">
             <Trophy size={24} />
           </div>
@@ -161,7 +161,7 @@ export default function CommunityPage() {
       </div>
 
       {/* Posts Table */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -301,7 +301,7 @@ export default function CommunityPage() {
             <button
               onClick={() => fetchPosts()}
               disabled={loading}
-              className="px-6 py-2.5 bg-pits-black text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-pits-red transition-all disabled:opacity-50 disabled:hover:bg-pits-black flex items-center gap-2"
+              className="px-6 py-2.5 bg-pits-black text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-pits-primary hover:text-pits-dark-text transition-all disabled:opacity-50 disabled:hover:bg-pits-black flex items-center gap-2"
             >
               {loading && <RefreshCw size={16} className="animate-spin" />}
               {loading ? t('Loading...') : t('Load More Posts')}

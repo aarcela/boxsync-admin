@@ -166,7 +166,7 @@ export default function PaymentMethodsPage() {
 
         <button 
           onClick={() => handleOpenForm()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-red text-white rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
         >
           <Plus size={18} />
           {t('Add Method')}
@@ -178,7 +178,7 @@ export default function PaymentMethodsPage() {
         
         {/* LIST */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
             <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row justify-between gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
@@ -274,11 +274,11 @@ export default function PaymentMethodsPage() {
               </p>
               
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/10">
+                <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-white/10">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">{t('Total Methods')}</span>
                   <span className="text-sm font-black text-white">{methods.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/10">
+                <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-white/10">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">{t('Active Channels')}</span>
                   <span className="text-sm font-black text-emerald-500">{methods.filter(m => m.is_active).length}</span>
                 </div>
@@ -286,7 +286,7 @@ export default function PaymentMethodsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase flex items-center gap-2">
               <Info size={14} className="text-pits-red" /> {t('System Tips')}
             </h3>
@@ -308,7 +308,7 @@ export default function PaymentMethodsPage() {
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
-          <div className="relative bg-white rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+          <div className="relative bg-pits-surface-elevated rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
                 <div>
@@ -331,7 +331,7 @@ export default function PaymentMethodsPage() {
                      required
                      value={formData.label}
                      onChange={(e) => setFormData({...formData, label: e.target.value})}
-                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-white transition-all placeholder:text-slate-300"
+                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-slate-300"
                    />
                 </div>
 
@@ -367,7 +367,7 @@ export default function PaymentMethodsPage() {
                      placeholder={t('Account number, bank name, etc.')}
                      value={formData.details}
                      onChange={(e) => setFormData({...formData, details: e.target.value})}
-                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-white transition-all placeholder:text-slate-300 resize-none"
+                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-slate-300 resize-none"
                    />
                 </div>
 
@@ -382,7 +382,7 @@ export default function PaymentMethodsPage() {
                   <button 
                     type="submit"
                     disabled={isPending}
-                    className="flex-[2] py-4 bg-pits-red text-white rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                    className="flex-[2] py-4 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                   >
                     {isPending ? t('Processing...') : editingMethod ? t('Save Changes') : t('Confirm Method')}
                   </button>

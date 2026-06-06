@@ -260,7 +260,7 @@ export default function PerformancePage() {
             {t('Strategic operational performance system')}
           </p>
         </div>
-        <div className="flex bg-white/50 backdrop-blur-sm border border-gray-100 p-1 rounded-xl shadow-sm">
+        <div className="flex bg-pits-surface-muted/50 backdrop-blur-sm border border-gray-100 p-1 rounded-xl shadow-sm">
            <div className="px-4 py-2 bg-pits-panel text-white rounded-lg text-[10px] font-black uppercase tracking-tighter">
              {t('Last 30 Days')}
            </div>
@@ -288,7 +288,7 @@ export default function PerformancePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* 1. ATHLETE HEALTH */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        <section className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
           <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-emerald-50/10">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-emerald-500/10 rounded-2xl">
@@ -321,7 +321,7 @@ export default function PerformancePage() {
               </h3>
               <div className="space-y-2">
                 {athletesHealth.topRisk.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white transition-all group">
+                  <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-pits-surface-elevated transition-all group">
                     <div className="flex flex-col">
                        <span className="font-black text-pits-text text-sm uppercase group-hover:text-pits-red transition-colors">{a.name}</span>
                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{t('Score')}: {a.score}/10 • {a.attendance} {t('Frequency')}</span>
@@ -332,7 +332,7 @@ export default function PerformancePage() {
                            if (a.phone) window.open(`https://wa.me/${a.phone.replace(/\D/g, '')}`, '_blank');
                            else toast(t('No phone on file'), 'warning');
                          }}
-                         className="px-3 py-1.5 bg-pits-panel text-white text-[9px] font-black uppercase rounded-lg hover:bg-pits-red transition-all"
+                         className="px-3 py-1.5 bg-pits-panel text-white text-[9px] font-black uppercase rounded-lg hover:bg-pits-primary hover:text-pits-dark-text transition-all"
                        >
                          {t('Contact')}
                        </button>
@@ -345,7 +345,7 @@ export default function PerformancePage() {
         </section>
 
         {/* 2. COACH QUALITY */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        <section className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
           <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-blue-50/10">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-blue-500/10 rounded-2xl">
@@ -360,11 +360,11 @@ export default function PerformancePage() {
           
           <div className="p-6 flex-1 flex flex-col gap-4">
             {coachStats.map((coach) => (
-              <div key={coach.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group transition-all hover:bg-white">
+              <div key={coach.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group transition-all hover:bg-pits-surface-elevated">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-black text-pits-text uppercase text-sm truncate group-hover:text-pits-red transition-colors">{coach.name}</h3>
-                    <span className="text-[8px] font-black text-gray-400 bg-white px-1.5 py-0.5 rounded border uppercase">
+                    <span className="text-[8px] font-black text-gray-400 bg-pits-surface-elevated px-1.5 py-0.5 rounded border uppercase">
                       {coach.reviews} {t('Reviews')}
                     </span>
                   </div>
@@ -397,7 +397,7 @@ export default function PerformancePage() {
         </section>
 
         {/* 3. CLASS PERFORMANCE */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        <section className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
           <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-purple-50/10">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-purple-500/10 rounded-2xl">
@@ -420,7 +420,7 @@ export default function PerformancePage() {
                {classStats.slice(0, 4).map((s, i) => (
                  <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group transition-all hover:border-pits-red/30">
                     <div className="flex items-center gap-4">
-                       <span className="w-12 h-12 flex items-center justify-center bg-white rounded-xl font-black text-pits-text text-sm shadow-sm">
+                       <span className="w-12 h-12 flex items-center justify-center bg-pits-surface-elevated rounded-xl font-black text-pits-text text-sm shadow-sm">
                          {s.slot}
                        </span>
                        <div>
@@ -433,7 +433,7 @@ export default function PerformancePage() {
                     </div>
                     <button 
                       onClick={() => router.push('/dashboard/news')}
-                      className="px-4 py-2 bg-white border border-gray-200 text-pits-text text-[9px] font-black uppercase rounded-lg hover:bg-pits-black hover:text-white transition-all shadow-sm"
+                      className="px-4 py-2 bg-pits-surface-elevated border border-gray-200 text-pits-text text-[9px] font-black uppercase rounded-lg hover:bg-pits-black hover:text-white transition-all shadow-sm"
                     >
                       {t('Promote')}
                     </button>
@@ -444,7 +444,7 @@ export default function PerformancePage() {
         </section>
 
         {/* 4. REVENUE EFFICIENCY */}
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+        <section className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
           <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-amber-50/10">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-amber-500/10 rounded-2xl">
@@ -482,7 +482,7 @@ export default function PerformancePage() {
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Top Plans')}</span>
               <div className="space-y-2">
                 {revenueStats.map((plan, i) => (
-                  <div key={i} className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 hover:bg-white transition-all group">
+                  <div key={i} className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 hover:bg-pits-surface-elevated transition-all group">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-200 text-gray-500'}`}>
                        #{i+1}
                     </div>

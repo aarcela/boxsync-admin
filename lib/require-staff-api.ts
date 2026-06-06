@@ -35,7 +35,7 @@ export async function requireStaffApi() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('id', user.id)
     .single();
 

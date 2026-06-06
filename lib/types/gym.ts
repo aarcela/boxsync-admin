@@ -12,6 +12,17 @@ export interface PaymentMethod {
   created_at: string;
 }
 
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  price_usd: number;
+  description: string | null;
+  is_active: boolean;
+  weekly_limit: number | null;
+  tenant_id: string;
+  created_at: string;
+}
+
 export interface PaymentRecord {
   id: string;
   amount: number;
@@ -68,6 +79,7 @@ export interface Profile {
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
   plan: AthletePlan;
+  plan_name?: string;
   inscription_plan: InscriptionPlan;
   inscription_paid: boolean;
   created_at: string;
@@ -97,6 +109,7 @@ export interface Profile {
   admin_note?: string | null;
   inscription_cost?: number;
   discount?: number | null;
+  salary_tier_id?: string | null;
   bookings?: { 
     id: string;
     status: string; 
@@ -144,6 +157,33 @@ export interface ExpenseRecord {
   payment_method: string;
 }
 
+export type IncomeCategory =
+  | 'merchandise_sales'
+  | 'supplement_sales'
+  | 'food_beverage_sales'
+  | 'workshops_seminars'
+  | 'events_competitions'
+  | 'space_rental'
+  | 'sponsorships'
+  | 'income_adjustments'
+  | 'other_income';
+
+export type IncomeStatus = 'pending' | 'confirmed' | 'cancelled';
+
+export interface IncomeRecord {
+  id: string;
+  description: string;
+  category: IncomeCategory;
+  amount: number;
+  currency: CurrencyType;
+  exchange_rate_at_time: number;
+  income_date: string;
+  payment_method?: string;
+  status: IncomeStatus;
+  created_by?: string;
+  created_at: string;
+}
+
 export interface ProfitabilityStats {
   totalRevenueEUR: number;
   totalExpensesEUR: number;
@@ -152,4 +192,51 @@ export interface ProfitabilityStats {
   breakEvenEUR: number;
   fixedCostsEUR: number;
   variableCostsEUR: number;
+}
+
+export interface CoachSalaryTier {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  tenant_id: string;
+  created_at: string;
+  rates?: CoachSalaryTierRate[];
+}
+
+export interface CoachSalaryTierRate {
+  id: string;
+  tier_id: string;
+  class_type: string;
+  rate_usd: number;
+  tenant_id: string;
+}
+
+export interface CoachWithSalaryTier {
+  id: string;
+  full_name: string;
+  role: Profile['role'];
+  salary_tier_id: string | null;
+  salary_tier?: { id: string; name: string } | null;
+}
+
+export type PayrollClassStatus = 'confirmed' | 'pending' | 'cancelled';
+
+export interface PayrollClass {
+  id: string;
+  start_time: string;
+  end_time: string;
+  class_type: string;
+  is_cancelled: boolean;
+  payroll_confirmed: boolean;
+  coach_id: string | null;
+  coach: {
+    id: string;
+    full_name: string;
+    salary_tier_id: string | null;
+    email?: string | null;
+  } | null;
+  bookings: { count: number }[];
+  payrollStatus?: PayrollClassStatus;
+  payRateUsd?: number | null;
 }

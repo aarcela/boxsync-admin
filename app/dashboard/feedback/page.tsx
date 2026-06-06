@@ -226,7 +226,7 @@ export default function FeedbackPage() {
   return (
     <div className="space-y-4 h-full flex flex-col overflow-hidden">
       {/* COMPACT STRATEGIC HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm gap-4 shrink-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-pits-surface-elevated p-4 rounded-xl border border-gray-100 shadow-sm gap-4 shrink-0">
         <div>
           <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-none mb-1">
             {t('Service Quality Control')}
@@ -258,7 +258,7 @@ export default function FeedbackPage() {
       {/* COMPACT EVALUATION COCKPIT */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
         {evaluations.map((val) => (
-          <div key={val.id} className={`bg-white p-3 rounded-xl border shadow-sm relative overflow-hidden transition-all hover:border-pits-red ${val.alert ? 'border-red-200' : 'border-gray-100'}`}>
+          <div key={val.id} className={`bg-pits-surface-elevated p-3 rounded-xl border shadow-sm relative overflow-hidden transition-all hover:border-pits-red ${val.alert ? 'border-red-200' : 'border-gray-100'}`}>
             {val.alert && (
               <div className="absolute top-0 right-0 bg-red-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-widest">
                 {t('Needs Attention')}
@@ -319,7 +319,7 @@ export default function FeedbackPage() {
                placeholder={t('Search by athlete or coach...')}
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg font-medium text-white placeholder-gray-500 focus:border-pits-red outline-none shadow-sm text-[11px]"
+               className="w-full pl-9 pr-4 py-2 bg-pits-ink/5 border border-white/10 rounded-lg font-medium text-white placeholder-gray-500 focus:border-pits-red outline-none shadow-sm text-[11px]"
              />
            </div>
            
@@ -327,7 +327,7 @@ export default function FeedbackPage() {
              <select
                value={filterCoach}
                onChange={(e) => { setFilterCoach(e.target.value); setCurrentPage(1); }}
-               className="flex-1 md:flex-none bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[10px] font-bold text-white outline-none focus:border-pits-red cursor-pointer"
+               className="flex-1 md:flex-none bg-pits-ink/5 border border-white/10 rounded-lg px-2 py-2 text-[10px] font-bold text-white outline-none focus:border-pits-red cursor-pointer"
              >
                <option value="all" className="text-black">All Coaches</option>
                {coaches.map(c => (
@@ -335,11 +335,11 @@ export default function FeedbackPage() {
                ))}
              </select>
 
-             <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+             <div className="flex items-center gap-1 bg-pits-ink/5 border border-white/10 rounded-lg p-1">
                 <button
                   onClick={() => { setFilterRating(null); setCurrentPage(1); }}
                   className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${
-                    filterRating === null ? 'bg-white text-pits-text' : 'text-gray-400 hover:text-white'
+                    filterRating === null ? 'bg-pits-surface-elevated text-pits-text' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   {t('All')}
@@ -349,7 +349,7 @@ export default function FeedbackPage() {
                     key={r}
                     onClick={() => { setFilterRating(r); setCurrentPage(1); }}
                     className={`px-2 py-1 rounded-md text-[9px] font-black flex items-center gap-1 transition-all ${
-                      filterRating === r ? 'bg-white text-pits-text font-black' : 'text-gray-400 hover:text-white font-bold'
+                      filterRating === r ? 'bg-pits-surface-elevated text-pits-text font-black' : 'text-gray-400 hover:text-white font-bold'
                     }`}
                   >
                     {r}{r === 3 ? '-' : ''}<Star size={9} className={filterRating === r ? 'fill-current text-yellow-500' : ''} />
@@ -360,7 +360,7 @@ export default function FeedbackPage() {
       </div>
 
       {/* FEEDBACK LIST */}
-      <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
         <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
             <h3 className="font-black text-pits-text text-[10px] uppercase tracking-widest italic">
@@ -399,7 +399,7 @@ export default function FeedbackPage() {
                             <User size={28} className="text-gray-300" />
                           )}
                         </div>
-                        <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-md bg-white`}>
+                        <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-md bg-pits-surface-elevated`}>
                            <span className={`text-[11px] font-black ${getARColor(item.rating)}`}>{item.rating}</span>
                         </div>
                       </div>
@@ -446,7 +446,7 @@ export default function FeedbackPage() {
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black uppercase italic tracking-wider transition-all shadow-sm ${
                               item.rating <= 3 
                               ? 'bg-red-600 text-white hover:bg-black' 
-                              : 'bg-white border border-gray-200 text-pits-text hover:bg-pits-red hover:text-white hover:border-pits-red'
+                              : 'bg-pits-surface-elevated border border-gray-200 text-pits-text hover:bg-pits-primary hover:text-pits-dark-text hover:border-pits-primary'
                             }`}
                           >
                             <Phone size={14} />
@@ -483,7 +483,7 @@ export default function FeedbackPage() {
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || loading}
-              className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-black hover:text-white text-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+              className="p-2 bg-pits-surface-elevated border border-gray-200 rounded-lg hover:bg-black hover:text-white text-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
             >
               <ChevronLeft size={16} />
             </button>
@@ -497,8 +497,8 @@ export default function FeedbackPage() {
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${
                       currentPage === pageNum 
-                        ? 'bg-pits-red text-white shadow-lg rotate-1' 
-                        : 'bg-white border border-gray-200 text-gray-400 hover:border-black hover:text-black'
+                        ? 'bg-pits-primary text-pits-dark-text shadow-lg rotate-1' 
+                        : 'bg-pits-surface-elevated border border-gray-200 text-gray-400 hover:border-black hover:text-black'
                     }`}
                   >
                     {pageNum}
@@ -509,7 +509,7 @@ export default function FeedbackPage() {
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages || loading}
-              className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-black hover:text-white text-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+              className="p-2 bg-pits-surface-elevated border border-gray-200 rounded-lg hover:bg-black hover:text-white text-gray-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
             >
               <ChevronRight size={16} />
             </button>
