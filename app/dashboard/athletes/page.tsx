@@ -6,6 +6,7 @@ import { Search, UserPlus, Filter, Check, X, Edit2, Award, ArrowUpDown, ChevronU
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import { useLanguage } from '@/components/LanguageContext';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 
@@ -18,6 +19,7 @@ function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: Sort
 
 export default function AthletesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const {
     profiles,
     loading,
@@ -60,12 +62,12 @@ export default function AthletesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
-            Roster <span className="text-gray-300">/ Atletas</span>
+            {t('Roster')} <span className="text-pits-dim">/ {t('Athletes')}</span>
           </h2>
           <p className="text-pits-dim font-medium text-sm">
-            Retention & Revenue Command Center.
+            {t('Retention & Revenue Command Center.')}
             <span className="ml-2 text-xs text-pits-red font-bold animate-pulse">
-              ● {profiles.filter(p => p.role === 'member' && !p.is_solvent).length} Unpaid
+              ● {t('{{count}} Unpaid', { count: profiles.filter(p => p.role === 'member' && !p.is_solvent).length })}
             </span>
           </p>
         </div>
@@ -73,91 +75,91 @@ export default function AthletesPage() {
           onClick={() => setIsAddModalOpen(true)}
           className="flex items-center justify-center px-4 py-3 bg-pits-primary text-pits-dark-text rounded-xl font-bold uppercase text-xs tracking-widest shadow-xl hover:bg-pits-primary-dark transition-all active:scale-95">
           <UserPlus size={18} className="mr-2" />
-          Add Athlete
+          {t('Add Athlete')}
         </button>
       </div>
 
       {/* FILTERS & SEARCH */}
-      <div className="bg-pits-surface-elevated p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-pits-surface-elevated p-4 rounded-xl border border-pits-edge shadow-sm flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pits-dim" size={20} />
           <input 
             type="text" 
-            placeholder="Search by name..." 
+            placeholder={t('Search by name...')} 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-pits-red focus:border-transparent outline-none transition-all"
+            className="w-full pl-10 pr-4 py-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium focus:ring-2 focus:ring-pits-red focus:border-transparent outline-none transition-all"
           />
         </div>
         
         <div className="flex items-center space-x-2 w-full md:w-auto">
-          <Filter size={20} className="text-gray-400" />
+          <Filter size={20} className="text-pits-dim" />
           <select 
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="flex-1 md:w-48 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 outline-none focus:border-pits-red"
+            className="flex-1 md:w-48 p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:border-pits-red"
           >
-            <option value="all">All Roles</option>
-            <option value="member">Members</option>
-            <option value="coach">Coaches</option>
-            <option value="manager">Managers</option>
-            <option value="admin">Admins</option>
+            <option value="all">{t('All Roles')}</option>
+            <option value="member">{t('Members')}</option>
+            <option value="coach">{t('Coaches')}</option>
+            <option value="manager">{t('Managers')}</option>
+            <option value="admin">{t('Admins')}</option>
           </select>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-400">Loading roster...</div>
+          <div className="p-12 text-center text-pits-dim">{t('Loading roster page...')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 uppercase bg-gray-50 font-bold tracking-wider border-b border-gray-100">
+              <thead className="text-xs text-pits-dim uppercase bg-pits-surface-elevated font-bold tracking-wider border-b border-pits-edge">
                 <tr>
                   <th className="px-6 py-4">
                     <button onClick={() => handleSort('full_name')} className="flex items-center hover:text-pits-red transition-colors">
-                      Athlete / <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" sortKey={sortKey} sortDir={sortDir} />
+                      {t('Athlete / Contact')} <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4">
                      <button onClick={() => handleSort('plan')} className="flex items-center hover:text-pits-red transition-colors">
-                      Plan <SortIcon column="plan" sortKey={sortKey} sortDir={sortDir} />
+                      {t('Plan')} <SortIcon column="plan" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4">
                     <button onClick={() => handleSort('is_solvent')} className="flex items-center hover:text-pits-red transition-colors">
-                      Status <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
+                      {t('Status')} <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleSort('created_at')} className="flex items-center hover:text-pits-red transition-colors">
-                      Registered <SortIcon column="created_at" sortKey={sortKey} sortDir={sortDir} />
+                      {t('Registered')} <SortIcon column="created_at" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
                   <th className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleSort('last_payment_date')} className="flex items-center hover:text-pits-red transition-colors">
-                      Last Payment <SortIcon column="last_payment_date" sortKey={sortKey} sortDir={sortDir} />
+                      {t('Last Payment')} <SortIcon column="last_payment_date" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
-                  <th className="px-6 py-4">Utilization</th>
-                  <th className="px-6 py-4">Last Visit</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4">{t('Utilization')}</th>
+                  <th className="px-6 py-4">{t('Last Visit')}</th>
+                  <th className="px-6 py-4 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-pits-edge">
                 {filteredProfiles.map((profile) => (
                   <tr 
                     key={profile.id} 
                     onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
-                    className={`transition-colors border-l-4 cursor-pointer ${!profile.is_solvent ? 'border-l-pits-red bg-red-50/30 font-medium' : 'border-l-transparent hover:bg-gray-50'}`}
+                    className={`transition-colors border-l-4 cursor-pointer ${!profile.is_solvent ? 'border-l-pits-red bg-pits-primary-soft/30 font-medium' : 'border-l-transparent hover:bg-pits-surface-muted'}`}
                   >
                     
                     {/* NAME + CONTACT */}
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="relative">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-sm mr-3 overflow-hidden border border-gray-100">
+                          <div className="w-10 h-10 rounded-full bg-pits-surface-muted flex items-center justify-center text-pits-dim font-bold text-sm mr-3 overflow-hidden border border-pits-edge">
                              {profile.avatar_url ? (
                                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                              ) : (
@@ -172,19 +174,19 @@ export default function AthletesPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-gray-900">{profile.full_name || 'Unnamed'}</span>
+                            <span className="font-bold text-pits-text">{profile.full_name || t('Unnamed')}</span>
                             <a 
                               href={`https://wa.me/${profile.phone?.replace(/[^0-9]/g, '')}`} 
                               target="_blank" 
                               rel="noreferrer"
-                              className="p-1 text-green-500 hover:bg-green-50 rounded-md transition-colors"
-                              title="Text on WhatsApp"
+                              className="p-1 text-pits-success hover:bg-pits-primary-soft rounded-md transition-colors"
+                              title={t('Text on WhatsApp')}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MessageCircle size={14} />
                             </a>
                           </div>
-                          <div className="text-[10px] text-gray-400 font-mono tracking-tighter uppercase whitespace-nowrap">
+                          <div className="text-[10px] text-pits-dim font-mono tracking-tighter uppercase whitespace-nowrap">
                             {profile.role} • ID: {profile.id.slice(0, 5)}
                           </div>
                         </div>
@@ -198,7 +200,7 @@ export default function AthletesPage() {
                           value={profile.plan || 'unlimited'}
                           onChange={(e) => changePlan(profile.id, e.target.value)}
                           onClick={(e) => e.stopPropagation()}
-                          className="bg-transparent border-none text-gray-700 text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors"
+                          className="bg-transparent border-none text-pits-text text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors"
                         >
                           <option value="unlimited">Unlimited</option>
                           <option value="3x_week">3x / Week</option>
@@ -209,7 +211,7 @@ export default function AthletesPage() {
                         </select>
                         <div className="flex items-center gap-1">
                           <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
-                            profile.inscription_paid ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                            profile.inscription_paid ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-primary border-pits-edge'
                           }`}>
                             {profile.inscription_plan || 'standard'}
                           </span>
@@ -223,26 +225,26 @@ export default function AthletesPage() {
                         onClick={() => setConfirmConfig({
                           isOpen: true,
                           profileId: profile.id,
-                          profileName: profile.full_name || 'this athlete',
+                          profileName: profile.full_name || t('this athlete'),
                           currentSolvency: profile.is_solvent
                         })}
                         className={`group relative flex items-center justify-center w-full max-w-[100px] px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${
                           profile.is_solvent 
-                            ? 'bg-pits-surface-elevated border-green-500 text-green-600 hover:bg-green-500 hover:text-white' 
+                            ? 'bg-pits-surface-elevated border-pits-success text-pits-success hover:bg-pits-success hover:text-pits-text' 
                             : 'bg-pits-primary border-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:border-pits-primary-dark'
                         }`}
                       >
-                        {profile.is_solvent ? 'Solvent / Paid' : 'Debt / Unpaid'}
+                        {profile.is_solvent ? t('Solvent / Paid') : t('Debt / Unpaid')}
                       </button>
                     </td>
 
                     {/* REGISTERED */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-700">
+                        <span className="text-xs font-bold text-pits-text">
                           {profile.created_at ? format(new Date(profile.created_at), 'dd/MM/yyyy') : '-'}
                         </span>
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-[10px] text-pits-dim">
                           {profile.created_at ? formatDistanceToNow(new Date(profile.created_at), { addSuffix: true }) : ''}
                         </span>
                       </div>
@@ -253,15 +255,15 @@ export default function AthletesPage() {
                       <div className="flex items-center">
                         {profile.last_payment_date ? (
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-gray-900">
+                            <span className="text-xs font-bold text-pits-text">
                               {format(new Date(profile.last_payment_date), 'dd/MM/yyyy')}
                             </span>
-                            <span className="text-[10px] text-gray-400 capitalize">
+                            <span className="text-[10px] text-pits-dim capitalize">
                               {formatDistanceToNow(new Date(profile.last_payment_date), { addSuffix: true })}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">No payments</span>
+                          <span className="text-xs text-pits-dim italic">{t('No payments')}</span>
                         )}
                       </div>
                     </td>
@@ -280,14 +282,14 @@ export default function AthletesPage() {
                                 <div 
                                   key={idx} 
                                   className={`w-2.5 h-2.5 rounded-full ${
-                                    idx <= attended ? 'bg-green-500' : 
-                                    (idx <= (attended + noShow) ? 'bg-red-500' : 'bg-gray-100')
+                                    idx <= attended ? 'bg-pits-success' : 
+                                    (idx <= (attended + noShow) ? 'bg-pits-error' : 'bg-pits-surface-muted')
                                   }`} 
                                 />
                               ))}
                             </div>
-                            <span className={`text-[10px] font-bold ${isRisk ? 'text-red-500 animate-pulse' : 'text-gray-400'}`}>
-                              {attended} Visits (30d)
+                            <span className={`text-[10px] font-bold ${isRisk ? 'text-pits-error animate-pulse' : 'text-pits-dim'}`}>
+                              {t('{{count}} Visits (30d)', { count: attended })}
                             </span>
                           </div>
                         );
@@ -301,16 +303,16 @@ export default function AthletesPage() {
                           ?.filter(b => b.status === 'attended')
                           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
                         
-                        if (!lastVisit) return <span className="text-gray-400 text-xs italic">Never</span>;
+                        if (!lastVisit) return <span className="text-pits-dim text-xs italic">{t('Never')}</span>;
                         
                         const date = new Date(lastVisit.created_at);
                         const days = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 3600 * 24));
                         
                         return (
-                          <div className="flex items-center text-xs font-bold text-gray-700">
-                             <Calendar size={12} className="mr-1.5 text-gray-400" />
+                          <div className="flex items-center text-xs font-bold text-pits-text">
+                             <Calendar size={12} className="mr-1.5 text-pits-dim" />
                              {formatDistanceToNow(date, { addSuffix: true })}
-                             {days > 10 && <span className="ml-2 w-2 h-2 bg-red-500 rounded-full" title="Inactive > 10 days" />}
+                             {days > 10 && <span className="ml-2 w-2 h-2 bg-pits-error rounded-full" title={t('Inactive > 10 days')} />}
                           </div>
                         );
                       })()}
@@ -325,8 +327,8 @@ export default function AthletesPage() {
                             setSelectedUserId(profile.id);
                             setIsEditModalOpen(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Edit athlete"
+                          className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
+                          title={t('Edit athlete')}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -360,13 +362,13 @@ export default function AthletesPage() {
       {/* SOLVENCY CONFIRMATION */}
       <ConfirmDialog
         isOpen={confirmConfig.isOpen}
-        title={confirmConfig.currentSolvency ? 'Revoke Access' : 'Restore Access'}
+        title={confirmConfig.currentSolvency ? t('Revoke Access') : t('Restore Access')}
         message={
           confirmConfig.currentSolvency
-            ? `Lock out ${confirmConfig.profileName}? They will immediately lose booking access until reactivated.`
-            : `Restore access for ${confirmConfig.profileName}? They will be able to book classes again.`
+            ? t('Lock out confirm message', { name: confirmConfig.profileName })
+            : t('Restore access confirm message', { name: confirmConfig.profileName })
         }
-        confirmLabel={confirmConfig.currentSolvency ? 'Lock Out' : 'Restore'}
+        confirmLabel={confirmConfig.currentSolvency ? t('Lock Out') : t('Restore')}
         variant={confirmConfig.currentSolvency ? 'danger' : 'default'}
         onConfirm={executeSolvencyToggle}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}

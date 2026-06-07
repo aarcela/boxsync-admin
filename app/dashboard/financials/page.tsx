@@ -12,8 +12,11 @@ import { useToast } from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import Tooltip from '../../../components/Tooltip';
 import { useFinancials } from './hooks/useFinancials';
-import { CurrencyType } from '@/lib/types/gym';
+import { CurrencyStats, CurrencyType } from '@/lib/types/gym';
+import { TranslationKey } from '@/lib/translations';
 import { useLanguage } from '../../../components/LanguageContext';
+
+type TranslateFn = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
 const ITEMS_PER_PAGE = 12;
 
@@ -117,10 +120,10 @@ export default function FinancialsPage() {
 
   const handleAudit = () => {
     if (reconDifference === 0) {
-      toast('Vault reconciled perfectly.', 'success');
+      toast(t('Vault reconciled perfectly.'), 'success');
     } else {
       const msg = `${reconDifference > 0 ? '+' : ''}${reconDifference.toFixed(2)} EUR`;
-      toast(`Reconciliation mismatch: ${msg}`, reconDifference < 0 ? 'error' : 'warning');
+      toast(t('Reconciliation mismatch: {{amount}}', { amount: msg }), reconDifference < 0 ? 'error' : 'warning');
     }
   };
 
@@ -169,51 +172,51 @@ export default function FinancialsPage() {
     link.href = url;
     link.download = `Ledger-${formatExportRange(period, customRange)}.csv`;
     link.click();
-    toast('Financial ledger exported.', 'success');
+    toast(t('Financial ledger exported.'), 'success');
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto min-w-0 w-full px-1 sm:px-0">
       
       {/* 1. COMMAND HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-slate-200/60">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
+            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
               {t('Financial Command')}
             </h1>
-            <div className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 border border-slate-200">v2.0 REFACTOR</div>
+            <div className="bg-pits-surface-muted px-2 py-0.5 rounded text-[10px] font-bold text-pits-dim border border-pits-edge">v2.0 REFACTOR</div>
           </div>
-          <p className="text-slate-400 text-xs font-semibold mt-1 tracking-wide uppercase">
+          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
             {t('Strategic performance and reconciliation cockpit')}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Exchange Rate Master */}
-          <div className="flex items-center bg-pits-surface-elevated border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
-             <div className="text-[10px] font-black text-slate-400 uppercase mr-3 group-hover:text-pits-red flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <div className="flex items-center bg-pits-surface-elevated border border-pits-edge rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
+             <div className="text-[10px] font-black text-pits-dim uppercase mr-3 group-hover:text-pits-red flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-pits-success animate-pulse"></div>
                 {t('Official Rate')}
              </div>
              <div className="flex items-center gap-1.5 font-bold text-sm">
-                <span className="text-slate-400">€1 = </span>
+                <span className="text-pits-dim">€1 = </span>
                 <input 
                   type="number" 
                   step="0.0001"
                   value={exchangeRate}
                   onChange={(e) => setExchangeRate(Number(e.target.value))}
-                  className="w-20 bg-transparent text-slate-900 focus:outline-none focus:text-pits-red font-black"
+                  className="w-20 bg-transparent text-pits-text focus:outline-none focus:text-pits-red font-black"
                 />
-                <span className="text-slate-400">VES</span>
+                <span className="text-pits-dim">VES</span>
              </div>
           </div>
 
           <div className="flex items-center gap-2 ml-auto lg:ml-0">
-             <button onClick={handleExportCSV} className="p-2.5 bg-pits-surface-elevated border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all active:scale-95">
+             <button onClick={handleExportCSV} className="p-2.5 bg-pits-surface-elevated border border-pits-edge rounded-xl hover:bg-pits-surface-muted text-pits-text shadow-sm transition-all active:scale-95">
                 <Download size={18} />
              </button>
-             <button onClick={refresh} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-black text-white shadow-md transition-all active:scale-95">
+             <button onClick={refresh} className="p-2.5 bg-pits-primary text-pits-dark-text border border-pits-primary-dark rounded-xl hover:bg-pits-primary-dark shadow-sm transition-all active:scale-95">
                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
              </button>
           </div>
@@ -221,12 +224,12 @@ export default function FinancialsPage() {
       </div>
 
       {/* DATE RANGE FILTER */}
-      <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
-        <div className="flex items-center gap-2 text-slate-500 shrink-0">
+      <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-pits-edge shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+        <div className="flex items-center gap-2 text-pits-dim shrink-0">
           <Calendar size={16} className="text-pits-red" />
-          <span className="text-[10px] font-black uppercase tracking-widest">{t('Filters')}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-pits-text">{t('Filters')}</span>
         </div>
-        <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl">
+        <div className="flex flex-wrap gap-1.5 bg-pits-surface-muted p-1 rounded-xl">
           {([
             { id: 'today' as const, label: t('Today') },
             { id: 'week' as const, label: t('This Week') },
@@ -241,7 +244,7 @@ export default function FinancialsPage() {
                 setCurrentPage(1);
               }}
               className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase transition-all ${
-                period === id ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400 hover:text-slate-600'
+                period === id ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
               {label}
@@ -251,7 +254,7 @@ export default function FinancialsPage() {
         {period === 'custom' && (
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <label className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase">{t('From')}</span>
+              <span className="text-[10px] font-black text-pits-dim uppercase">{t('From')}</span>
               <input
                 type="date"
                 value={toDateInputValue(customRange.start)}
@@ -264,11 +267,11 @@ export default function FinancialsPage() {
                   }));
                   setCurrentPage(1);
                 }}
-                className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+                className="bg-pits-surface-muted border border-pits-edge rounded-xl px-3 py-2 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
               />
             </label>
             <label className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase">{t('To')}</span>
+              <span className="text-[10px] font-black text-pits-dim uppercase">{t('To')}</span>
               <input
                 type="date"
                 value={toDateInputValue(customRange.end)}
@@ -281,7 +284,7 @@ export default function FinancialsPage() {
                   }));
                   setCurrentPage(1);
                 }}
-                className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pits-red"
+                className="bg-pits-surface-muted border border-pits-edge rounded-xl px-3 py-2 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
               />
             </label>
           </div>
@@ -290,12 +293,12 @@ export default function FinancialsPage() {
 
       {/* 2. VITALS BAR (KPIs) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label={t('Collected (EUR)')} value={stats.EUR.totalRevenue} symbol="€" trend="positive" color="emerald" t={t} />
-        <StatCard label={t('Collected (VES)')} value={stats.VES.totalRevenue} symbol="Bs." trend="positive" color="blue" t={t} />
-        <StatCard label={t('Consolidated')} value={combinedTotalEUR} symbol="€" trend="neutral" color="slate" info="VES converted to EUR" t={t} />
-        <StatCard label={t('Pending Liquidity')} value={stats.EUR.pendingAmount + (stats.VES.pendingAmount / exchangeRate)} symbol="€" trend="warning" color="amber" t={t} />
-        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol="€" trend="danger" color="red" t={t} />
-        <StatCard label={t('Efficiency')} value={efficiencyRate} symbol="%" trend={efficiencyRate > 80 ? 'positive' : 'warning'} color="purple" t={t} />
+        <StatCard label={t('Collected (EUR)')} value={stats.EUR.totalRevenue} symbol="€" trend="positive" color="success" />
+        <StatCard label={t('Collected (VES)')} value={stats.VES.totalRevenue} symbol="Bs." trend="positive" color="primary" />
+        <StatCard label={t('Consolidated')} value={combinedTotalEUR} symbol="€" trend="neutral" color="muted" info={t('Consolidated EUR base')} />
+        <StatCard label={t('Pending Liquidity')} value={stats.EUR.pendingAmount + (stats.VES.pendingAmount / exchangeRate)} symbol="€" trend="warning" color="warning" />
+        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol="€" trend="danger" color="danger" />
+        <StatCard label={t('Efficiency')} value={efficiencyRate} symbol="%" trend={efficiencyRate > 80 ? 'positive' : 'warning'} color="primary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
@@ -309,37 +312,37 @@ export default function FinancialsPage() {
                title={t('EURO OPERATIONS')} 
                stats={stats.EUR} 
                symbol="€" 
-               color="emerald" 
+               color="success" 
                active={activeCurrency === CurrencyType.EUR}
                onClick={() => setActiveCurrency(CurrencyType.EUR)}
-               t={t}
+               pendingLabel={t('Pending Liquidity')}
              />
              <CurrencyPanel 
                title={t('VES BOLIVARES')} 
                stats={stats.VES} 
                symbol="Bs." 
-               color="blue" 
+               color="primary" 
                active={activeCurrency === CurrencyType.VES}
                onClick={() => setActiveCurrency(CurrencyType.VES)}
-               t={t}
+               pendingLabel={t('Pending Liquidity')}
              />
           </div>
 
           {/* TABLE FILTERS */}
-          <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center">
+          <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-pits-edge shadow-sm flex flex-col md:flex-row gap-3 items-center">
              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} />
                 <input 
                   type="text" 
                   placeholder={t('Search athlete or transaction...')} 
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:ring-2 focus:ring-pits-red outline-none transition-all uppercase"
+                  className="w-full pl-10 pr-4 py-2.5 bg-pits-surface-muted border border-pits-edge rounded-xl text-xs font-bold text-pits-text placeholder:text-pits-dim focus:ring-2 focus:ring-pits-red outline-none transition-all uppercase"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
              </div>
              <div className="flex gap-2 w-full md:w-auto">
                 <select 
-                  className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-[10px] font-black text-slate-700 uppercase outline-none flex-1 md:w-40"
+                  className="bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-2.5 text-[10px] font-black text-pits-text uppercase outline-none flex-1 md:w-40"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -348,55 +351,55 @@ export default function FinancialsPage() {
                   <option value="approved">{t('Verified Only')}</option>
                   <option value="rejected">{t('Rejected Only')}</option>
                 </select>
-                <div className="flex bg-slate-100 p-1 rounded-xl">
+                <div className="flex bg-pits-surface-muted p-1 rounded-xl">
                    <button 
                      onClick={() => setActiveCurrency(CurrencyType.EUR)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400'}`}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
                    >EUR</button>
                    <button 
                      onClick={() => setActiveCurrency(CurrencyType.VES)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.VES ? 'bg-pits-surface-muted shadow-sm text-pits-primary' : 'text-slate-400'}`}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
                    >VES</button>
                 </div>
              </div>
           </div>
 
           {/* THE LEDGER TABLE */}
-          <div className="bg-pits-surface-elevated rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px] min-w-0">
+          <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px] min-w-0">
              <div className="overflow-x-auto">
              <table className="w-full min-w-[720px] text-left border-collapse">
-                <thead className="bg-slate-50/50 border-b border-slate-100">
+                <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Timeline')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Subject')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Value')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{t('Evidence')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-right">{t('Control')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Timeline')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Subject')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Method')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Value')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Evidence')}</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase text-right">{t('Control')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-pits-edge">
                   {loading ? (
-                    <tr><td colSpan={6} className="py-20 text-center text-slate-400 font-bold uppercase animate-pulse">Syncing Matrix...</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">{t('Syncing Matrix...')}</td></tr>
                   ) : paginatedPayments.map(p => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={p.id} className="hover:bg-pits-surface-muted/40 transition-colors group">
                       <td className="px-6 py-4">
-                        <div className="text-[11px] font-black text-slate-900">{new Date(p.created_at).toLocaleDateString()}</div>
-                        <div className="text-[9px] text-slate-400 font-bold">{new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div className="text-[11px] font-black text-pits-text">{new Date(p.created_at).toLocaleDateString()}</div>
+                        <div className="text-[9px] text-pits-dim font-bold">{new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-xs font-black text-slate-900 uppercase">{p.profiles?.full_name || 'Anonymous Object'}</div>
-                        <div className="text-[8px] text-slate-400 font-bold tracking-widest">ID_{p.id.slice(0,6)}</div>
+                        <div className="text-xs font-black text-pits-text uppercase">{p.profiles?.full_name || t('Anonymous Object')}</div>
+                        <div className="text-[8px] text-pits-dim font-bold tracking-widest">ID_{p.id.slice(0,6)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
-                          <div className="p-1 bg-slate-100 rounded text-slate-500"><CreditCard size={10}/></div>
-                          <span className="text-[10px] font-black text-slate-600 uppercase">{p.method || 'Unknown Channel'}</span>
+                          <div className="p-1 bg-pits-surface-muted rounded text-pits-dim"><CreditCard size={10}/></div>
+                          <span className="text-[10px] font-black text-pits-text uppercase">{p.method || t('Unknown Channel')}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-black text-slate-900">
+                            <span className="text-xs font-black text-pits-text">
                                {activeCurrency === CurrencyType.EUR ? '€' : 'Bs.'}
                                {p.amount.toLocaleString()}
                             </span>
@@ -407,9 +410,9 @@ export default function FinancialsPage() {
                            href={p.proof_image_url} 
                            target="_blank" 
                            rel="noreferrer"
-                           className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase hover:bg-blue-100 transition-colors"
+                           className="inline-flex items-center px-2 py-1 bg-pits-surface-muted text-pits-primary rounded-lg text-[9px] font-black uppercase hover:bg-pits-primary-soft transition-colors"
                          >
-                            Check Proof <ExternalLink size={10} className="ml-1" />
+                            {t('Check Proof')} <ExternalLink size={10} className="ml-1" />
                          </a>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -417,16 +420,16 @@ export default function FinancialsPage() {
                             {p.status === 'pending' ? (
                               <>
                                 <button 
-                                  onClick={() => setConfirmConfig({ isOpen: true, action: 'reject', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || 'Unknown' })}
-                                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                                  onClick={() => setConfirmConfig({ isOpen: true, action: 'reject', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || t('Unknown') })}
+                                  className="p-2 text-pits-dim hover:text-pits-error transition-colors"
                                 ><XCircle size={18}/></button>
                                 <button 
-                                  onClick={() => setConfirmConfig({ isOpen: true, action: 'approve', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || 'Unknown' })}
-                                  className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm hover:bg-emerald-600 active:scale-95 transition-all"
-                                >Approve</button>
+                                  onClick={() => setConfirmConfig({ isOpen: true, action: 'approve', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || t('Unknown') })}
+                                  className="bg-pits-success text-pits-dark-text px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 active:scale-95 transition-all"
+                                >{t('Approve')}</button>
                               </>
                             ) : (
-                              <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                              <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-primary-soft text-pits-error border-pits-edge'}`}>
                                 {p.status}
                               </div>
                             )}
@@ -435,7 +438,7 @@ export default function FinancialsPage() {
                     </tr>
                   ))}
                   {filteredPayments.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="py-20 text-center text-slate-300 font-bold uppercase">Void results in this sector.</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-pits-dim font-bold uppercase">{t('Void results in this sector.')}</td></tr>
                   )}
                 </tbody>
              </table>
@@ -443,14 +446,14 @@ export default function FinancialsPage() {
 
              {/* PAGINATION */}
              {totalPages > 1 && (
-               <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('Sector Coverage')}: {filteredPayments.length} Units</p>
+               <div className="px-6 py-4 bg-pits-surface-elevated border-t border-pits-edge flex justify-between items-center">
+                  <p className="text-[10px] font-black text-pits-dim uppercase">{t('Sector Coverage')}: {filteredPayments.length} Units</p>
                   <nav className="flex gap-1.5">
-                     <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-pits-surface-elevated border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronLeft size={16}/></button>
-                     <div className="flex bg-pits-surface-elevated border border-slate-200 rounded-lg p-0.5 px-3 items-center text-[11px] font-black">
-                        {currentPage} <span className="mx-2 text-slate-300">/</span> {totalPages}
+                     <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-dim disabled:opacity-30"><ChevronLeft size={16}/></button>
+                     <div className="flex bg-pits-surface-muted border border-pits-edge rounded-lg p-0.5 px-3 items-center text-[11px] font-black text-pits-text">
+                        {currentPage} <span className="mx-2 text-pits-dim">/</span> {totalPages}
                      </div>
-                     <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-1.5 bg-pits-surface-elevated border border-slate-200 rounded-lg text-slate-400 disabled:opacity-30"><ChevronRight size={16}/></button>
+                     <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-1.5 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-dim disabled:opacity-30"><ChevronRight size={16}/></button>
                   </nav>
                </div>
              )}
@@ -458,18 +461,18 @@ export default function FinancialsPage() {
         </div>
 
         {/* SIDEBAR (RIGHT 3 COLS) */}
-        <div className="lg:col-span-3 space-y-6 min-w-0 bg-pits-surface-elevated">
+        <div className="lg:col-span-3 space-y-6 min-w-0">
           
           {/* CASH RECONCILIATION MOD */}
-          <div className="bg-pits-surface-elevated rounded-3xl p-6 shadow-xl border border-slate-800 relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+          <div className="bg-pits-surface-elevated rounded-3xl p-6 shadow-sm border border-pits-edge relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity text-pits-text">
                 <Wallet size={20} />
              </div>
              
              <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-6">
-                   <div className="p-2 bg-red-500/20 text-pits-red rounded-lg"><Zap size={18} fill="currentColor"/></div>
-                   <h3 className="text-sm font-black text-white uppercase tracking-tighter">{t('Vault Reconciler')}</h3>
+                   <div className="p-2 bg-pits-primary-soft text-pits-red rounded-lg"><Zap size={18} fill="currentColor"/></div>
+                   <h3 className="text-sm font-black text-pits-text uppercase tracking-tighter">{t('Vault Reconciler')}</h3>
                 </div>
 
                  <div className="space-y-5">
@@ -477,7 +480,7 @@ export default function FinancialsPage() {
                       label={t('Opening Cash')} 
                       symbol="€" 
                       value={reconState.opening} 
-                      onChange={(val: any) => setReconState(prev => ({ ...prev, opening: val }))} 
+                      onChange={(val) => setReconState(prev => ({ ...prev, opening: Number(val) }))} 
                       systemValue={0} 
                       hideExpected={true}
                       t={t} 
@@ -494,7 +497,7 @@ export default function FinancialsPage() {
                       label={t('Withdrawals')} 
                       symbol="€" 
                       value={reconState.withdrawals} 
-                      onChange={(val: any) => setReconState(prev => ({ ...prev, withdrawals: val }))} 
+                      onChange={(val) => setReconState(prev => ({ ...prev, withdrawals: Number(val) }))} 
                       systemValue={0} 
                       hideExpected={true}
                       t={t} 
@@ -503,17 +506,17 @@ export default function FinancialsPage() {
                       label={t('Physical Count')} 
                       symbol="€" 
                       value={reconState.actual} 
-                      onChange={(val: any) => setReconState(prev => ({ ...prev, actual: val }))} 
+                      onChange={(val) => setReconState(prev => ({ ...prev, actual: Number(val) }))} 
                       systemValue={expectedClosingCash} 
                       t={t} 
                     />
                  </div>
 
-                <div className="mt-8 pt-6 border-t border-slate-800">
+                <div className="mt-8 pt-6 border-t border-pits-edge">
                    <div className="flex justify-between items-end">
                       <div>
-                         <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('Status Report')}</p>
-                         <p className={`text-xs font-bold flex items-center gap-1 ${(reconDifference === 0) ? 'text-emerald-400' : 'text-amber-400'}`}>
+                         <p className="text-[10px] font-black text-pits-dim uppercase mb-1">{t('Status Report')}</p>
+                         <p className={`text-xs font-bold flex items-center gap-1 ${(reconDifference === 0) ? 'text-pits-success' : 'text-pits-primary'}`}>
                             {(reconDifference === 0) ? <CheckCircle size={12}/> : <AlertTriangle size={12}/>}
                             {(reconDifference === 0) ? t('Verified Sync') : t('Mismatch Found')}
                          </p>
@@ -532,35 +535,35 @@ export default function FinancialsPage() {
           {/* INSIGHTS & ACTIONS */}
           <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-pits-edge shadow-sm space-y-6">
              <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase mb-4 flex items-center justify-between">
+                <h3 className="text-xs font-black text-pits-text uppercase mb-4 flex items-center justify-between">
                    <div className="flex items-center gap-2">
                        <BarChart3 size={14} className="text-pits-red" /> {t('Operational Health')}
                    </div>
                    <Tooltip content={t('Operational Health Info')}>
-                      <Info size={14} className="text-slate-400 cursor-help" />
+                      <Info size={14} className="text-pits-dim cursor-help" />
                    </Tooltip>
                 </h3>
                 <div className="space-y-4">
                    <MetricRow 
-                      label={t('Contract Health')} value={`${stats.solvencyRate}%`} color="purple" progress={stats.solvencyRate} tooltip={t('Contract Health Tip')} t={t} />
-                   <MetricRow label={t('Growth Velocity')} value="+4.2%" color="emerald" progress={75} tooltip={t('Growth Velocity Tip')} t={t} />
-                   <MetricRow label={t('Churn Risk')} value={t('Low')} color="slate" progress={20} tooltip={t('Churn Risk Tip')} t={t} />
+                      label={t('Contract Health')} value={`${stats.solvencyRate}%`} color="primary" progress={stats.solvencyRate} tooltip={t('Contract Health Tip')} />
+                   <MetricRow label={t('Growth Velocity')} value="+4.2%" color="success" progress={75} tooltip={t('Growth Velocity Tip')} />
+                   <MetricRow label={t('Churn Risk')} value={t('Low')} color="muted" progress={20} tooltip={t('Churn Risk Tip')} />
                 </div>
              </div>
 
-             <div className="pt-6 border-t border-slate-100 space-y-3">
+             <div className="pt-6 border-t border-pits-edge space-y-3">
                 <button 
                   onClick={() => setConfirmConfig({ isOpen: true, action: 'expiry', paymentId: '', userId: '', athleteName: '' })}
                   disabled={runningExpiry}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-[11px] font-black uppercase transition-all border border-slate-200/50"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-pits-surface-muted hover:bg-pits-edge text-pits-text rounded-2xl text-[11px] font-black uppercase transition-all border border-pits-edge"
                 >
                    <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
                    {t('Run Expiry Sync')}
                 </button>
-                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-2xl border border-blue-100">
-                   <Info size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                   <p className="text-[9px] font-bold text-blue-700 leading-relaxed uppercase">
-                      Sync solvency to lock accounts whose payment period has reached 100% depletion.
+                <div className="flex items-start gap-2 p-3 bg-pits-primary-soft rounded-2xl border border-pits-edge">
+                   <Info size={14} className="text-pits-primary mt-0.5 shrink-0" />
+                   <p className="text-[9px] font-bold text-pits-text leading-relaxed uppercase">
+                      {t('Sync solvency expiry tip')}
                    </p>
                 </div>
              </div>
@@ -572,13 +575,13 @@ export default function FinancialsPage() {
 
       <ConfirmDialog
         isOpen={confirmConfig.isOpen}
-        title={confirmConfig.action === 'expiry' ? 'Operational Halt?' : confirmConfig.action === 'reject' ? 'Protocol: Reject' : 'Protocol: Verify'}
+        title={confirmConfig.action === 'expiry' ? t('Operational Halt?') : confirmConfig.action === 'reject' ? t('Protocol: Reject') : t('Protocol: Verify')}
         message={
           confirmConfig.action === 'expiry' 
-            ? 'Execution will lock stagnant accounts. Members with expired cycles will lose grid access immediately.' 
-            : `Confirming final status update for ${confirmConfig.athleteName}. This action is recorded in the ledger.`
+            ? t('Expiry warning message')
+            : t('Confirm status update message', { name: confirmConfig.athleteName })
         }
-        confirmLabel={confirmConfig.action === 'expiry' ? 'EXECUTE' : confirmConfig.action === 'reject' ? 'REJECT' : 'VERIFY'}
+        confirmLabel={confirmConfig.action === 'expiry' ? t('EXECUTE') : confirmConfig.action === 'reject' ? t('REJECT') : t('VERIFY')}
         variant={confirmConfig.action === 'expiry' ? 'warning' : confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
@@ -589,21 +592,29 @@ export default function FinancialsPage() {
 
 // --- SUBCOMPONENTS ---
 
-function StatCard({ label, value, symbol, trend, color, info, t }: any) {
-  const colors: Record<string, string> = {
-    emerald: 'text-emerald-500 bg-emerald-50 border-emerald-100',
-    blue: 'text-blue-500 bg-blue-50 border-blue-100',
-    slate: 'text-slate-600 bg-slate-50 border-slate-100',
-    amber: 'text-amber-500 bg-amber-50 border-amber-100',
-    red: 'text-red-500 bg-red-50 border-red-100',
-    purple: 'text-purple-500 bg-purple-50 border-purple-100'
+type StatCardProps = {
+  label: string;
+  value: number;
+  symbol: string;
+  trend: 'positive' | 'neutral' | 'warning' | 'danger';
+  color: 'success' | 'primary' | 'muted' | 'warning' | 'danger';
+  info?: string;
+};
+
+function StatCard({ label, value, symbol, trend, color, info }: StatCardProps) {
+  const accents: Record<string, string> = {
+    success: 'text-pits-success bg-pits-primary-soft border-pits-edge',
+    primary: 'text-pits-primary bg-pits-primary-soft border-pits-edge',
+    muted: 'text-pits-dim bg-pits-surface-muted border-pits-edge',
+    warning: 'text-pits-primary bg-pits-primary-soft border-pits-edge',
+    danger: 'text-pits-error bg-pits-primary-soft border-pits-edge',
   };
 
   return (
-    <div className="bg-pits-surface-elevated p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+    <div className="bg-pits-surface-elevated p-4 rounded-3xl border border-pits-edge shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
       <div className="flex justify-between items-start mb-4">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">{label}</p>
-        <div className={`p-1.5 rounded-lg border ${colors[color]}`}>
+        <p className="text-[9px] font-black text-pits-dim uppercase tracking-widest leading-tight">{label}</p>
+        <div className={`p-1.5 rounded-lg border ${accents[color] ?? accents.muted}`}>
           {trend === 'positive' && <TrendingUp size={14} />}
           {trend === 'neutral' && <DollarSign size={14} />}
           {trend === 'warning' && <AlertTriangle size={14} />}
@@ -611,79 +622,98 @@ function StatCard({ label, value, symbol, trend, color, info, t }: any) {
         </div>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-sm font-black text-slate-400 mb-1">{symbol}</span>
-        <span className="text-xl font-black text-slate-900 tracking-tighter">{value.toLocaleString()}</span>
+        <span className="text-sm font-black text-pits-dim mb-1">{symbol}</span>
+        <span className="text-xl font-black text-pits-text tracking-tighter">{value.toLocaleString()}</span>
       </div>
-      {info && <p className="text-[8px] font-bold text-slate-300 uppercase mt-1 tracking-tighter">{t ? t(info) : info}</p>}
+      {info && <p className="text-[8px] font-bold text-pits-dim uppercase mt-1 tracking-tighter">{info}</p>}
     </div>
   );
 }
 
-function CurrencyPanel({ title, stats, symbol, color, active, onClick, t }: any) {
-  const colors: Record<string, string> = {
-    emerald: 'from-emerald-500 to-emerald-600',
-    blue: 'from-blue-500 to-blue-600'
+type CurrencyPanelProps = {
+  title: string;
+  stats: CurrencyStats;
+  symbol: string;
+  color: 'success' | 'primary';
+  active: boolean;
+  onClick: () => void;
+  pendingLabel: string;
+};
+
+function CurrencyPanel({ title, stats, symbol, color, active, onClick, pendingLabel }: CurrencyPanelProps) {
+  const barColors: Record<string, string> = {
+    success: 'bg-pits-success',
+    primary: 'bg-pits-primary',
   };
 
   return (
     <div 
       onClick={onClick}
-      className={`relative p-6 rounded-3xl border-2 cursor-pointer transition-all duration-300 group overflow-hidden bg-pits-surface-elevated shadow-sm ${active ? 'border-pits-primary' : 'border-pits-edge hover:border-pits-edge'}`}
+      className={`relative p-6 rounded-3xl border-2 cursor-pointer transition-all duration-300 group overflow-hidden bg-pits-surface-elevated shadow-sm ${active ? 'border-pits-primary' : 'border-pits-edge hover:border-pits-grey'}`}
     >
-      <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-      
       <div className="flex justify-between items-start relative z-10">
         <div>
-          <h3 className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-500">{title}</h3>
-          <p className="text-2xl font-black tracking-tighter text-slate-900">
+          <h3 className="text-[10px] font-black uppercase tracking-widest mb-1 text-pits-dim">{title}</h3>
+          <p className="text-2xl font-black tracking-tighter text-pits-text">
             {symbol}{stats.totalRevenue.toLocaleString()}
           </p>
         </div>
-        <button type="button" className="p-2 rounded-xl border bg-slate-50 border-slate-100 text-slate-400">
+        <button type="button" className="p-2 rounded-xl border bg-pits-surface-muted border-pits-edge text-pits-dim">
           <BarChart3 size={16} />
         </button>
       </div>
 
       <div className="mt-6 flex items-center justify-between relative z-10">
         <div className="space-y-0.5">
-           <p className="text-[9px] font-black text-slate-500 uppercase">{t('Pending Flow')}</p>
-           <p className="text-xs font-black text-amber-600">
-             {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[10px]">({stats.pendingCount} units)</span>
+           <p className="text-[9px] font-black text-pits-dim uppercase">{pendingLabel}</p>
+           <p className="text-xs font-black text-pits-primary">
+             {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[10px] text-pits-dim">({stats.pendingCount} units)</span>
            </p>
         </div>
-        <div className="h-1.5 w-24 rounded-full overflow-hidden bg-slate-100">
-           <div className={`h-full rounded-full bg-gradient-to-r ${colors[color]} transition-all duration-1000`} style={{ width: '65%' }} />
+        <div className="h-1.5 w-24 rounded-full overflow-hidden bg-pits-surface-muted">
+           <div className={`h-full rounded-full ${barColors[color] ?? 'bg-pits-dim'} transition-all duration-1000`} style={{ width: '65%' }} />
         </div>
       </div>
     </div>
   );
 }
 
-function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, hideExpected, t }: any) {
+type ReconInputProps = {
+  label: string;
+  symbol: string;
+  value: number;
+  onChange?: (val: string) => void;
+  systemValue: number;
+  isReadOnly?: boolean;
+  hideExpected?: boolean;
+  t: TranslateFn;
+};
+
+function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, hideExpected, t }: ReconInputProps) {
   const diff = Number(value || 0) - systemValue;
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
-        <label className="text-[9px] font-black text-slate-500 uppercase">{label}</label>
+        <label className="text-[9px] font-black text-pits-dim uppercase">{label}</label>
         {!hideExpected && !isReadOnly && (
-          <span className={`text-[9px] font-black uppercase ${diff === 0 ? 'text-slate-600' : diff < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+          <span className={`text-[9px] font-black uppercase ${diff === 0 ? 'text-pits-dim' : diff < 0 ? 'text-pits-error' : 'text-pits-success'}`}>
              {diff === 0 ? t('In Sync') : diff < 0 ? `${symbol}${Math.abs(diff)} Gap` : `${symbol}${diff} Surplus`}
           </span>
         )}
       </div>
       <div className="relative min-w-0">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-black pointer-events-none">{symbol}</span>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pits-dim text-xs font-black pointer-events-none">{symbol}</span>
         <input 
           type="number" 
           placeholder="0.00"
           value={value}
           readOnly={isReadOnly}
           onChange={(e) => onChange && onChange(e.target.value)}
-          className={`w-full max-w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-slate-700 focus:outline-none ${isReadOnly ? 'bg-slate-800/20 border-slate-800 text-slate-400 cursor-not-allowed' : 'bg-slate-800/50 border-slate-700 text-white focus:border-pits-red'}`}
+          className={`w-full max-w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-pits-dim focus:outline-none ${isReadOnly ? 'bg-pits-surface-muted border-pits-edge text-pits-dim cursor-not-allowed' : 'bg-pits-surface-muted border-pits-edge text-pits-text focus:border-pits-red'}`}
         />
         {!hideExpected && (
-          <p className="mt-1.5 text-[8px] font-black text-slate-500 uppercase text-right truncate">
+          <p className="mt-1.5 text-[8px] font-black text-pits-dim uppercase text-right truncate">
             {t('Expected')}: {systemValue.toLocaleString()}
           </p>
         )}
@@ -692,28 +722,36 @@ function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, h
   );
 }
 
-function MetricRow({ label, value, color, progress, tooltip, t }: any) {
-  const colors: Record<string, string> = {
-    purple: 'bg-purple-500',
-    emerald: 'bg-emerald-500',
-    slate: 'bg-slate-400'
+type MetricRowProps = {
+  label: string;
+  value: string;
+  color: 'primary' | 'success' | 'muted';
+  progress: number;
+  tooltip?: string;
+};
+
+function MetricRow({ label, value, color, progress, tooltip }: MetricRowProps) {
+  const barColors: Record<string, string> = {
+    primary: 'bg-pits-primary',
+    success: 'bg-pits-success',
+    muted: 'bg-pits-dim',
   };
 
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-1.5">
-           <p className="text-[9px] font-black text-slate-400 uppercase">{label}</p>
+           <p className="text-[9px] font-black text-pits-dim uppercase">{label}</p>
            {tooltip && (
              <Tooltip content={tooltip}>
-                <Info size={10} className="text-slate-300 cursor-help" />
+                <Info size={10} className="text-pits-dim cursor-help" />
              </Tooltip>
            )}
         </div>
-        <span className="text-[10px] font-black text-slate-900">{value}</span>
+        <span className="text-[10px] font-black text-pits-text">{value}</span>
       </div>
-      <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-        <div className={`h-full rounded-full ${colors[color]} transition-all duration-1000`} style={{ width: `${progress}%` }} />
+      <div className="h-1 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
+        <div className={`h-full rounded-full ${barColors[color] ?? barColors.muted} transition-all duration-1000`} style={{ width: `${progress}%` }} />
       </div>
     </div>
   );

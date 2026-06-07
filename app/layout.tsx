@@ -23,8 +23,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pits CrossFit Admin",
-  description: "Pits CrossFit Admin",
+  title: "WODUS Admin",
+  description: "WODUS Admin",
 };
 
 

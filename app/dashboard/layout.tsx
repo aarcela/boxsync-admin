@@ -28,77 +28,41 @@ import {
   Banknote,
   Receipt
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../components/LanguageContext';
 import Image from 'next/image';
+
+type NavSubItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+type NavLinkItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+type NavParentItem = {
+  name: string;
+  icon: LucideIcon;
+  subItems: NavSubItem[];
+};
+
+type NavItem = NavLinkItem | NavParentItem;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 1024
+  );
   const { lang, setLanguage, t } = useLanguage();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  const toggleMenu = (menuName: string) => {
-    setOpenMenus(prev => 
-      prev.includes(menuName) 
-        ? prev.filter(m => m !== menuName) 
-        : [...prev, menuName]
-    );
-  };
-
-  // Auto-expand menu if sub-item is active
-  useEffect(() => {
-    navItems.forEach(item => {
-      if ('subItems' in item && item.subItems?.some(sub => pathname === sub.href)) {
-        if (!openMenus.includes(item.name)) {
-          setOpenMenus(prev => [...prev, item.name]);
-        }
-      }
-    });
-
-    // Close sidebar on mobile after navigation
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, [pathname]);
-
-  // Initial responsive check
-  useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
-
-  // Client-side guard (middleware is the primary enforcement)
-  useEffect(() => {
-    const verifyStaffSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace('/');
-        return;
-      }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      if (!isStaffRole(profile?.role)) {
-        await supabase.auth.signOut();
-        router.replace('/');
-        return;
-      }
-      setUserRole(profile?.role ?? null);
-    };
-    verifyStaffSession();
-  }, [router]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
-  const navItems = useMemo(() => {
+  const navItems = useMemo((): NavItem[] => {
     const financialSubItems = [
       { name: t('Dashboard'), href: '/dashboard/financials', icon: DollarSign },
       { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
@@ -147,6 +111,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ];
   }, [t, userRole]);
 
+  const toggleMenu = (menuName: string) => {
+    setOpenMenus(prev => 
+      prev.includes(menuName) 
+        ? prev.filter(m => m !== menuName) 
+        : [...prev, menuName]
+    );
+  };
+
+  const closeSidebarOnMobile = () => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  // Client-side guard (middleware is the primary enforcement)
+  useEffect(() => {
+    const verifyStaffSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (!isStaffRole(profile?.role)) {
+        await supabase.auth.signOut();
+        router.replace('/');
+        return;
+      }
+      setUserRole(profile?.role ?? null);
+    };
+    verifyStaffSession();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
   return (
     <div className="flex h-screen bg-pits-surface overflow-hidden">
       
@@ -160,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       
       {/* SIDEBAR */}
       <aside 
-        className={`bg-pits-surface-elevated text-pits-grey transition-all duration-300 ease-in-out flex flex-col border-r border-pits-edge
+        className={`bg-pits-surface-elevated text-pits-grey transition-all duration-300 ease-in-out flex flex-col
           fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
           ${isSidebarOpen 
             ? 'w-64 translate-x-0' 
@@ -168,12 +174,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         `}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-pits-edge">
-          <div className={`flex-1 flex items-center ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
+        <div className="h-16 flex items-center justify-between px-4">
+          <div className={`flex-1 flex items-center py-4 ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
             {isSidebarOpen ? (
-              <Image src="/assets/logo.webp" alt="Logo" width={100} height={100} />
+               <>
+              <Image src="/assets/logo.png" alt="Logo" className="w-10 h-10" width={40} height={40} />
+              <span className="font-black text-2xl text-pits-white ml-2">WODUS</span>
+               </>
             ) : (
-              <span className="font-black text-2xl text-pits-primary">P</span>
+              <span className="font-black text-2xl text-pits-primary">W</span>
             )}
           </div>
           
@@ -192,7 +201,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 py-6 space-y-2 px-3">
           {navItems.map((item) => {
             const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
-            const isMenuOpen = openMenus.includes(item.name);
+            const isMenuOpen =
+              openMenus.includes(item.name) ||
+              ('subItems' in item && item.subItems?.some(sub => pathname === sub.href) === true);
             const isActive = 'href' in item 
               ? pathname === item.href 
               : 'subItems' in item && item.subItems?.some(sub => pathname === sub.href);
@@ -221,9 +232,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </>
                     )}
                   </button>
-                ) : (
+                ) : 'href' in item ? (
                   <Link
-                    href={(item as any).href}
+                    href={item.href}
+                    onClick={closeSidebarOnMobile}
                     className={`flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                       ${isActive 
                         ? 'border-pits-primary text-pits-ink' 
@@ -237,17 +249,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </span>
                     )}
                   </Link>
-                )}
+                ) : null}
 
-                {hasSubItems && isMenuOpen && isSidebarOpen && (
+                {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
                   <div className="ml-4 space-y-1 border-l border-pits-edge pl-2">
-                    {(item as any).subItems.map((sub: any) => {
+                    {item.subItems.map((sub) => {
                       const isSubActive = pathname === sub.href;
                       return (
                         <Link
                           key={sub.name}
                           href={sub.href}
-                          className={`flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
+                          onClick={closeSidebarOnMobile}
+                          className={`flex items-center p-2 rounded-lg transition-colors group
                             ${isSubActive 
                               ? 'border-pits-primary text-pits-ink' 
                               : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
@@ -268,7 +281,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Footer / Logout */}
-        <div className="p-4 border-t border-pits-edge">
+        <div className="p-4">
           <button
             onClick={handleLogout}
             className="flex items-center w-full p-2 rounded-lg text-pits-ink-muted hover:border hover:border-pits-edge hover:text-pits-primary transition-colors"
@@ -286,7 +299,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-pits-surface-elevated border-b border-pits-edge flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <header className="h-16 bg-pits-surface-elevated shadow-lg flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -325,7 +338,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Scrollable Page Content */}
-        <main className="dashboard-main flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6 bg-pits-surface text-pits-ink">
+        <main className="bg-pits-edge flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6 text-pits-ink">
           {children}
         </main>
       </div>

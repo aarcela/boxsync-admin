@@ -76,10 +76,10 @@ export default function CommunityPage() {
 
   const getPostIcon = (type: PostType) => {
     switch (type) {
-      case 'achievement': return <Trophy className="text-yellow-500" size={16} />;
-      case 'wod_share': return <Dumbbell className="text-blue-500" size={16} />;
+      case 'achievement': return <Trophy className="text-pits-primary" size={16} />;
+      case 'wod_share': return <Dumbbell className="text-pits-primary" size={16} />;
       case 'announcement': return <Megaphone className="text-pits-red" size={16} />;
-      default: return <MessageSquare className="text-gray-500" size={16} />;
+      default: return <MessageSquare className="text-pits-dim" size={16} />;
     }
   };
 
@@ -91,21 +91,21 @@ export default function CommunityPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-pits-black uppercase tracking-tight">
+          <h1 className="text-2xl font-black text-pits-text uppercase tracking-tight">
             {t('Community Control')}
           </h1>
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-sm text-pits-dim font-medium">
             {t('Manage and moderate user posts from the community feed')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={14} />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
-              className="pl-9 pr-4 py-2 bg-pits-surface-elevated border border-gray-200 rounded-xl text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red transition-all"
+              className="pl-9 pr-4 py-2 bg-pits-surface-elevated border border-pits-edge rounded-xl text-sm font-bold text-pits-text appearance-none focus:outline-none focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red transition-all"
             >
               <option value="all">{t('All Types')}</option>
               <option value="general">{t('General')}</option>
@@ -118,7 +118,7 @@ export default function CommunityPage() {
           <button
             onClick={() => fetchPosts(true)}
             disabled={loading}
-            className="p-2 bg-pits-surface-elevated border border-gray-200 rounded-xl text-gray-600 hover:text-pits-red hover:border-pits-red transition-all disabled:opacity-50"
+            className="p-2 bg-pits-surface-elevated border border-pits-edge rounded-xl text-pits-text hover:text-pits-red hover:border-pits-red transition-all disabled:opacity-50"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -127,33 +127,33 @@ export default function CommunityPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-pits-edge shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-pits-red/10 rounded-xl flex items-center justify-center text-pits-red">
             <MessageSquare size={24} />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('Total Posts')}</p>
-            <p className="text-2xl font-black text-pits-black">{posts.length}</p>
+            <p className="text-xs font-bold text-pits-dim uppercase tracking-wider">{t('Total Posts')}</p>
+            <p className="text-2xl font-black text-pits-text">{posts.length}</p>
           </div>
         </div>
-        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-pits-edge shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 bg-pits-surface-muted rounded-xl flex items-center justify-center text-pits-primary">
             <Heart size={24} />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('Total Likes')}</p>
-            <p className="text-2xl font-black text-pits-black">
+            <p className="text-xs font-bold text-pits-dim uppercase tracking-wider">{t('Total Likes')}</p>
+            <p className="text-2xl font-black text-pits-text">
               {posts.reduce((acc, p) => acc + (p.likes_count || 0), 0)}
             </p>
           </div>
         </div>
-        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500">
+        <div className="bg-pits-surface-elevated p-4 rounded-2xl border border-pits-edge shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 bg-pits-primary-soft rounded-xl flex items-center justify-center text-pits-primary">
             <Trophy size={24} />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('Achievements')}</p>
-            <p className="text-2xl font-black text-pits-black">
+            <p className="text-xs font-bold text-pits-dim uppercase tracking-wider">{t('Achievements')}</p>
+            <p className="text-2xl font-black text-pits-text">
               {posts.filter(p => p.type === 'achievement').length}
             </p>
           </div>
@@ -161,25 +161,25 @@ export default function CommunityPage() {
       </div>
 
       {/* Posts Table */}
-      <div className="bg-pits-surface-elevated rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-50 bg-gray-50/50">
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('User')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Content')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Type')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Stats')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Date')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">{t('Actions')}</th>
+            <thead className="bg-pits-surface-elevated border-b border-pits-edge">
+              <tr>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('User')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Content')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Type')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Stats')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Date')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-pits-edge">
               {filteredPosts.map((post) => (
-                <tr key={post.id} className="group hover:bg-gray-50/50 transition-colors">
+                <tr key={post.id} className="group hover:bg-pits-surface-elevated transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 border-2 border-white shadow-sm">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-pits-surface-muted border-2 border-white shadow-sm">
                         {post.profiles?.avatar_url ? (
                           <Image 
                             src={post.profiles.avatar_url} 
@@ -188,16 +188,16 @@ export default function CommunityPage() {
                             className="object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <div className="w-full h-full flex items-center justify-center text-pits-dim">
                             <UserIcon size={20} />
                           </div>
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-pits-black">
+                        <p className="text-sm font-black text-pits-text">
                           {post.profiles?.full_name || t('Unknown Athlete')}
                         </p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                        <p className="text-[10px] text-pits-dim font-bold uppercase tracking-tight">
                           ID: {post.user_id.substring(0, 8)}...
                         </p>
                       </div>
@@ -205,7 +205,7 @@ export default function CommunityPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="max-w-xs md:max-w-md">
-                      <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-pits-text line-clamp-2 leading-relaxed">
                         {post.content}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ export default function CommunityPage() {
                           </div>
                         )}
                         {post.media_url && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold text-[10px] uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-surface-muted text-pits-dim rounded-md font-bold text-[10px] uppercase tracking-wider">
                             <ImageIcon size={10} />
                             {t('Attached Media')}
                           </div>
@@ -225,27 +225,27 @@ export default function CommunityPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full w-fit">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pits-surface-muted rounded-full w-fit">
                       {getPostIcon(post.type)}
-                      <span className="text-[10px] font-black text-gray-600 uppercase tracking-tight">
+                      <span className="text-[10px] font-black text-pits-text uppercase tracking-tight">
                         {t(post.type)}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-4 text-gray-400">
+                    <div className="flex items-center gap-4 text-pits-dim">
                       <div className="flex items-center gap-1">
-                        <Heart size={14} className={post.likes_count > 0 ? 'text-pink-500 fill-pink-500' : ''} />
+                        <Heart size={14} className={post.likes_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
                         <span className="text-xs font-bold">{post.likes_count || 0}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <MessageSquare size={14} className={post.comments_count > 0 ? 'text-blue-500 fill-blue-500' : ''} />
+                        <MessageSquare size={14} className={post.comments_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
                         <span className="text-xs font-bold">{post.comments_count || 0}</span>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-gray-400">
+                    <div className="flex items-center gap-1.5 text-pits-dim">
                       <Calendar size={14} />
                       <span className="text-xs font-medium">
                         {new Date(post.created_at).toLocaleDateString()}
@@ -259,7 +259,7 @@ export default function CommunityPage() {
                           href={post.media_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-2 text-gray-400 hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
+                          className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
                           title={t('View Media')}
                         >
                           <Eye size={18} />
@@ -267,7 +267,7 @@ export default function CommunityPage() {
                       )}
                       <button
                         onClick={() => setIsDeleting(post.id)}
-                        className="p-2 text-gray-400 hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
+                        className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
                         title={t('Delete Post')}
                       >
                         <Trash2 size={18} />
@@ -281,12 +281,12 @@ export default function CommunityPage() {
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+                      <div className="w-16 h-16 bg-pits-surface-muted rounded-full flex items-center justify-center text-pits-dim">
                         <MessageSquare size={32} />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-base font-black text-pits-black uppercase tracking-tight">{t('No posts found')}</p>
-                        <p className="text-sm text-gray-400 font-medium">{t('Try changing your filter or check back later')}</p>
+                        <p className="text-base font-black text-pits-text uppercase tracking-tight">{t('No posts found')}</p>
+                        <p className="text-sm text-pits-dim font-medium">{t('Try changing your filter or check back later')}</p>
                       </div>
                     </div>
                   </td>
@@ -297,11 +297,11 @@ export default function CommunityPage() {
         </div>
 
         {hasMore && (
-          <div className="p-6 border-t border-gray-50 flex justify-center">
+          <div className="p-6 border-t border-pits-edge flex justify-center">
             <button
               onClick={() => fetchPosts()}
               disabled={loading}
-              className="px-6 py-2.5 bg-pits-black text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-pits-primary hover:text-pits-dark-text transition-all disabled:opacity-50 disabled:hover:bg-pits-black flex items-center gap-2"
+              className="px-6 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-sm font-black uppercase tracking-widest hover:bg-pits-primary hover:text-pits-dark-text transition-all disabled:opacity-50 disabled:hover:bg-pits-black flex items-center gap-2"
             >
               {loading && <RefreshCw size={16} className="animate-spin" />}
               {loading ? t('Loading...') : t('Load More Posts')}

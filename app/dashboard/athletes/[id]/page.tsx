@@ -336,7 +336,7 @@ export default function AthleteDetailPage() {
             </div>
             <div className="pt-4 border-t border-gray-50">
                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Home Box</p>
-               <p className="text-sm font-black text-black uppercase italic">{profile.home_box || 'PITS CrossFit'}</p>
+               <p className="text-sm font-black text-black uppercase italic">{profile.home_box || 'WODUS'}</p>
             </div>
           </div>
 

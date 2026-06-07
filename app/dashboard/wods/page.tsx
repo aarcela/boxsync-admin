@@ -20,9 +20,11 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import { useLanguage } from '../../../components/LanguageContext';
 
 export default function WodEditorPage() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -169,13 +171,13 @@ export default function WodEditorPage() {
         if (data) setWodId(data.id);
       }
 
-      toast('Workout Published Successfully', 'success');
+      toast(t('Workout Published Successfully'), 'success');
       setView('preview');
       setIsLocked(true);
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast('Error saving WOD: ' + errorMessage, 'error');
+      toast(`${t('Error saving WOD')}: ${errorMessage}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -211,10 +213,10 @@ export default function WodEditorPage() {
       const { error } = await supabase.from('wods').delete().eq('id', wodId);
       if (error) throw error;
       resetForm();
-      toast('Workout deleted', 'success');
+      toast(t('Workout deleted'), 'success');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast('Error deleting WOD: ' + errorMessage, 'error');
+      toast(`${t('Error deleting WOD')}: ${errorMessage}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -229,18 +231,18 @@ export default function WodEditorPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
 
       {/* WEEK CALENDAR */}
-      <div className="bg-pits-surface-elevated p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="bg-pits-surface-elevated p-4 sm:p-5 rounded-2xl border border-pits-edge shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-4">
           <button
             type="button"
             onClick={goToPrevWeek}
-            className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-pits-text transition-all shrink-0"
-            aria-label="Previous week"
+            className="p-2 rounded-xl border border-pits-edge text-pits-dim hover:bg-pits-surface-muted hover:text-pits-text transition-all shrink-0"
+            aria-label={t('Previous week')}
           >
             <ChevronLeft size={20} />
           </button>
           <div className="text-center min-w-0">
-            <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest">Week of</p>
+            <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Week of')}</p>
             <p className="text-sm sm:text-base font-black text-pits-text uppercase tracking-tight truncate">
               {weekRangeLabel}
             </p>
@@ -248,8 +250,8 @@ export default function WodEditorPage() {
           <button
             type="button"
             onClick={goToNextWeek}
-            className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-pits-text transition-all shrink-0"
-            aria-label="Next week"
+            className="p-2 rounded-xl border border-pits-edge text-pits-dim hover:bg-pits-surface-muted hover:text-pits-text transition-all shrink-0"
+            aria-label={t('Next week')}
           >
             <ChevronRight size={20} />
           </button>
@@ -271,18 +273,18 @@ export default function WodEditorPage() {
                   ${selected
                     ? 'bg-pits-primary border-pits-primary text-pits-dark-text shadow-lg shadow-pits-primary/20'
                     : today
-                      ? 'bg-red-50 border-pits-red/30 text-pits-text hover:border-pits-red/50'
-                      : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-pits-surface-elevated hover:border-gray-200'
+                      ? 'bg-pits-primary-soft border-pits-red/30 text-pits-text hover:border-pits-red/50'
+                      : 'bg-pits-surface-muted border-pits-edge text-pits-text hover:bg-pits-surface-elevated hover:border-pits-edge'
                   }`}
               >
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-white/80' : 'text-gray-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-pits-dark-text/80' : 'text-pits-dim'}`}>
                   {format(day, 'EEE')}
                 </span>
-                <span className={`text-base sm:text-lg font-black leading-none ${selected ? 'text-white' : 'text-pits-text'}`}>
+                <span className={`text-base sm:text-lg font-black leading-none ${selected ? 'text-pits-dark-text' : 'text-pits-text'}`}>
                   {format(day, 'd')}
                 </span>
                 <span
-                  className={`mt-1 w-1.5 h-1.5 rounded-full ${hasWod ? (selected ? 'bg-pits-surface-elevated' : 'bg-emerald-500') : 'bg-transparent'}`}
+                  className={`mt-1 w-1.5 h-1.5 rounded-full ${hasWod ? (selected ? 'bg-pits-surface-elevated' : 'bg-pits-success') : 'bg-transparent'}`}
                   aria-hidden={!hasWod}
                 />
               </button>
@@ -297,25 +299,25 @@ export default function WodEditorPage() {
               onClick={goToToday}
               className="text-[10px] font-black uppercase tracking-widest text-pits-red hover:text-pits-red-dark transition-colors"
             >
-              Jump to today
+              {t('Jump to today')}
             </button>
           </div>
         )}
       </div>
       
       {/* HEADER & DATE PICKER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-pits-red rounded-xl flex items-center justify-center shadow-lg shadow-red-100">
-            <Dumbbell className="text-white" size={24} />
+          <div className="w-12 h-12 bg-pits-red rounded-xl flex items-center justify-center text-pits-dark-text">
+            <Dumbbell className="text-pits-dark-text" size={24} />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter">
-              Programming Center
+            <h2 className="text-2xl font-black text-pits-text-main uppercase italic tracking-tighter">
+              {t('Programming Center')}
             </h2>
             <p className="text-pits-dim font-medium text-xs flex items-center">
               <Calendar size={12} className="mr-1" />
-              Assigning workout for {new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              {t('Assigning workout for {{date}}', { date: new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
             </p>
           </div>
         </div>
@@ -326,13 +328,13 @@ export default function WodEditorPage() {
               type="date" 
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red outline-none shadow-sm transition-all"
+              className="pl-4 pr-10 py-3 bg-pits-surface-muted border border-pits-edge rounded-xl font-bold text-pits-text focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red outline-none shadow-sm transition-all"
             />
           </div>
           <button 
             onClick={() => setView(view === 'edit' ? 'preview' : 'edit')}
-            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-panel text-white' : 'bg-pits-surface-elevated text-gray-500 hover:bg-gray-50'}`}
-            title="Toggle Preview"
+            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-panel text-pits-text' : 'bg-pits-surface-elevated text-pits-dim hover:bg-pits-surface-muted'}`}
+            title={t('Toggle Preview')}
           >
             <Eye size={20} />
           </button>
@@ -340,9 +342,9 @@ export default function WodEditorPage() {
       </div>
 
       {loading ? (
-        <div className="p-24 flex flex-col items-center justify-center text-gray-400 gap-4">
+        <div className="p-24 flex flex-col items-center justify-center text-pits-dim gap-4">
           <Loader2 size={40} className="animate-spin text-pits-red" />
-          <p className="font-bold text-sm uppercase tracking-widest">Loading Whiteboard...</p>
+          <p className="font-bold text-sm uppercase tracking-widest">{t('Loading Whiteboard...')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -350,23 +352,23 @@ export default function WodEditorPage() {
           {/* MAIN FORM: INPUTS */}
           <div className={`lg:col-span-7 space-y-6 relative ${view === 'preview' ? 'hidden lg:block' : 'block'}`}>
             {isLocked && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-pits-primary-soft border border-pits-edge rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-pits-primary-soft text-pits-primary rounded-xl flex items-center justify-center">
                     <Lock size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-emerald-900 uppercase tracking-wide">Workout published</p>
-                    <p className="text-xs text-emerald-700 font-medium">Editing is locked to avoid accidental changes.</p>
+                    <p className="text-sm font-black text-pits-text uppercase tracking-wide">{t('Workout published')}</p>
+                    <p className="text-xs text-pits-success font-medium">{t('Workout published lock message')}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={requestUnlock}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pits-surface-elevated border border-emerald-200 text-emerald-800 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-100 transition-all shrink-0"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pits-surface-elevated border border-pits-edge text-pits-success rounded-xl font-black text-xs uppercase tracking-widest hover:bg-pits-primary-soft transition-all shrink-0"
                 >
                   <Pencil size={14} />
-                  Edit workout
+                  {t('Edit workout')}
                 </button>
               </div>
             )}
@@ -377,15 +379,15 @@ export default function WodEditorPage() {
               role={isLocked ? 'button' : undefined}
               tabIndex={isLocked ? 0 : undefined}
               onKeyDown={isLocked ? (e) => { if (e.key === 'Enter' || e.key === ' ') requestUnlock(); } : undefined}
-              aria-label={isLocked ? 'Published workout — click to edit' : undefined}
+              aria-label={isLocked ? t('Published workout click to edit') : undefined}
             >
             
             {/* Title & Score Type Block */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm overflow-hidden relative">
                 <div className="absolute top-0 left-0 w-1 h-full bg-pits-red"></div>
                 <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
-                  Workout Theme or Naming
+                  {t('Workout Theme or Naming')}
                 </label>
                 <input 
                   type="text" 
@@ -393,29 +395,29 @@ export default function WodEditorPage() {
                   maxLength={200}
                   disabled={isLocked}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. 'Stronger Together' or 'Engine Builder'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
+                  placeholder={t('WOD title placeholder')}
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
                 />
                 <div className="text-right mt-1.5">
-                  <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-red-500' : 'text-gray-400'}`}>
+                  <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-pits-error' : 'text-pits-dim'}`}>
                     {200 - title.length}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm overflow-hidden relative">
                 <label className="block text-xs font-black text-pits-dim uppercase tracking-widest mb-3">
-                  Score Type
+                  {t('Score Type')}
                 </label>
                 <select 
                   value={scoreType}
                   disabled={isLocked}
                   onChange={(e) => setScoreType(e.target.value)}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
-                  <option value="none">None</option>
+                  <option value="none">{t('None')}</option>
                   <option value="amrap">AMRAP</option>
-                  <option value="for_time">For Time</option>
+                  <option value="for_time">{t('For Time')}</option>
                   <option value="emom">EMOM</option>
                 </select>
               </div>
@@ -423,29 +425,29 @@ export default function WodEditorPage() {
 
             {/* Warm Up Section */}
             <Section 
-              label="1. Preparation (Warm-up)" 
-              color="bg-orange-500" 
+              label={t('1. Preparation (Warm-up)')} 
+              color="bg-pits-primary" 
               icon={<Sparkles size={16} />}
               value={warmUp} 
               onChange={setWarmUp}
               disabled={isLocked}
-              placeholder="Elevate heart rate & prep specific joints...\n3 Rounds:\n- 10 Empty Bar Cleans\n- 10 Scaps Pull"
+              placeholder={t('Warm up placeholder')}
             />
 
             {/* Technique Section */}
-            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm relative group overflow-visible">
+            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm relative group overflow-visible">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-8 h-8 bg-pits-primary-soft text-pits-primary rounded-lg flex items-center justify-center mr-3">
                     <Zap size={16} />
                   </div>
                   <label className="text-sm font-black text-pits-text uppercase tracking-widest">
-                    2. Focus (Technique)
+                    {t('2. Focus (Technique)')}
                   </label>
                 </div>
               </div>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-pits-dim" size={18} />
                 <input 
                   type="text"
                   disabled={isLocked}
@@ -460,27 +462,27 @@ export default function WodEditorPage() {
                     setTechniqueDropdownOpen(true);
                   }}
                   onBlur={() => setTimeout(() => setTechniqueDropdownOpen(false), 200)}
-                  placeholder="Select primary skill focus..."
-                  className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-purple-600 outline-none transition-all disabled:cursor-not-allowed"
+                  placeholder={t('Skill focus placeholder')}
+                  className="w-full pl-11 pr-4 py-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
                 />
               </div>
 
               {techniqueDropdownOpen && (
-                <div className="absolute z-50 left-6 right-6 mt-2 bg-pits-surface-elevated border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                  {UNIQUE_TECHNIQUES.filter(t => t.toLowerCase().includes(techniqueSearch.toLowerCase())).map((t) => (
+                <div className="absolute z-50 left-6 right-6 mt-2 bg-pits-surface-elevated border border-pits-edge rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {UNIQUE_TECHNIQUES.filter(tech => tech.toLowerCase().includes(techniqueSearch.toLowerCase())).map((tech) => (
                     <div 
-                      key={t}
-                      className="px-5 py-3 hover:bg-purple-50 cursor-pointer text-sm font-bold text-gray-700 transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group/item"
+                      key={tech}
+                      className="px-5 py-3 hover:bg-pits-surface-muted cursor-pointer text-sm font-bold text-pits-text transition-colors border-b border-pits-edge last:border-0 flex items-center justify-between group/item"
                       onClick={() => {
-                        setTechnique(t);
+                        setTechnique(tech);
                         setTechniqueDropdownOpen(false);
                       }}
                     >
-                      {t}
-                      <MoveRight size={14} className="opacity-0 group-hover/item:opacity-100 text-purple-400" />
+                      {tech}
+                      <MoveRight size={14} className="opacity-0 group-hover/item:opacity-100 text-pits-primary" />
                     </div>
                   )) || (
-                    <div className="p-4 text-center text-xs text-gray-400">No match found</div>
+                    <div className="p-4 text-center text-xs text-pits-dim">{t('No match found')}</div>
                   )}
                 </div>
               )}
@@ -488,59 +490,59 @@ export default function WodEditorPage() {
 
             {/* Strength Section */}
             <Section 
-              label="3. Build (Strength / Skill)" 
-              color="bg-blue-600" 
+              label={t('3. Build (Strength / Skill)')} 
+              color="bg-pits-primary" 
               icon={<Dumbbell size={16} />}
               value={strength} 
               onChange={setStrength}
               disabled={isLocked}
-              placeholder="Specify sets, reps and load intensity...\n5x3 Back Squats @ 80-85%\nRest 2:00 between sets."
+              placeholder={t('Strength placeholder')}
             />
 
             {/* Metcon Section */}
             <Section 
-              label="4. Perform (The Metcon)" 
+              label={t('4. Perform (The Metcon)')} 
               color="bg-pits-red" 
               icon={<Zap size={16} />}
               value={metcon} 
               onChange={setMetcon}
               disabled={isLocked}
               rows={8}
-              placeholder="Describe the workout heart...\nAMRAP 15:\n- 10 Box Jumps\n- 10 Power Snatches (95/65)"
+              placeholder={t('Metcon placeholder')}
             />
 
             {/* Stimulus & Scaling */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
+               <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
                 <div className="flex items-center mb-3">
-                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-8 h-8 bg-pits-primary-soft text-pits-success rounded-lg flex items-center justify-center mr-3">
                     <Sparkles size={16} />
                   </div>
-                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">Intended Stimulus</label>
+                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">{t('Intended Stimulus')}</label>
                 </div>
                 <textarea 
                   value={stimulus}
                   disabled={isLocked}
                   onChange={(e) => setStimulus(e.target.value)}
                   rows={3}
-                  placeholder="e.g. 'Fast & Unbroken. Heart rate 90%+'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-emerald-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
+                  placeholder={t('Stimulus placeholder')}
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-red outline-none resize-none transition-all placeholder:text-pits-dim disabled:cursor-not-allowed"
                 />
               </div>
-              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
                 <div className="flex items-center mb-3">
-                  <div className="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-8 h-8 bg-pits-surface-muted text-pits-text rounded-lg flex items-center justify-center mr-3">
                     <Scale size={16} />
                   </div>
-                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">Scaling & Notes</label>
+                  <label className="text-xs font-black text-pits-text uppercase tracking-widest">{t('Scaling & Notes')}</label>
                 </div>
                 <textarea 
                   value={scaling}
                   disabled={isLocked}
                   onChange={(e) => setScaling(e.target.value)}
                   rows={3}
-                  placeholder="e.g. 'Scale Pull-ups to Ring Rows...'"
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-slate-500 outline-none resize-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed"
+                  placeholder={t('Scaling placeholder')}
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-edge0 outline-none resize-none transition-all placeholder:text-pits-dim disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -553,7 +555,7 @@ export default function WodEditorPage() {
             
             {/* Live Mobile Preview */}
             <div className={`bg-gray-900 rounded-[2.5rem] p-4 border-[8px] border-gray-800 shadow-2xl relative transition-all duration-500 ${view === 'preview' ? 'scale-100' : 'scale-95 opacity-80'}`}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl z-10 flex items-center justify-center">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-pits-surface-muted rounded-b-2xl z-10 flex items-center justify-center">
                  <div className="w-10 h-1 bg-gray-700 rounded-full"></div>
               </div>
               
@@ -561,21 +563,21 @@ export default function WodEditorPage() {
                 {/* Simulated In-App Content */}
                 <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                   <div className="uppercase font-black text-2xl italic tracking-tighter text-pits-text leading-none">
-                    {title || 'TODAY\'S WORKOUT'}
+                    {title || t("TODAY'S WORKOUT")}
                   </div>
-                  <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                  <div className="text-[10px] font-bold text-pits-dim tracking-widest uppercase">
                     {new Date(date).toDateString()}
                   </div>
 
                   {/* Reactive Blocks */}
-                  {warmUp && <PreviewBlock label="Prep" color="border-orange-500" content={warmUp} />}
-                  {technique && <PreviewBlock label="Focus" color="border-purple-600" content={technique} />}
-                  {strength && <PreviewBlock label="Strength" color="border-blue-600" content={strength} />}
-                  {metcon && <PreviewBlock label="Metcon" color="border-pits-red" content={metcon} />}
+                  {warmUp && <PreviewBlock label={t('Prep')} color="border-pits-primary" content={warmUp} />}
+                  {technique && <PreviewBlock label={t('Focus')} color="border-pits-primary" content={technique} />}
+                  {strength && <PreviewBlock label={t('Strength')} color="border-pits-primary" content={strength} />}
+                  {metcon && <PreviewBlock label={t('Metcon')} color="border-pits-red" content={metcon} />}
                   {(stimulus || scaling) && (
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                       <div className="text-[9px] font-black text-emerald-600 uppercase mb-1">Stimulus & Scaling</div>
-                       <p className="text-[11px] font-bold text-emerald-800 leading-relaxed whitespace-pre-line">
+                    <div className="bg-pits-primary-soft p-4 rounded-xl border border-pits-edge">
+                       <div className="text-[9px] font-black text-pits-success uppercase mb-1">{t('Stimulus & Scaling')}</div>
+                       <p className="text-[11px] font-bold text-pits-success leading-relaxed whitespace-pre-line">
                          {stimulus ? `💡 ${stimulus}\n` : ''}
                          {scaling ? `⚖️ ${scaling}` : ''}
                        </p>
@@ -583,28 +585,28 @@ export default function WodEditorPage() {
                   )}
                   
                   {!warmUp && !metcon && !strength && (
-                    <div className="flex flex-col items-center justify-center h-48 text-gray-300">
-                       <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                    <div className="flex flex-col items-center justify-center h-48 text-pits-dim">
+                       <div className="w-12 h-12 bg-pits-surface-muted rounded-full flex items-center justify-center mb-3">
                          <Dumbbell size={24} className="opacity-20" />
                        </div>
-                       <p className="text-xs font-bold uppercase tracking-widest">Workout is empty</p>
+                       <p className="text-xs font-bold uppercase tracking-widest">{t('Workout is empty')}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="p-4 border-t border-gray-100 bg-gray-50 text-center">
-                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Athlete Mobile View</p>
+                <div className="p-4 border-t border-pits-edge bg-pits-surface-muted text-center">
+                   <p className="text-[10px] text-pits-dim font-bold uppercase tracking-widest">{t('Athlete Mobile View')}</p>
                 </div>
               </div>
             </div>
             
             {/* Save Action */}
-            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
               <button
                 onClick={isLocked ? requestUnlock : handleSave}
                 disabled={saving}
                 className={`w-full py-4 rounded-xl flex items-center justify-center font-black uppercase tracking-widest text-sm shadow-xl transition-all
-                  ${saving ? 'bg-gray-400 text-white cursor-not-allowed' : isLocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100' : 'bg-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:scale-[1.02] active:scale-[0.98] shadow-pits-primary/20'}
+                  ${saving ? 'bg-pits-dim text-pits-dark-text cursor-not-allowed' : isLocked ? 'bg-pits-success hover:opacity-90 text-pits-dark-text shadow-pits-primary/20' : 'bg-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:scale-[1.02] active:scale-[0.98] shadow-pits-primary/20'}
                 `}
               >
                 {saving ? (
@@ -614,7 +616,7 @@ export default function WodEditorPage() {
                 ) : (
                   <Save size={18} className="mr-2" />
                 )}
-                {saving ? 'Publishing...' : isLocked ? 'Edit published workout' : 'Publish to PITS App'}
+                {saving ? t('Publishing...') : isLocked ? t('Edit published workout btn') : t('Publish to PITS App')}
               </button>
 
               {wodId && (
@@ -622,24 +624,24 @@ export default function WodEditorPage() {
                   type="button"
                   onClick={() => setDeleteConfirmOpen(true)}
                   disabled={deleting || saving}
-                  className="w-full mt-3 py-3 rounded-xl flex items-center justify-center gap-2 border border-red-200 text-red-600 font-black uppercase tracking-widest text-xs hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-3 py-3 rounded-xl flex items-center justify-center gap-2 border border-pits-edge text-pits-error font-black uppercase tracking-widest text-xs hover:bg-pits-primary-soft transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleting ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : (
                     <Trash2 size={16} />
                   )}
-                  {deleting ? 'Deleting...' : 'Delete workout'}
+                  {deleting ? t('Deleting...') : t('Delete workout btn')}
                 </button>
               )}
 
               <div className="mt-4 flex items-center justify-between px-2">
                  <div className="flex items-center gap-1.5 opacity-40">
-                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Connected</span>
+                   <div className="w-2 h-2 bg-pits-success rounded-full animate-pulse"></div>
+                   <span className="text-[10px] font-bold uppercase tracking-wider text-pits-text">{t('Connected')}</span>
                  </div>
-                 <p className="text-[10px] text-gray-400 font-bold uppercase text-right">
-                   Auto-scales for iOS/Android
+                 <p className="text-[10px] text-pits-dim font-bold uppercase text-right">
+                   {t('Auto-scales for iOS/Android')}
                  </p>
               </div>
             </div>
@@ -650,10 +652,10 @@ export default function WodEditorPage() {
 
       <ConfirmDialog
         isOpen={editConfirmOpen}
-        title="Edit published workout?"
-        message="This workout is already live for athletes. Do you want to unlock the editor and change the content?"
-        confirmLabel="Yes, edit"
-        cancelLabel="Keep locked"
+        title={t('Edit published workout title')}
+        message={t('Edit published workout message')}
+        confirmLabel={t('Yes, edit')}
+        cancelLabel={t('Keep locked')}
         variant="warning"
         onConfirm={handleConfirmEdit}
         onCancel={() => setEditConfirmOpen(false)}
@@ -661,10 +663,10 @@ export default function WodEditorPage() {
 
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
-        title="Delete workout?"
-        message={`This will permanently remove the workout for ${new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}. Athletes will no longer see it in the app.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('Delete workout title')}
+        message={t('Delete workout dated message', { date: new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
+        confirmLabel={t('Delete')}
+        cancelLabel={t('Cancel')}
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirmOpen(false)}
@@ -685,9 +687,9 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
   disabled?: boolean;
 }) {
   return (
-    <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-gray-200 shadow-sm transition-all hover:border-gray-300">
+    <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm transition-all hover:border-gray-300">
       <div className="flex items-center mb-4">
-        <div className={`w-8 h-8 ${color} text-white rounded-lg flex items-center justify-center mr-3 shadow-sm`}>
+        <div className={`w-8 h-8 ${color} text-pits-dark-text rounded-lg flex items-center justify-center mr-3 shadow-sm`}>
           {icon}
         </div>
         <label className="text-sm font-black text-pits-text uppercase tracking-widest">
@@ -700,7 +702,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-gray-400 outline-none resize-none transition-all placeholder:text-gray-300 font-mono disabled:cursor-not-allowed"
+        className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-gray-400 outline-none resize-none transition-all placeholder:text-pits-dim font-mono disabled:cursor-not-allowed"
       />
     </div>
   );
@@ -709,7 +711,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
 function PreviewBlock({ label, color, content }: { label: string, color: string, content: string }) {
   return (
     <div className={`border-l-4 ${color} pl-4 py-1`}>
-      <div className="text-[9px] font-black uppercase text-gray-400 mb-1 tracking-widest">{label}</div>
+      <div className="text-[9px] font-black uppercase text-pits-dim mb-1 tracking-widest">{label}</div>
       <p className="text-[12px] font-bold text-pits-text leading-snug whitespace-pre-line">
         {content}
       </p>

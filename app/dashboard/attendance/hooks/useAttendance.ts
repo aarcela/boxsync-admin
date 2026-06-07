@@ -3,9 +3,11 @@ import { getCaracasDate } from '@/lib/utils/date';
 import { classService } from '@/lib/services/classService';
 import { Booking, ClassSession, BookingStatus } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
+import { useLanguage } from '@/components/LanguageContext';
 
 export function useAttendance() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   
   // State
   const [date, setDate] = useState('');
@@ -51,11 +53,11 @@ export function useAttendance() {
       }
     } catch (error) {
       console.error('Fetch classes error:', error);
-      toast('Failed to load classes', 'error');
+      toast(t('Failed to load classes'), 'error');
     } finally {
       setLoadingClasses(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     fetchClasses(date);
@@ -69,11 +71,11 @@ export function useAttendance() {
       setRoster(bookings);
     } catch (error) {
       console.error('Fetch roster error:', error);
-      toast('Failed to load roster', 'error');
+      toast(t('Failed to load roster'), 'error');
     } finally {
       setLoadingRoster(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     if (selectedClassId) {
@@ -100,7 +102,7 @@ export function useAttendance() {
     } catch (error) {
       console.error(error);
       setRoster(previousRoster);
-      toast('Failed to update status', 'error');
+      toast(t('Failed to update status'), 'error');
     }
   };
 
@@ -110,7 +112,7 @@ export function useAttendance() {
     const selectedClass = classes.find(c => c.id === selectedClassId);
     const count = selectedClass?.bookings[0]?.count ?? roster.length;
     if (selectedClass && count >= selectedClass.max_capacity) {
-      toast('Class is at full capacity', 'error');
+      toast(t('Class is at full capacity'), 'error');
       return;
     }
 
@@ -118,10 +120,10 @@ export function useAttendance() {
       const booking = await classService.createBooking(selectedClassId, userId);
       setRoster(prev => [...prev, booking]);
       updateClassBookingCount(selectedClassId, 1);
-      toast('Athlete added to class', 'success');
+      toast(t('Athlete added to class'), 'success');
     } catch (error) {
       console.error(error);
-      toast(error instanceof Error ? error.message : 'Failed to add athlete', 'error');
+      toast(error instanceof Error ? error.message : t('Failed to add athlete'), 'error');
       throw error;
     }
   };
@@ -135,18 +137,18 @@ export function useAttendance() {
     try {
       await classService.deleteBooking(bookingId);
       updateClassBookingCount(selectedClassId, -1);
-      toast('Athlete removed from class', 'success');
+      toast(t('Athlete removed from class'), 'success');
     } catch (error) {
       console.error(error);
       setRoster(previousRoster);
-      toast('Failed to remove athlete', 'error');
+      toast(t('Failed to remove athlete'), 'error');
     }
   };
 
   const markAll = async (newStatus: BookingStatus) => {
     const toUpdate = roster.filter(b => b.status !== newStatus);
     if (toUpdate.length === 0) {
-      toast(`All athletes are already marked as ${newStatus}`, 'info');
+      toast(t('All athletes are already marked as {{status}}', { status: t(newStatus as 'attended' | 'no_show' | 'booked') }), 'info');
       return;
     }
 
@@ -155,11 +157,14 @@ export function useAttendance() {
 
     try {
       await classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus);
-      toast(`${toUpdate.length} athletes marked as ${newStatus.replace('_', ' ')}`, 'success');
+      toast(t('{{count}} athletes marked as {{status}}', {
+        count: toUpdate.length,
+        status: t(newStatus as 'attended' | 'no_show' | 'booked'),
+      }), 'success');
     } catch (error) {
       console.error(error);
       setRoster(previousRoster); // Rollback
-      toast('Some updates may have failed', 'error');
+      toast(t('Some updates may have failed'), 'error');
     }
   };
 

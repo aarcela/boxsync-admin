@@ -20,7 +20,7 @@ export function buildWelcomeMessage(params: {
     return [
       `¡Hola ${firstName}! 👋`,
       '',
-      '¡Bienvenido/a a PITS CrossFit! Tu cuenta ya está lista.',
+      '¡Bienvenido/a a WODUS! Tu cuenta ya está lista.',
       '',
       'Descarga nuestra app para reservar clases, ver el WOD y mantenerte conectado con el box:',
       `📱 ${APP_STORE_URL}`,
@@ -34,7 +34,7 @@ export function buildWelcomeMessage(params: {
   return [
     `Hi ${firstName}! 👋`,
     '',
-    'Welcome to PITS CrossFit! Your account is ready.',
+    'Welcome to WODUS! Your account is ready.',
     '',
     'Download our app to book classes, view the WOD, and stay connected with the box:',
     `📱 ${APP_STORE_URL}`,

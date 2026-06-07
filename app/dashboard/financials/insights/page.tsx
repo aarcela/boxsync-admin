@@ -276,7 +276,7 @@ export default function FinancialInsightsPage() {
             {t('High-impact decisions to recover revenue and protect growth.')}
           </p>
         </div>
-        <div className="bg-pits-panel text-white px-4 py-2 rounded-lg flex items-center shadow-lg">
+        <div className="bg-pits-panel text-pits-text px-4 py-2 rounded-lg flex items-center shadow-lg">
           <Zap size={16} className="text-yellow-400 mr-2 animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-widest">
             {visibleRecs.filter(r => r.priority === 'urgent' || r.priority === 'high').length} {t('Critical Actions')}
@@ -285,50 +285,50 @@ export default function FinancialInsightsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-green-600 p-6 rounded-2xl shadow-xl shadow-green-100 flex items-center justify-between group cursor-default">
+        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
           <div>
-            <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-1">{t('Recoverable Debt')}</p>
-            <p className="text-4xl font-black text-white italic">€{totals.recoveredPotential}</p>
-            <p className="text-white/60 text-[10px] mt-2 font-bold uppercase">{t('Immediate Cash Flow')}</p>
+            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Recoverable Debt')}</p>
+            <p className="text-4xl font-black text-pits-text italic">€{totals.recoveredPotential}</p>
+            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Immediate Cash Flow')}</p>
           </div>
-          <DollarSign size={40} className="text-white/20 group-hover:scale-110 transition-transform" />
+          <DollarSign size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
         </div>
         
-        <div className="bg-blue-600 p-6 rounded-2xl shadow-xl shadow-blue-100 flex items-center justify-between group cursor-default">
+        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
           <div>
-            <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-1">{t('Monthly Growth')}</p>
-            <p className="text-4xl font-black text-white italic">+€{totals.upsellPotential}<span className="text-sm">/mo</span></p>
-            <p className="text-white/60 text-[10px] mt-2 font-bold uppercase">{t('Plan Optimization')}</p>
+            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Monthly Growth')}</p>
+            <p className="text-4xl font-black text-pits-text italic">+€{totals.upsellPotential}<span className="text-sm">/mo</span></p>
+            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Plan Optimization')}</p>
           </div>
-          <TrendingUp size={40} className="text-white/20 group-hover:scale-110 transition-transform" />
+          <TrendingUp size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
         </div>
 
-        <div className="bg-black p-6 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-between group cursor-default">
+        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
           <div>
-            <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-1">{t('Churn Risk')}</p>
-            <p className="text-4xl font-black text-white italic">{recommendations.filter(r => r.type === 'retention').length}</p>
-            <p className="text-white/60 text-[10px] mt-2 font-bold uppercase">{t('Members Missing more 12d')}</p>
+            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Churn Risk')}</p>
+            <p className="text-4xl font-black text-pits-text italic">{recommendations.filter(r => r.type === 'retention').length}</p>
+            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Members Missing more 12d')}</p>
           </div>
-          <AlertCircle size={40} className="text-white/20 group-hover:scale-110 transition-transform" />
+          <AlertCircle size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-pits-surface-elevated p-2 rounded-xl border border-gray-100 shadow-sm overflow-x-auto no-scrollbar">
-        <Filter size={16} className="text-gray-400 shrink-0 ml-2" />
+      <div className="flex items-center gap-2 bg-pits-surface-elevated p-2 rounded-xl border border-pits-edge shadow-sm overflow-x-auto no-scrollbar">
+        <Filter size={16} className="text-pits-dim shrink-0 ml-2" />
         {FILTER_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveFilter(tab.key)}
             className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
               activeFilter === tab.key 
-                ? 'bg-pits-panel text-white shadow-md' 
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                ? 'bg-pits-panel text-pits-text shadow-md' 
+                : 'text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted'
             }`}
           >
             {tab.label}
             {tab.count > 0 && (
               <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black ${
-                activeFilter === tab.key ? 'bg-pits-surface-elevated text-black' : 'bg-gray-100 text-gray-500'
+                activeFilter === tab.key ? 'bg-pits-surface-elevated text-black' : 'bg-pits-surface-muted text-pits-dim'
               }`}>
                 {tab.count}
               </span>
@@ -348,11 +348,11 @@ export default function FinancialInsightsPage() {
             <div 
               key={rec.id} 
               className={`bg-pits-surface-elevated border rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden
-                ${rec.priority === 'urgent' ? 'border-2 border-red-500 shadow-red-50' : 'border-gray-100'}
+                ${rec.priority === 'urgent' ? 'border-2 border-pits-error' : 'border-pits-edge'}
               `}
             >
               {rec.priority === 'urgent' && (
-                <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-black uppercase px-3 py-1 rounded-bl-lg tracking-widest">
+                <div className="absolute top-0 right-0 bg-pits-error text-pits-text text-[8px] font-black uppercase px-3 py-1 rounded-bl-lg tracking-widest">
                   {t('Urgent Recovery')}
                 </div>
               )}
@@ -360,14 +360,14 @@ export default function FinancialInsightsPage() {
               <div>
                 <div className="flex justify-between items-start mb-3">
                   <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest
-                    ${rec.type === 'recovery' ? 'bg-red-50 text-red-600' : 
-                      rec.type === 'upsell' ? 'bg-blue-50 text-blue-600' : 
-                      rec.type === 'retention' ? 'bg-orange-50 text-orange-600' : 
-                      'bg-gray-100 text-gray-600'}
+                    ${rec.type === 'recovery' ? 'bg-pits-primary-soft text-pits-error' : 
+                      rec.type === 'upsell' ? 'bg-pits-surface-muted text-pits-primary' : 
+                      rec.type === 'retention' ? 'bg-pits-primary-soft text-pits-primary' : 
+                      'bg-pits-surface-muted text-pits-text'}
                   `}>
                     {t(rec.type.charAt(0).toUpperCase() + rec.type.slice(1) as any)}
                   </div>
-                  <span className={`font-black text-sm italic ${rec.type === 'recovery' ? 'text-red-600' : 'text-pits-text'}`}>
+                  <span className={`font-black text-sm italic ${rec.type === 'recovery' ? 'text-pits-error' : 'text-pits-text'}`}>
                     {rec.impact}
                   </span>
                 </div>
@@ -380,22 +380,22 @@ export default function FinancialInsightsPage() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+              <div className="flex items-center justify-between pt-4 border-t border-pits-edge">
                 <div className="flex items-center">
-                  <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center mr-2 border border-gray-200">
-                    <Users size={14} className="text-gray-400" />
+                  <div className="w-7 h-7 bg-pits-surface-muted rounded-full flex items-center justify-center mr-2 border border-pits-edge">
+                    <Users size={14} className="text-pits-dim" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-pits-text uppercase leading-none">
                       {rec.athleteName ? rec.athleteName.split(' ')[0] : t('Bulk Inscription Recovery')}
                     </span>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase">Athlete ID {rec.athleteId?.slice(0,5) || 'Group'}</span>
+                    <span className="text-[8px] text-pits-dim font-bold uppercase">Athlete ID {rec.athleteId?.slice(0,5) || 'Group'}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => handleDismiss(rec.id)}
-                    className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors"
+                    className="text-[9px] font-bold text-pits-dim uppercase tracking-widest hover:text-pits-text transition-colors"
                   >
                     {t('Dismiss')}
                   </button>
@@ -403,8 +403,8 @@ export default function FinancialInsightsPage() {
                     onClick={() => handleAction(rec)}
                     className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 shadow-sm
                       ${rec.type === 'recovery' || rec.priority === 'urgent'
-                        ? 'bg-red-600 text-white hover:bg-black' 
-                        : 'bg-pits-panel text-white hover:bg-black'}
+                        ? 'bg-pits-error text-pits-text hover:bg-pits-primary-dark' 
+                        : 'bg-pits-panel text-pits-text hover:bg-pits-primary-dark'}
                     `}
                   >
                     {rec.type !== 'inscription' && rec.id !== 'ins-bulk' && (
@@ -421,9 +421,9 @@ export default function FinancialInsightsPage() {
       </div>
 
       {visibleRecs.length === 0 && !loading && (
-        <div className="bg-pits-surface-elevated p-20 rounded-2xl border border-dashed border-gray-200 text-center flex flex-col items-center">
-           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-             <UserCheck size={32} className="text-gray-200" />
+        <div className="bg-pits-surface-elevated p-20 rounded-2xl border border-dashed border-pits-edge text-center flex flex-col items-center">
+           <div className="w-16 h-16 bg-pits-surface-muted rounded-full flex items-center justify-center mb-4">
+             <UserCheck size={32} className="text-pits-dim" />
            </div>
            <p className="text-pits-text font-black uppercase italic tracking-wider text-xl">{t('The Box is Perfectly Balanced')}</p>
            <p className="text-pits-dim text-xs font-bold uppercase mt-2 tracking-widest opacity-60">{t('No high-impact recovery or growth tasks detected.')}</p>

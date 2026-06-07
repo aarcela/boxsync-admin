@@ -70,8 +70,8 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-pits-black rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3 ring-1 ring-pits-edge">
             <Image
-              src="/assets/logo.webp"
-              alt="Pits CrossFit"
+              src="/assets/logo.png"
+              alt="WODUS"
               width={48}
               height={48}
               className="w-full h-full object-contain"
@@ -79,7 +79,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className="text-2xl font-black text-pits-ink uppercase italic tracking-tighter">
-            Pits CrossFit
+            WODUS
           </h1>
           <p className="text-pits-ink-muted text-xs font-bold uppercase tracking-widest mt-1">
             {t('Command Center')}
