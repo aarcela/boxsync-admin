@@ -16,6 +16,9 @@ interface Coach {
   full_name: string;
 }
 
+const inputClass =
+  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none';
+
 const DAYS_OF_WEEK = [
   { label: 'M', value: 1 },
   { label: 'T', value: 2 },
@@ -38,6 +41,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
   const [coachId, setCoachId] = useState('');
   const [type, setType] = useState('CrossFit');
   const [capacity, setCapacity] = useState('12');
+  const [tenantId, setTenantId] = useState<string | null>(null);
 
   // Recurring State
   const [isRecurring, setIsRecurring] = useState(false);
@@ -46,6 +50,17 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
 
   useEffect(() => {
     const fetchCoaches = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      setTenantId(profile?.tenant_id ?? null);
+
       const { data } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -66,6 +81,10 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
     setLoading(true);
 
     try {
+      if (!tenantId) {
+        throw new Error('Missing tenant context. Sign out and sign in again.');
+      }
+
       const classesToInsert = [];
       const durationMs = parseInt(duration) * 60000;
 
@@ -73,6 +92,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
         // Single Class Logic
         const start = new Date(`${date}T${time}`);
         classesToInsert.push({
+          tenant_id: tenantId,
           start_time: start.toISOString(),
           end_time: new Date(start.getTime() + durationMs).toISOString(),
           coach_id: coachId || null,
@@ -89,6 +109,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
         while (currentIterDate <= endLimit) {
           if (selectedDays.includes(currentIterDate.getDay())) {
             classesToInsert.push({
+              tenant_id: tenantId,
               start_time: currentIterDate.toISOString(),
               end_time: new Date(currentIterDate.getTime() + durationMs).toISOString(),
               coach_id: coachId || null,
@@ -120,12 +141,12 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pits-background/50 backdrop-blur-sm">
-      <div className="bg-pits-background rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-        <div className="bg-pits-background px-6 py-4 border-b border-pits-border flex justify-between items-center">
+      <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-pits-edge flex justify-between items-center">
           <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
             Schedule Classes
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-pits-background rounded-full text-pits-primary">
+          <button onClick={onClose} className="p-2 hover:bg-pits-surface-muted rounded-full text-pits-dim hover:text-pits-ink transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -134,11 +155,11 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Start Date</label>
-              <input type="date" required value={date} onChange={e => setDate(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red" />
+              <input type="date" required value={date} onChange={e => setDate(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Time</label>
-              <input type="time" required value={time} onChange={e => setTime(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red" />
+              <input type="time" required value={time} onChange={e => setTime(e.target.value)} className={inputClass} />
             </div>
           </div>
 
@@ -156,14 +177,14 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
                     setDuration('60');
                   }
                 }} 
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red"
+                className={inputClass}
               >
                 {CLASS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Coach</label>
-              <select value={coachId} onChange={e => setCoachId(e.target.value)} required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none focus:border-pits-red">
+              <select value={coachId} onChange={e => setCoachId(e.target.value)} required className={inputClass}>
                 <option value="">Select Coach</option>
                 {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
               </select>
@@ -171,9 +192,9 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           </div>
 
           {/* RECURRING SECTION */}
-          <div className={`p-4 rounded-xl border-2 transition-all ${isRecurring ? 'bg-pits-card border-pits-red/20' : 'bg-gray-50 border-transparent'}`}>
+          <div className={`p-4 rounded-xl border-2 transition-all ${isRecurring ? 'bg-pits-card border-pits-red/20' : 'bg-pits-surface-muted border-pits-edge'}`}>
             <label className="flex items-center cursor-pointer mb-3">
-              <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-4 h-4 text-pits-red rounded border-gray-300 focus:ring-pits-red" />
+              <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-4 h-4 text-pits-red rounded border-pits-edge focus:ring-pits-red" />
               <span className="ml-3 text-sm font-black text-pits-text uppercase italic tracking-tight flex items-center">
                 <Repeat size={14} className="mr-2" />
                 Repeat this class
@@ -190,7 +211,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
                         key={day.value}
                         type="button"
                         onClick={() => toggleDay(day.value)}
-                        className={`w-9 h-9 rounded-full font-bold text-xs border-2 transition-all ${selectedDays.includes(day.value) ? 'bg-pits-primary border-pits-primary text-pits-dark-text' : 'bg-pits-surface-elevated border-gray-200 text-gray-400'}`}
+                        className={`w-9 h-9 rounded-full font-bold text-xs border-2 transition-all ${selectedDays.includes(day.value) ? 'bg-pits-primary border-pits-primary text-pits-dark-text' : 'bg-pits-surface-elevated border-pits-edge text-pits-dim'}`}
                       >
                         {day.label}
                       </button>
@@ -199,7 +220,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Until Date</label>
-                  <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className="w-full p-2 bg-pits-background border border-pits-border rounded-lg text-sm font-bold outline-none focus:border-pits-red" />
+                  <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className={inputClass} />
                 </div>
               </div>
             )}
@@ -208,7 +229,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg ${loading ? 'bg-gray-400' : 'bg-pits-primary hover:bg-pits-primary-dark '}`}
+            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg transition-all ${loading ? 'bg-pits-gunmetal cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}`}
           >
             {loading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
             {isRecurring ? 'Bulk Schedule' : 'Schedule Single Class'}

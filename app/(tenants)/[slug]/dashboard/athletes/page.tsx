@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Filter, Check, X, Edit2, Award, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -33,7 +33,6 @@ export default function AthletesPage() {
     filteredProfiles,
     toggleSolvency,
     changePlan,
-    toggleInscription,
     refresh
   } = useAthletes();
 

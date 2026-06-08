@@ -1,21 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
-
-// Initialize the Admin Client (Bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -106,8 +94,9 @@ export async function POST(request: Request) {
     const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email so they can login immediately
-      user_metadata: { full_name } // Trigger uses this to create profile
+      email_confirm: true,
+      user_metadata: { full_name, tenant_id: tenantId },
+      app_metadata: { tenant_id: tenantId },
     });
 
     if (createError) throw createError;
@@ -158,12 +147,17 @@ export async function POST(request: Request) {
 
     profileUpdate.plan = planId;
 
-    const { error: profileError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .update(profileUpdate)
-      .eq('id', user.user.id);
+      .eq('id', user.user.id)
+      .select('id, tenant_id, role, plan')
+      .single();
 
     if (profileError) throw profileError;
+    if (profile.tenant_id !== tenantId) {
+      throw new Error('Profile tenant_id was not set correctly.');
+    }
 
     let whatsappWarning: string | undefined;
     if (phone?.trim()) {

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { AuthLanguageToggle } from '@/components/AuthLanguageToggle';
 import { isStaffRole, resolveLoginError } from '@/lib/auth';
-import { tenantService } from '@/lib/services/tenantService';
+import { resolvePostLoginTenantSlug } from '@/lib/resolve-post-login-tenant';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
 
 export default function StaffLoginPage() {
@@ -50,12 +50,7 @@ export default function StaffLoginPage() {
         throw new Error(t('Unauthorized: Staff access only.'));
       }
 
-      if (!profile?.tenant_id) {
-        await supabase.auth.signOut();
-        throw new Error(t('Missing tenant context.'));
-      }
-
-      const tenantSlug = await tenantService.getTenantSlugById(profile.tenant_id);
+      const tenantSlug = await resolvePostLoginTenantSlug();
       if (!tenantSlug) {
         await supabase.auth.signOut();
         throw new Error(t('Missing tenant context.'));

@@ -61,14 +61,14 @@ export default function AddToClassModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-pits-background/50 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-pits-surface-elevated rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]"
+        className="bg-pits-surface-elevated border border-pits-edge rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-5 border-b border-pits-edge flex items-center justify-between">
           <div>
             <h3 className="text-lg font-black text-pits-text uppercase italic tracking-tight">
               Add Athlete
@@ -79,21 +79,21 @@ export default function AddToClassModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+            className="p-2 rounded-lg hover:bg-pits-surface-muted text-pits-dim hover:text-pits-ink transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-pits-edge">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} />
             <input
               type="text"
               placeholder="Search members..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:border-pits-red outline-none"
+              className="w-full pl-9 pr-4 py-2.5 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none transition-all"
               autoFocus
             />
           </div>
@@ -101,12 +101,12 @@ export default function AddToClassModal({
 
         <div className="overflow-y-auto flex-1 p-2">
           {loading ? (
-            <div className="p-8 flex flex-col items-center text-gray-400">
+            <div className="p-8 flex flex-col items-center text-pits-dim">
               <Loader2 size={24} className="animate-spin mb-2" />
               <span className="text-sm">Loading members...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 text-sm">
+            <div className="p-8 text-center text-pits-dim text-sm">
               {available.length === 0
                 ? 'All members are already booked for this class.'
                 : 'No members match your search.'}
@@ -118,9 +118,9 @@ export default function AddToClassModal({
                   key={member.id}
                   onClick={() => onSelect(member.id)}
                   disabled={adding}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-all text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-pits-surface-muted border border-transparent hover:border-pits-edge transition-all text-left disabled:opacity-50"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-pits-surface-muted border border-pits-edge flex items-center justify-center text-xs font-bold text-pits-dim overflow-hidden shrink-0">
                     {member.avatar_url ? (
                       <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -130,7 +130,7 @@ export default function AddToClassModal({
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-pits-text text-sm truncate">{member.full_name}</p>
                     {!member.is_solvent && (
-                      <span className="text-[10px] font-bold uppercase text-orange-600 tracking-wide">
+                      <span className="text-[10px] font-bold uppercase text-orange-400 tracking-wide">
                         Unpaid
                       </span>
                     )}

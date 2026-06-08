@@ -6,6 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
 import { useLanguage } from './LanguageContext';
 
+const inputClass =
+  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-50';
+const inputDisabledClass =
+  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-dim cursor-not-allowed opacity-60';
+
 interface EditAthleteModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -151,18 +156,18 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pits-background/50 backdrop-blur-sm">
+      <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-pits-edge flex justify-between items-center">
           <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
             Edit Athlete
           </h3>
           <button 
             onClick={onClose} 
             disabled={loading || fetching}
-            className="p-2 hover:bg-gray-200 rounded-full text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 hover:bg-pits-surface-muted rounded-full text-pits-dim hover:text-pits-ink disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <X size={20} />
           </button>
@@ -173,7 +178,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         {fetching ? (
           <div className="p-12 text-center">
             <Loader2 size={32} className="animate-spin mx-auto text-pits-red mb-4" />
-            <p className="text-sm text-gray-500 font-medium">Loading user data...</p>
+            <p className="text-sm text-pits-dim font-medium">Loading user data...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,7 +186,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Left Column: Personal Info */}
               <div className="space-y-4">
-                <h4 className="font-bold text-sm text-pits-text border-b pb-2 mb-4">Personal Information</h4>
+                <h4 className="font-bold text-sm text-pits-text border-b border-pits-edge pb-2 mb-4">Personal Information</h4>
                 <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Full Name
@@ -191,7 +196,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 required
                 value={formData.full_name}
                 onChange={e => setFormData({...formData, full_name: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="e.g. Mat Fraser"
               />
             </div>
@@ -206,7 +211,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 disabled
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="athlete@example.com"
               />
             </div>
@@ -219,23 +224,23 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 type="tel"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="+1 234 567 8900"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                New Password <span className="text-gray-400 font-normal">(Optional)</span>
+                New Password <span className="text-pits-ink-muted font-normal">(Optional)</span>
               </label>
               <input
                 type="text"
                 value={formData.password}
                 onChange={e => setFormData({...formData, password: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none font-mono"
+                className={`${inputClass} font-mono`}
                 placeholder="Leave blank to keep current password"
               />
-              <p className="text-[10px] text-gray-400 mt-1">
+              <p className="text-[10px] text-pits-ink-muted mt-1">
                 Only fill this if you want to change the password. Leave blank to keep the current one.
               </p>
             </div>
@@ -244,7 +249,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
               {/* Right Column: Gym Status */}
               <div className="space-y-4">
-                <h4 className="font-bold text-sm text-pits-text border-b pb-2 mb-4">Membership Details</h4>
+                <h4 className="font-bold text-sm text-pits-text border-b border-pits-edge pb-2 mb-4">Membership Details</h4>
                 <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
                 Role
@@ -254,13 +259,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                   type="text"
                   disabled
                   value="Admin"
-                  className="w-full p-3 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 cursor-not-allowed"
+                  className={inputDisabledClass}
                 />
               ) : (
                 <select
                   value={formData.role}
                   onChange={e => setFormData({...formData, role: e.target.value as 'member' | 'coach' | 'manager' | 'admin'})}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                  className={inputClass}
                 >
                   <option value="member">Member</option>
                   <option value="coach">Coach</option>
@@ -279,7 +284,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 <select
                   value={formData.plan}
                   onChange={e => setFormData({...formData, plan: e.target.value as AthletePlan})}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                  className={inputClass}
                 >
                   <option value="unlimited">Unlimited</option>
                   <option value="3x_week">3x / Week</option>
@@ -300,7 +305,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                   <select
                     value={formData.inscription_plan}
                     onChange={e => setFormData({...formData, inscription_plan: e.target.value as InscriptionPlan})}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    className={inputClass}
                   >
                     <option value="standard">Standard</option>
                     <option value="promo">Promo</option>
@@ -318,7 +323,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                     value={formData.discount} 
                     onChange={e => setFormData({...formData, discount: e.target.value})} 
                     placeholder="e.g. 10"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    className={inputClass}
                     min="0"
                     max="100"
                   />
@@ -330,7 +335,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                       type="checkbox"
                       checked={formData.inscription_paid}
                       onChange={e => setFormData({...formData, inscription_paid: e.target.checked})}
-                      className="w-5 h-5 text-pits-red border-gray-300 rounded focus:ring-pits-red focus:ring-2"
+                      className="w-5 h-5 text-pits-red border-pits-edge rounded focus:ring-pits-red focus:ring-2"
                     />
                     <div>
                       <div className="text-xs font-bold text-pits-dim uppercase tracking-wider">
@@ -343,8 +348,8 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
             {/* Show plan info for coaches/managers/admins */}
             {isStaffProfileRole(formData.role) && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+              <div className="p-3 bg-blue-950/40 border border-blue-900/50 rounded-lg">
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-wide">
                   Plan: Unlimited (Auto-assigned for {formData.role}s)
                 </p>
               </div>
@@ -356,13 +361,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                   type="checkbox"
                   checked={formData.is_solvent}
                   onChange={e => setFormData({...formData, is_solvent: e.target.checked})}
-                  className="w-5 h-5 text-pits-red border-gray-300 rounded focus:ring-pits-red focus:ring-2"
+                  className="w-5 h-5 text-pits-red border-pits-edge rounded focus:ring-pits-red focus:ring-2"
                 />
                 <div>
                   <div className="text-xs font-bold text-pits-dim uppercase tracking-wider">
                     Active Status (Solvent)
                   </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">
+                  <div className="text-[10px] text-pits-ink-muted mt-0.5">
                     Active members have full access to the gym
                   </div>
                 </div>
@@ -371,11 +376,11 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
             </div>
             </div>
 
-            <div className="pt-6 mt-2 border-t border-gray-100 flex justify-end">
+            <div className="pt-6 mt-2 border-t border-pits-edge flex justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 rounded-lg font-bold text-sm text-gray-500 hover:bg-gray-100 mr-4"
+                className="px-6 py-3 rounded-lg font-bold text-sm text-pits-dim hover:bg-pits-surface-muted mr-4 transition-colors"
               >
                 Cancel
               </button>
@@ -383,7 +388,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 type="submit"
                 disabled={loading || fetching}
                 className={`px-8 py-3 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg
-                  ${loading || fetching ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
+                  ${loading || fetching ? 'bg-pits-gunmetal cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
                 `}
               >
                 {loading ? (

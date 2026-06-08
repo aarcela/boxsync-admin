@@ -66,7 +66,7 @@ export default function SchedulePage() {
       </div>
 
       {/* List */}
-      <div className="bg-pits-surface-elevated rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">{t('Loading schedule...')}</div>
         ) : classes.length === 0 ? (
@@ -74,7 +74,7 @@ export default function SchedulePage() {
             {t('No upcoming classes found. Schedule one above.')}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-pits-edge">
             {classes.map((session) => {
               const startDate = new Date(session.start_time);
               
@@ -91,7 +91,7 @@ export default function SchedulePage() {
               const isHighOccupancy = occupancyRate > 80;
 
               return (
-                <div key={session.id} className="p-5 hover:bg-gray-50/80 transition-colors flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-gray-100 last:border-0">
+                <div key={session.id} className="p-5 hover:bg-pits-surface-muted/40 transition-colors flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-pits-edge last:border-0">
                   
                   {/* Left: Date & Time */}
                   <div className="flex items-center gap-5 min-w-[280px]">
@@ -113,13 +113,13 @@ export default function SchedulePage() {
                           `}>
                             {session.class_type}
                           </span>
-                          <span className="text-xs font-black text-pits-text flex items-center bg-gray-100 px-2 py-0.5 rounded italic">
-                            <Clock size={12} className="mr-1 text-pits-red" />
+                          <span className="text-xs font-black text-pits-text flex items-center bg-pits-surface-muted border border-pits-edge px-2 py-0.5 rounded italic">
+                            <Clock size={12} className="mr-1 text-pits-primary" />
                             {timeStr}
                           </span>
                        </div>
-                       <div className={`flex items-center text-xs font-bold transition-colors ${!session.coach?.full_name ? 'text-orange-600 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100' : 'text-gray-500'}`}>
-                         <User size={12} className={`mr-1.5 ${!session.coach?.full_name ? 'text-orange-600' : 'text-gray-400'}`} />
+                       <div className={`flex items-center text-xs font-bold transition-colors ${!session.coach?.full_name ? 'text-orange-400 bg-orange-950/40 px-2 py-1 rounded-lg border border-orange-900/50' : 'text-pits-dim'}`}>
+                         <User size={12} className={`mr-1.5 ${!session.coach?.full_name ? 'text-orange-400' : 'text-pits-dim'}`} />
                          {session.coach?.full_name ? session.coach.full_name.toUpperCase() : t('Staff')}
                          {!session.coach?.full_name && <AlertCircle size={12} className="ml-1.5" />}
                        </div>
@@ -130,8 +130,8 @@ export default function SchedulePage() {
                   <div className="flex-1 max-w-md w-full">
                     <div className="flex justify-between items-end mb-2">
                       <div className="flex items-center gap-2">
-                        <Users size={14} className="text-gray-400" />
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('Bookings')}</span>
+                        <Users size={14} className="text-pits-dim" />
+                        <span className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Bookings')}</span>
                       </div>
                       <div className="text-right">
                         <span className={`text-lg font-black italic ${
@@ -140,24 +140,24 @@ export default function SchedulePage() {
                         }`}>
                           {bookingCount}
                         </span>
-                        <span className="text-gray-300 font-bold ml-1 text-sm">/ {session.max_capacity}</span>
+                        <span className="text-pits-dim font-bold ml-1 text-sm">/ {session.max_capacity}</span>
                       </div>
                     </div>
                     
                     {/* Progress Bar Container */}
-                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden border border-gray-200/50">
+                    <div className="h-2 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
                       <div 
                         className={`h-full transition-all duration-500 rounded-full ${
                           bookingCount >= session.max_capacity ? 'bg-pits-red' :
                           isHighOccupancy ? 'bg-orange-500' :
-                          bookingCount > 0 ? 'bg-green-500' : 'bg-gray-300'
+                          bookingCount > 0 ? 'bg-green-500' : 'bg-pits-edge'
                         }`}
                         style={{ width: `${Math.min(100, occupancyRate)}%` }}
                       />
                     </div>
                     
                     <div className="flex justify-between mt-1">
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                      <span className="text-[9px] font-bold text-pits-dim uppercase tracking-tighter">
                         {occupancyRate.toFixed(0)}% {t('Capacity')}
                       </span>
                       {bookingCount >= session.max_capacity ? (
@@ -177,18 +177,18 @@ export default function SchedulePage() {
                         setSelectedClassId(session.id);
                         setIsDetailsModalOpen(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-2 text-pits-text hover:bg-gray-100 border border-transparent hover:border-gray-200 rounded-lg transition-all font-black text-[10px] uppercase tracking-widest italic"
+                      className="flex items-center gap-1 px-3 py-2 text-pits-text hover:bg-pits-surface-muted border border-transparent hover:border-pits-edge rounded-lg transition-all font-black text-[10px] uppercase tracking-widest italic"
                       title={t('DETAILS')}
                     >
                       {t('DETAILS')}
                     </button>
                     
                     {/* Placeholder for Edit/Duplicate Actions */}
-                    <div className="flex items-center border-l border-gray-100 ml-2 pl-2 gap-1">
-                      <button className="p-2 text-gray-400 hover:text-pits-text hover:bg-gray-100 rounded-lg transition-colors" title="Edit (Coming Soon)">
+                    <div className="flex items-center border-l border-pits-edge ml-2 pl-2 gap-1">
+                      <button className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors" title="Edit (Coming Soon)">
                         <Edit3 size={16} />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-pits-text hover:bg-gray-100 rounded-lg transition-colors" title="Duplicate (Coming Soon)">
+                      <button className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors" title="Duplicate (Coming Soon)">
                         <Copy size={16} />
                       </button>
                       <button 
@@ -198,7 +198,7 @@ export default function SchedulePage() {
                           classType: session.class_type,
                           bookingCount: bookingCount
                         })}
-                        className="p-2 text-gray-300 hover:text-pits-red hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-colors"
                         title={t('Cancel Class')}
                       >
                         <Trash2 size={18} />
@@ -307,10 +307,10 @@ export default function SchedulePage() {
               })()}
             </div>
             
-            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50 rounded-b-xl">
+            <div className="p-4 border-t border-pits-edge flex justify-end bg-pits-surface-muted rounded-b-xl">
               <button
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="px-6 py-2 bg-pits-surface-elevated border border-gray-200 text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
+                className="px-6 py-2 bg-pits-surface-elevated border border-pits-edge text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-pits-edge transition-colors shadow-sm"
               >
                 {t('Close')}
               </button>

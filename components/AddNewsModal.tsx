@@ -11,6 +11,9 @@ interface CreateNewsModalProps {
 
 const TAGS = ['INFO', 'ALERT', 'EVENT'];
 
+const inputClass =
+  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none';
+
 export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNewsModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -44,22 +47,29 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
     }
   };
 
+  const tagButtonClass = (t: string) => {
+    if (tag !== t) {
+      return 'bg-pits-surface-elevated border-pits-edge text-pits-dim';
+    }
+    if (t === 'ALERT') return 'bg-red-950/40 border-red-500 text-red-400';
+    if (t === 'EVENT') return 'bg-blue-950/40 border-blue-500 text-blue-400';
+    return 'bg-pits-primary-soft border-pits-primary text-pits-primary';
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pits-background/50 backdrop-blur-sm">
+      <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
         
-        {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-pits-edge flex justify-between items-center">
           <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter flex items-center">
             <Megaphone size={18} className="mr-2 text-pits-red" />
             Broadcast News
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">
+          <button onClick={onClose} className="p-2 hover:bg-pits-surface-muted rounded-full text-pits-dim hover:text-pits-ink transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           
           <div>
@@ -71,11 +81,11 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
               required
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+              className={inputClass}
               placeholder="e.g. Gym Closed on Sunday"
               maxLength={60}
             />
-            <p className="text-[10px] text-gray-400 mt-1 text-right">
+            <p className="text-[10px] text-pits-ink-muted mt-1 text-right">
               {title.length}/60 chars
             </p>
           </div>
@@ -89,14 +99,7 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
                   key={t}
                   type="button"
                   onClick={() => setTag(t)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider border
-                    ${tag === t 
-                      ? t === 'ALERT' ? 'bg-red-100 border-red-500 text-red-700' 
-                      : t === 'EVENT' ? 'bg-blue-100 border-blue-500 text-blue-700'
-                      : 'bg-gray-200 border-gray-400 text-gray-700'
-                      : 'bg-pits-surface-elevated border-gray-200 text-gray-400'
-                    }
-                  `}
+                  className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider border transition-all ${tagButtonClass(t)}`}
                 >
                   {t}
                 </button>
@@ -108,8 +111,8 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-4 rounded-lg flex items-center justify-center text-white font-black uppercase tracking-widest text-sm shadow-lg
-                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-panel hover:bg-black shadow-gray-300'}
+              className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg transition-all
+                ${loading ? 'bg-pits-gunmetal cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
               `}
             >
               {loading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Send size={18} className="mr-2" />}

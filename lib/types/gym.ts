@@ -16,6 +16,7 @@ export interface PaymentMethod {
   currency: CurrencyType;
   details: string | null;
   is_active: boolean;
+  tenant_id?: string;
   created_at: string;
 }
 

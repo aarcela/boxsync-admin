@@ -17,6 +17,7 @@ import {
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { supabase } from '@/lib/supabase';
 import { paymentMethodService } from '@/lib/services/paymentMethodService';
 import { PaymentMethod, CurrencyType } from '@/lib/types/gym';
 import { 
@@ -34,6 +35,7 @@ export default function PaymentMethodsPage() {
   // State
   const [loading, setLoading] = useState(true);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,10 +49,10 @@ export default function PaymentMethodsPage() {
     is_active: true
   });
 
-  const fetchMethods = async () => {
+  const fetchMethods = async (activeTenantId: string) => {
     setLoading(true);
     try {
-      const data = await paymentMethodService.getPaymentMethods();
+      const data = await paymentMethodService.getPaymentMethods(activeTenantId);
       setMethods(data);
     } catch (error) {
       console.error(error);
@@ -61,7 +63,28 @@ export default function PaymentMethodsPage() {
   };
 
   useEffect(() => {
-    fetchMethods();
+    const loadContext = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      const id = profile?.tenant_id ?? null;
+      setTenantId(id);
+      if (id) await fetchMethods(id);
+      else setLoading(false);
+    };
+
+    loadContext();
   }, []);
 
   const handleOpenForm = (method?: PaymentMethod) => {
@@ -106,7 +129,7 @@ export default function PaymentMethodsPage() {
         }
         
         setIsFormOpen(false);
-        fetchMethods();
+        if (tenantId) fetchMethods(tenantId);
       } catch (error) {
         toast(t('Action failed'), 'error');
       }
@@ -121,7 +144,7 @@ export default function PaymentMethodsPage() {
         await deletePaymentMethodAction(methodToDelete);
         toast(t('Payment method deleted'), 'success');
         setMethodToDelete(null);
-        fetchMethods();
+        if (tenantId) fetchMethods(tenantId);
       } catch (error) {
         toast(t('Delete failed'), 'error');
       }
@@ -133,7 +156,7 @@ export default function PaymentMethodsPage() {
       try {
         await togglePaymentMethodStatusAction(method.id, !method.is_active);
         toast(t('Status updated'), 'success');
-        fetchMethods();
+        if (tenantId) fetchMethods(tenantId);
       } catch (error) {
         toast(t('Toggle failed'), 'error');
       }

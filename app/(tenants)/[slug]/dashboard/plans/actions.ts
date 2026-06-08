@@ -1,61 +1,9 @@
 'use server';
 
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { requireAdminTenantId } from '@/lib/require-admin-tenant';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
-
-const ADMIN_ONLY = 'Only admins can manage membership plans.';
-
-async function requireAdminTenant() {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Route handlers may run without mutable cookies
-          }
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('Unauthorized');
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role, tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || profile?.role !== 'admin') {
-    throw new Error(ADMIN_ONLY);
-  }
-
-  if (!profile.tenant_id) {
-    throw new Error('Missing tenant context.');
-  }
-
-  return { supabase, tenantId: profile.tenant_id as string };
-}
 
 function parsePlanForm(formData: FormData) {
   const name = (formData.get('name') as string)?.trim();
@@ -79,29 +27,29 @@ function parsePlanForm(formData: FormData) {
 }
 
 export async function createMembershipPlanAction(formData: FormData) {
-  const { supabase, tenantId } = await requireAdminTenant();
+  const tenantId = await requireAdminTenantId();
   const plan = parsePlanForm(formData);
 
-  await membershipPlanService.createMembershipPlan(supabase, tenantId, plan);
+  await membershipPlanService.createMembershipPlan(supabaseAdmin, tenantId, plan);
   revalidatePath('/dashboard/plans');
 }
 
 export async function updateMembershipPlanAction(id: string, formData: FormData) {
-  const { supabase, tenantId } = await requireAdminTenant();
+  const tenantId = await requireAdminTenantId();
   const plan = parsePlanForm(formData);
 
-  await membershipPlanService.updateMembershipPlan(supabase, tenantId, id, plan);
+  await membershipPlanService.updateMembershipPlan(supabaseAdmin, tenantId, id, plan);
   revalidatePath('/dashboard/plans');
 }
 
 export async function toggleMembershipPlanStatusAction(id: string, is_active: boolean) {
-  const { supabase, tenantId } = await requireAdminTenant();
-  await membershipPlanService.updateMembershipPlan(supabase, tenantId, id, { is_active });
+  const tenantId = await requireAdminTenantId();
+  await membershipPlanService.updateMembershipPlan(supabaseAdmin, tenantId, id, { is_active });
   revalidatePath('/dashboard/plans');
 }
 
 export async function deleteMembershipPlanAction(id: string) {
-  const { supabase, tenantId } = await requireAdminTenant();
-  await membershipPlanService.deleteMembershipPlan(supabase, tenantId, id);
+  const tenantId = await requireAdminTenantId();
+  await membershipPlanService.deleteMembershipPlan(supabaseAdmin, tenantId, id);
   revalidatePath('/dashboard/plans');
 }

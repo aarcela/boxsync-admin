@@ -14,6 +14,11 @@ interface AddAthleteModalProps {
   onSuccess: () => void;
 }
 
+const labelClass =
+  'block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2';
+const inputClass =
+  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-50';
+const hintClass = 'text-[10px] text-pits-ink-muted mt-1';
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const { toast } = useToast();
@@ -179,15 +184,18 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
       : `Create account for ${formData.full_name} (${formData.email}) as a ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}?`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-pits-surface-elevated rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-pits-black/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
         
         {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
-          <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
+        <div className="px-6 py-4 border-b border-pits-edge flex justify-between items-center shrink-0">
+          <h3 className="font-black text-lg text-pits-ink uppercase italic tracking-tighter">
             Register New Athlete
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-pits-surface-muted rounded-full text-pits-ink-muted hover:text-pits-ink transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -198,74 +206,64 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Full Name
-              </label>
+              <label className={labelClass}>Full Name</label>
               <input
                 type="text"
                 required
                 value={formData.full_name}
                 onChange={e => setFormData({...formData, full_name: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="e.g. Mat Fraser"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Email Address
-              </label>
+              <label className={labelClass}>Email Address</label>
               <input
                 type="email"
                 required
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="athlete@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Phone Number
-              </label>
+              <label className={labelClass}>Phone Number</label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
                 placeholder="+58 412 123 4567"
               />
-              <p className="text-[10px] text-gray-400 mt-1">
+              <p className={hintClass}>
                 Include country code. A welcome WhatsApp is sent when provided.
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Temporary Password
-              </label>
+              <label className={labelClass}>Temporary Password</label>
               <input
                 type="text"
                 required
                 value={formData.password}
                 onChange={e => setFormData({...formData, password: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none font-mono"
+                className={`${inputClass} font-mono`}
                 placeholder="e.g. Pits2024!"
               />
-              <p className="text-[10px] text-gray-400 mt-1">
+              <p className={hintClass}>
                 Share this with the athlete. They cannot change it in the app yet.
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Role
-              </label>
+              <label className={labelClass}>Role</label>
               <select
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                className={inputClass}
               >
                 <option value="member">Member</option>
                 <option value="coach">Coach</option>
@@ -278,14 +276,12 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
             {formData.role === 'member' && (
               <>
                 <div>
-                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                    Plan
-                  </label>
+                  <label className={labelClass}>Plan</label>
                   <select
                     value={formData.plan}
                     onChange={e => setFormData({...formData, plan: e.target.value})}
                     disabled={plansLoading || membershipPlans.length === 0}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none disabled:opacity-50"
+                    className={inputClass}
                   >
                     {plansLoading ? (
                       <option value="">{t('Loading...')}</option>
@@ -306,13 +302,11 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                    Inscription Plan
-                  </label>
+                  <label className={labelClass}>Inscription Plan</label>
                   <select 
                     value={formData.inscription_plan} 
                     onChange={e => setFormData({...formData, inscription_plan: e.target.value})} 
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    className={inputClass}
                   >
                     <option value="standard">Standard</option>
                     <option value="promo">Promo</option>
@@ -322,43 +316,39 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                    Inscription Price (€)
-                  </label>
+                  <label className={labelClass}>Inscription Price (€)</label>
                   <input 
                     type="number"
                     value={formData.inscription_cost} 
                     onChange={e => setFormData({...formData, inscription_cost: e.target.value})} 
                     placeholder="e.g. 50"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    className={inputClass}
                     min="0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                    Discount (%) / Optional
-                  </label>
+                  <label className={labelClass}>Discount (%) / Optional</label>
                   <input 
                     type="number"
                     value={formData.discount} 
                     onChange={e => setFormData({...formData, discount: e.target.value})} 
                     placeholder="e.g. 10"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none"
+                    className={inputClass}
                     min="0"
                     max="100"
                   />
                 </div>
 
-                <div className="col-span-2 flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="col-span-2 flex items-center p-3 bg-pits-primary-soft rounded-lg border border-pits-edge">
                   <input 
                     type="checkbox" 
                     id="ins_paid"
                     checked={formData.inscription_paid} 
                     onChange={e => setFormData({...formData, inscription_paid: e.target.checked})}
-                    className="w-4 h-4 text-pits-red rounded border-gray-300 focus:ring-pits-red"
+                    className="w-4 h-4 text-pits-primary rounded border-pits-edge focus:ring-pits-primary"
                   />
-                  <label htmlFor="ins_paid" className="ml-3 text-sm font-bold text-blue-800 uppercase tracking-tight flex items-center">
+                  <label htmlFor="ins_paid" className="ml-3 text-sm font-bold text-pits-ink uppercase tracking-tight flex items-center">
                     <Award size={16} className="mr-2" />
                     Mark Inscription as Paid
                   </label>
@@ -368,22 +358,22 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
             {/* Show plan info for coaches/managers */}
             {isStaffProfileRole(formData.role) && (
-              <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+              <div className="col-span-2 p-3 bg-pits-primary-soft border border-pits-edge rounded-lg">
+                <p className="text-xs font-bold text-pits-primary uppercase tracking-wide">
                   Plan: Unlimited (Auto-assigned for {formData.role}s)
                 </p>
               </div>
             )}
 
             <div className="col-span-2">
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2 flex justify-between">
+              <label className={`${labelClass} flex justify-between`}>
                 Admin Note
-                <span className="text-gray-400 font-normal">{formData.admin_note.length}/150</span>
+                <span className="text-pits-ink-muted font-normal">{formData.admin_note.length}/150</span>
               </label>
               <textarea
                 value={formData.admin_note}
                 onChange={e => setFormData({...formData, admin_note: e.target.value.slice(0, 150)})}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold focus:border-pits-red outline-none resize-none h-20"
+                className={`${inputClass} resize-none h-20`}
                 placeholder="Internal notes for this athlete..."
                 maxLength={150}
               />
@@ -393,8 +383,8 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
           <button
             type="submit"
             disabled={loading || (formData.role === 'member' && !formData.plan)}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
+            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg transition-colors
+              ${loading ? 'bg-pits-gunmetal cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}
             `}
           >
             {loading ? (

@@ -50,6 +50,23 @@ export default function WodEditorPage() {
   const [techniqueSearch, setTechniqueSearch] = useState('');
 
   const [scheduledDates, setScheduledDates] = useState<Set<string>>(new Set());
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTenant = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      setTenantId(profile?.tenant_id ?? null);
+    };
+    loadTenant();
+  }, []);
 
   const selectedDate = useMemo(() => parseISO(date), [date]);
   const weekStart = useMemo(
@@ -70,12 +87,15 @@ export default function WodEditorPage() {
   }, [weekStart]);
 
   useEffect(() => {
+    if (!tenantId) return;
+
     const fetchWeekWods = async () => {
       const start = format(weekStart, 'yyyy-MM-dd');
       const end = format(addDays(weekStart, 6), 'yyyy-MM-dd');
       const { data } = await supabase
         .from('wods')
         .select('date')
+        .eq('tenant_id', tenantId)
         .gte('date', start)
         .lte('date', end);
       if (data) {
@@ -83,10 +103,15 @@ export default function WodEditorPage() {
       }
     };
     fetchWeekWods();
-  }, [weekStart, loading, wodId]);
+  }, [weekStart, loading, wodId, tenantId]);
 
   // Fetch WOD for selected date
   useEffect(() => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
+
     const fetchWod = async () => {
       setLoading(true);
       setWodId(null);
@@ -101,11 +126,14 @@ export default function WodEditorPage() {
       setIsLocked(false);
 
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('wods')
           .select('*')
+          .eq('tenant_id', tenantId)
           .eq('date', date)
-          .single();
+          .maybeSingle();
+
+        if (error) throw error;
 
         if (data) {
           setWodId(data.id);
@@ -127,16 +155,21 @@ export default function WodEditorPage() {
           }
         }
       } catch (error) {
-        // No WOD found
+        console.error('Error loading WOD:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchWod();
-  }, [date]);
+  }, [date, tenantId]);
 
   const handleSave = async () => {
+    if (!tenantId) {
+      toast(t('Missing tenant context.'), 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const contentJson = JSON.stringify({
@@ -145,30 +178,32 @@ export default function WodEditorPage() {
         strength,
         metcon,
         scaling,
-        stimulus, // Save strategic stimulus
+        stimulus,
       });
 
       const payload = {
+        tenant_id: tenantId,
         date,
         title: title || 'Daily WOD',
         content: contentJson,
-        score_type: scoreType
+        score_type: scoreType,
       };
 
       if (wodId) {
         const { error } = await supabase
           .from('wods')
           .update(payload)
-          .eq('id', wodId);
+          .eq('id', wodId)
+          .eq('tenant_id', tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('wods')
-          .insert(payload);
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
-        // Refresh to get the new ID
-        const { data } = await supabase.from('wods').select('id').eq('date', date).single();
-        if (data) setWodId(data.id);
+        if (data?.id) setWodId(data.id);
       }
 
       toast(t('Workout Published Successfully'), 'success');
@@ -206,11 +241,15 @@ export default function WodEditorPage() {
   };
 
   const handleDelete = async () => {
-    if (!wodId) return;
+    if (!wodId || !tenantId) return;
     setDeleteConfirmOpen(false);
     setDeleting(true);
     try {
-      const { error } = await supabase.from('wods').delete().eq('id', wodId);
+      const { error } = await supabase
+        .from('wods')
+        .delete()
+        .eq('id', wodId)
+        .eq('tenant_id', tenantId);
       if (error) throw error;
       resetForm();
       toast(t('Workout deleted'), 'success');

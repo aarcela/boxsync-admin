@@ -58,6 +58,11 @@ export function resolveLoginError(
     return staffOnly;
   }
 
+  const missingTenant = t('Missing tenant context.');
+  if (err.message === missingTenant) {
+    return missingTenant;
+  }
+
   const msg = err.message.toLowerCase();
 
   if (msg.includes('too many') || msg.includes('rate limit')) {

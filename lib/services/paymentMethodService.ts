@@ -1,46 +1,63 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { ensureRowTenantId } from '../ensure-row-tenant-id';
 import { supabase } from '../supabase';
 import { PaymentMethod } from '../types/gym';
 
 export const paymentMethodService = {
-  async getPaymentMethods(): Promise<PaymentMethod[]> {
-    const { data, error } = await supabase
-      .from('payment_methods')
-      .select('*')
-      .order('label', { ascending: true });
+  async getPaymentMethods(tenantId?: string): Promise<PaymentMethod[]> {
+    let query = supabase.from('payment_methods').select('*').order('label', { ascending: true });
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    }
+    const { data, error } = await query;
 
     if (error) throw error;
     return data as PaymentMethod[];
   },
 
-  async createPaymentMethod(paymentMethod: Omit<PaymentMethod, 'id' | 'created_at'>): Promise<PaymentMethod> {
-    const { data, error } = await supabase
+  async createPaymentMethod(
+    client: SupabaseClient,
+    tenantId: string,
+    paymentMethod: Omit<PaymentMethod, 'id' | 'created_at' | 'tenant_id'>
+  ): Promise<PaymentMethod> {
+    const { data, error } = await client
       .from('payment_methods')
-      .insert([paymentMethod])
-      .select()
+      .insert([{ ...paymentMethod, tenant_id: tenantId }])
+      .select('*')
       .single();
 
     if (error) throw error;
-    return data as PaymentMethod;
+    if (!data) throw new Error('Insert returned no row');
+
+    const saved = await ensureRowTenantId(client, 'payment_methods', data, tenantId);
+    return saved as PaymentMethod;
   },
 
-  async updatePaymentMethod(id: string, updates: Partial<Omit<PaymentMethod, 'id' | 'created_at'>>): Promise<PaymentMethod> {
-    const { data, error } = await supabase
+  async updatePaymentMethod(
+    client: SupabaseClient,
+    tenantId: string,
+    id: string,
+    updates: Partial<Omit<PaymentMethod, 'id' | 'created_at' | 'tenant_id'>>
+  ): Promise<PaymentMethod> {
+    const { data, error } = await client
       .from('payment_methods')
       .update(updates)
       .eq('id', id)
-      .select()
+      .eq('tenant_id', tenantId)
+      .select('*')
       .single();
 
     if (error) throw error;
     return data as PaymentMethod;
   },
 
-  async deletePaymentMethod(id: string): Promise<void> {
-    const { error } = await supabase
+  async deletePaymentMethod(client: SupabaseClient, tenantId: string, id: string): Promise<void> {
+    const { error } = await client
       .from('payment_methods')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
 
     if (error) throw error;
-  }
+  },
 };

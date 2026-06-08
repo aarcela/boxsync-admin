@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ensureRowTenantId } from '../ensure-row-tenant-id';
 import { supabase } from '../supabase';
 import { MembershipPlan } from '../types/gym';
 
@@ -64,11 +65,14 @@ export const membershipPlanService = {
     const { data, error } = await client
       .from('membership_plans')
       .insert([{ ...plan, tenant_id: tenantId }])
-      .select()
+      .select('*')
       .single();
 
     if (error) throw error;
-    return data as MembershipPlan;
+    if (!data) throw new Error('Insert returned no row');
+
+    const saved = await ensureRowTenantId(client, 'membership_plans', data, tenantId);
+    return saved as MembershipPlan;
   },
 
   async updateMembershipPlan(

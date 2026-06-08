@@ -37,7 +37,11 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const slug = resolveTenantSlug(host);
 
-  if (pathname.startsWith('/api/admin/cron') || pathname.startsWith('/api/admin/tenants')) {
+  if (
+    pathname.startsWith('/api/admin/cron') ||
+    pathname.startsWith('/api/admin/tenants') ||
+    pathname.startsWith('/api/admin/provision')
+  ) {
     return NextResponse.next();
   }
 
