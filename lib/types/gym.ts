@@ -3,6 +3,13 @@ export enum CurrencyType {
   VES = 'VES',
 }
 
+export interface Tenant {
+  id: string;
+  slug: string;
+  name: string;
+  created_at: string;
+}
+
 export interface PaymentMethod {
   id: string;
   label: string;
