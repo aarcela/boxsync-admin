@@ -52,7 +52,7 @@ body {
 }
 
 /*
- * Dashboard dark theme: legacy slate/gray utilities map to pits tokens
+ * Dashboard theme: legacy slate/gray utilities map to pits tokens
  * (source of truth: lib/constants/colorTokens.js → pits-theme.css).
  */
 .dashboard-main {
@@ -90,7 +90,7 @@ body {
 
 /* slate-900 is remapped to ink for text; keep dark when used as a background */
 .dashboard-main :where(.bg-slate-900, .bg-gray-900) {
-  background-color: var(--color-pits-surface-muted) !important;
+  background-color: var(--color-pits-ink) !important;
 }
 
 .dashboard-main :where(.bg-slate-50, .bg-gray-50) {
@@ -108,9 +108,9 @@ body {
 .dashboard-main .shadow-sm {
   box-shadow:
     0 0 0 1px var(--color-pits-edge),
-    0 1px 2px rgb(0 0 0 / 0.5);
+    0 1px 2px rgb(0 0 0 / 0.06);
 }
 
 .dashboard-main :where(.shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl) {
-  --tw-shadow-color: rgb(0 0 0 / 0.55);
+  --tw-shadow-color: rgb(0 0 0 / 0.1);
 }

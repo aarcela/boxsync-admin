@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       
       {/* SIDEBAR */}
       <aside 
-        className={`bg-pits-surface-elevated text-pits-grey transition-all duration-300 ease-in-out flex flex-col
+        className={`bg-pits-shell text-pits-shell-ink transition-all duration-300 ease-in-out flex flex-col
           fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
           ${isSidebarOpen 
             ? 'w-64 translate-x-0' 
@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="font-black text-2xl text-pits-white ml-2">WODUS</span>
                </>
             ) : (
-              <span className="font-black text-2xl text-pits-primary">W</span>
+              <span className="font-black text-2xl text-pits-shell-accent">W</span>
             )}
           </div>
           
@@ -190,7 +190,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {isSidebarOpen && (
             <button 
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 text-pits-gunmetal hover:text-pits-primary transition-colors"
+              className="lg:hidden p-2 text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
             >
               <X size={20} />
             </button>
@@ -215,11 +215,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => toggleMenu(item.name)}
                     className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                       ${isActive
-                        ? 'border-pits-primary text-pits-ink'
-                        : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
+                        ? 'border-pits-shell-accent text-pits-shell-ink'
+                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                     `}
                   >
-                    <item.icon size={20} className={isActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
+                    <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
                     {isSidebarOpen && (
                       <>
                         <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
@@ -238,11 +238,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={closeSidebarOnMobile}
                     className={`flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                       ${isActive 
-                        ? 'border-pits-primary text-pits-ink' 
-                        : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
+                        ? 'border-pits-shell-accent text-pits-shell-ink' 
+                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                     `}
                   >
-                    <item.icon size={20} className={isActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
+                    <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
                     {isSidebarOpen && (
                       <span className="ml-3 font-bold text-sm uppercase tracking-wide">
                         {item.name}
@@ -252,7 +252,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ) : null}
 
                 {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
-                  <div className="ml-4 space-y-1 border-l border-pits-edge pl-2">
+                  <div className="ml-4 space-y-1 border-l border-pits-shell-edge pl-2">
                     {item.subItems.map((sub) => {
                       const isSubActive = pathname === sub.href;
                       return (
@@ -262,11 +262,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           onClick={closeSidebarOnMobile}
                           className={`flex items-center p-2 rounded-lg transition-colors group
                             ${isSubActive 
-                              ? 'border-pits-primary text-pits-ink' 
-                              : 'text-pits-ink-muted hover:border-pits-edge hover:text-pits-ink'}
+                              ? 'border-pits-shell-accent text-pits-shell-ink' 
+                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                           `}
                         >
-                          <sub.icon size={16} className={isSubActive ? 'text-pits-primary' : 'text-pits-gunmetal group-hover:text-pits-primary'} />
+                          <sub.icon size={16} className={isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
                           <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
                             {sub.name}
                           </span>
@@ -284,7 +284,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full p-2 rounded-lg text-pits-ink-muted hover:border hover:border-pits-edge hover:text-pits-primary transition-colors"
+            className="flex items-center w-full p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors"
           >
             <LogOut size={20} />
             {isSidebarOpen && (
@@ -299,21 +299,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-pits-surface-elevated shadow-lg flex items-center justify-between px-4 lg:px-6 shrink-0">
+        <header className="h-16 bg-pits-shell shadow-lg flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-md hover:bg-pits-surface-muted text-pits-grey hover:text-pits-primary transition-colors"
+              className="p-2 rounded-md hover:bg-pits-shell-edge text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
             >
               {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             
             {/* Language Toggle */}
-            <div className="flex items-center bg-pits-surface border border-pits-edge rounded-full p-1 ml-2">
+            <div className="flex items-center bg-pits-black border border-pits-shell-edge rounded-full p-1 ml-2">
               <button
                 onClick={() => setLanguage('en')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'en' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
+                  lang === 'en' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
                 }`}
               >
                 EN
@@ -321,7 +321,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setLanguage('es')}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'es' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-pits-gunmetal hover:text-pits-grey'
+                  lang === 'es' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
                 }`}
               >
                 ES
@@ -330,10 +330,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-pits-primary rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
+            <div className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
               AD
             </div>
-            <span className="ml-3 font-bold text-sm text-pits-grey">{t('Admin')}</span>
+            <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted">{t('Admin')}</span>
           </div>
         </header>
 
