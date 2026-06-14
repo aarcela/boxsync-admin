@@ -1,7 +1,5 @@
 import type { Language } from './translations';
-
-const APP_STORE_URL =
-  'https://apps.apple.com/ve/app/pits-crossfit/id6758683997';
+import { GOOGLE_PLAY_URL } from './constants/app-links';
 
 const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION ?? 'v21.0';
 
@@ -22,8 +20,10 @@ export function buildWelcomeMessage(params: {
       '',
       '¡Bienvenido/a a WODUS! Tu cuenta ya está lista.',
       '',
-      'Descarga nuestra app para reservar clases, ver el WOD y mantenerte conectado con el box:',
-      `📱 ${APP_STORE_URL}`,
+      'Descarga nuestra app en Google Play para reservar clases, ver el WOD y mantenerte conectado con el box:',
+      `📱 ${GOOGLE_PLAY_URL}`,
+      '',
+      'App iOS próximamente.',
       '',
       `Inicia sesión con tu correo: ${params.email}`,
       '',
@@ -36,8 +36,10 @@ export function buildWelcomeMessage(params: {
     '',
     'Welcome to WODUS! Your account is ready.',
     '',
-    'Download our app to book classes, view the WOD, and stay connected with the box:',
-    `📱 ${APP_STORE_URL}`,
+    'Download our app on Google Play to book classes, view the WOD, and stay connected with the box:',
+    `📱 ${GOOGLE_PLAY_URL}`,
+    '',
+    'iOS app coming soon.',
     '',
     `Log in with your email: ${params.email}`,
     '',

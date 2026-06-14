@@ -7,12 +7,14 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { AuthLanguageToggle } from '@/components/AuthLanguageToggle';
+import { useOptionalTenant } from '@/components/TenantContext';
 import { isStaffRole, resolveLoginError } from '@/lib/auth';
 import { resolvePostLoginTenantSlug } from '@/lib/resolve-post-login-tenant';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
 
 export default function StaffLoginPage() {
   const { t } = useLanguage();
+  const tenant = useOptionalTenant();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,7 +83,7 @@ export default function StaffLoginPage() {
             />
           </div>
           <h1 className="text-2xl font-black text-pits-ink uppercase italic tracking-tighter">
-            WODUS
+            {tenant ? `${tenant.slug} | WODUS` : 'WODUS'}
           </h1>
           <p className="text-pits-ink-muted text-xs font-bold uppercase tracking-widest mt-1">
             {t('Command Center')}

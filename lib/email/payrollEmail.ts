@@ -1,4 +1,5 @@
 import type { CoachPayrollReport } from '@/lib/payroll/payrollReport';
+import { getPayrollFromEmail, isSmtpConfigured, sendEmail } from '@/lib/email/smtp';
 
 function buildEmailHtml(report: CoachPayrollReport): string {
   const rows = report.lines
@@ -40,46 +41,37 @@ function buildEmailHtml(report: CoachPayrollReport): string {
   `;
 }
 
+export function isPayrollEmailConfigured(): boolean {
+  return isSmtpConfigured();
+}
+
 export async function sendCoachPayrollEmail(
   report: CoachPayrollReport,
   pdfBytes: Uint8Array
 ): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.PAYROLL_FROM_EMAIL;
-
-  if (!apiKey || !from) {
-    throw new Error('Email is not configured. Set RESEND_API_KEY and PAYROLL_FROM_EMAIL.');
+  if (!isSmtpConfigured()) {
+    throw new Error(
+      'Payroll email is not configured. Set SMTP_USER, SMTP_PASSWORD, and PAYROLL_FROM_EMAIL.'
+    );
   }
 
   if (!report.email) {
     throw new Error(`No email for ${report.coachName}`);
   }
 
-  const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
   const filename = `payroll-${report.periodLabel.replace(/\s+/g, '_')}.pdf`;
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [report.email],
-      subject: `Payroll summary — ${report.periodLabel}`,
-      html: buildEmailHtml(report),
-      attachments: [
-        {
-          filename,
-          content: pdfBase64,
-        },
-      ],
-    }),
+  await sendEmail({
+    to: report.email,
+    subject: `Payroll summary — ${report.periodLabel}`,
+    html: buildEmailHtml(report),
+    from: getPayrollFromEmail(),
+    attachments: [
+      {
+        filename,
+        content: pdfBytes,
+        contentType: 'application/pdf',
+      },
+    ],
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Failed to send email: ${body}`);
-  }
 }

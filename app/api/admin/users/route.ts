@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
+import {
+  ADMIN_ROLE_ASSIGN_FORBIDDEN,
+  canAssignProfileRole,
+  getMemberInviteRedirectUrl,
+} from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
 
@@ -67,8 +72,22 @@ export async function POST(request: Request) {
     const messageLanguage: Language =
       language === 'es' || language === 'en' ? language : 'en';
 
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedFullName =
+      typeof full_name === 'string' ? full_name.trim() : '';
+    const profileRole = role || 'member';
+    const usesInvite = profileRole === 'member';
+
     // 1. Validation
-    if (!email || !password || !full_name) {
+    if (!normalizedEmail || !normalizedFullName) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (!usesInvite && !password) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -91,16 +110,50 @@ export async function POST(request: Request) {
     }
 
     // 2. Create Auth User
-    const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name, tenant_id: tenantId },
-      app_metadata: { tenant_id: tenantId },
-    });
+    let authUserId: string;
+    let memberInviteLink: string | undefined;
 
-    if (createError) throw createError;
-    if (!user.user) throw new Error('Failed to create user object');
+    if (usesInvite) {
+      const { data: linkData, error: linkError } =
+        await supabaseAdmin.auth.admin.generateLink({
+          type: 'invite',
+          email: normalizedEmail,
+          options: {
+            redirectTo: getMemberInviteRedirectUrl(request),
+            data: { full_name: normalizedFullName, tenant_id: tenantId },
+          },
+        });
+
+      if (linkError) throw linkError;
+      if (!linkData.user) throw new Error('Failed to create user object');
+
+      memberInviteLink = linkData.properties?.action_link;
+      if (!memberInviteLink) throw new Error('Failed to generate invite link');
+
+      authUserId = linkData.user.id;
+
+      const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(
+        authUserId,
+        {
+          app_metadata: { tenant_id: tenantId },
+        }
+      );
+
+      if (metadataError) throw metadataError;
+    } else {
+      const { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: normalizedFullName, tenant_id: tenantId },
+        app_metadata: { tenant_id: tenantId },
+      });
+
+      if (createError) throw createError;
+      if (!user.user) throw new Error('Failed to create user object');
+
+      authUserId = user.user.id;
+    }
 
     // 3. Update Profile Role, Solvency & Plan
     // The trigger created the profile, but defaults to 'member' / 'insolvent'.
@@ -150,7 +203,7 @@ export async function POST(request: Request) {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .update(profileUpdate)
-      .eq('id', user.user.id)
+      .eq('id', authUserId)
       .select('id, tenant_id, role, plan')
       .single();
 
@@ -160,12 +213,29 @@ export async function POST(request: Request) {
     }
 
     let whatsappWarning: string | undefined;
+    let emailWarning: string | undefined;
+
+    if (usesInvite && memberInviteLink) {
+      try {
+        await sendMemberInviteEmail({
+          to: normalizedEmail,
+          fullName: normalizedFullName,
+          inviteLink: memberInviteLink,
+          language: messageLanguage,
+        });
+      } catch (emailError) {
+        console.error('Member invite email failed:', emailError);
+        emailWarning =
+          'User created, but the invite email could not be sent. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
+      }
+    }
+
     if (phone?.trim()) {
       try {
         await sendWelcomeWhatsApp({
           phone: phone.trim(),
-          fullName: full_name,
-          email,
+          fullName: normalizedFullName,
+          email: normalizedEmail,
           language: messageLanguage,
         });
       } catch (whatsappError) {
@@ -177,16 +247,29 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      user: user.user,
+      userId: authUserId,
+      inviteSent: usesInvite && !emailWarning,
+      ...(emailWarning ? { emailWarning } : {}),
       ...(whatsappWarning ? { whatsappWarning } : {}),
     });
 
   } catch (error: unknown) {
     console.error('Create User Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    let errorMessage =
+      error instanceof Error ? error.message : 'Internal Server Error';
+
+    if (errorMessage.toLowerCase().includes('already been registered')) {
+      errorMessage = 'A user with this email already exists.';
+    } else if (errorMessage.toLowerCase().includes('invite email')) {
+      errorMessage =
+        'Could not send invite email. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
+    } else if (errorMessage.toLowerCase().includes('email is not configured')) {
+      errorMessage =
+        'Invite email is not configured. Set SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
+    }
+
+    const status = errorMessage.includes('already exists') ? 400 : 500;
+
+    return NextResponse.json({ error: errorMessage }, { status });
   }
 }

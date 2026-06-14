@@ -145,11 +145,21 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
         throw new Error(data.error || 'Failed to create user');
       }
 
+      if (data.emailWarning) {
+        toast(data.emailWarning, 'warning');
+      }
+
       if (data.whatsappWarning) {
         toast(data.whatsappWarning, 'warning');
       }
 
-      toast(`User ${formData.full_name} created successfully!`, 'success');
+      const successKey =
+        data.inviteSent === false && data.emailWarning
+          ? 'User {{name}} created successfully!'
+          : data.inviteSent
+            ? 'User {{name}} created successfully! Invite email sent.'
+            : 'User {{name}} created successfully!';
+      toast(t(successKey, { name: formData.full_name }), 'success');
       onSuccess();
       onClose();
       setFormData({
@@ -180,7 +190,7 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
 
   const confirmMessage =
     formData.role === 'member'
-      ? `Create account for ${formData.full_name} (${formData.email}) as a Member with ${planLabel} plan?`
+      ? `Create account for ${formData.full_name} (${formData.email}) as a Member with ${planLabel} plan? An invite email will be sent to set their password.`
       : `Create account for ${formData.full_name} (${formData.email}) as a ${formData.role.charAt(0).toUpperCase() + formData.role.slice(1)}?`;
 
   return (
@@ -239,24 +249,33 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
                 placeholder="+58 412 123 4567"
               />
               <p className={hintClass}>
-                Include country code. A welcome WhatsApp is sent when provided.
+                {formData.role === 'member' ? (
+                  <>
+                    {t('An invite email will be sent so they can set their password.')}{' '}
+                    {t('Include country code for a welcome WhatsApp when provided.')}
+                  </>
+                ) : (
+                  'Include country code. A welcome WhatsApp is sent when provided.'
+                )}
               </p>
             </div>
 
-            <div>
-              <label className={labelClass}>Temporary Password</label>
-              <input
-                type="text"
-                required
-                value={formData.password}
-                onChange={e => setFormData({...formData, password: e.target.value})}
-                className={`${inputClass} font-mono`}
-                placeholder="e.g. Pits2024!"
-              />
-              <p className={hintClass}>
-                Share this with the athlete. They cannot change it in the app yet.
-              </p>
-            </div>
+            {isStaffProfileRole(formData.role) && (
+              <div>
+                <label className={labelClass}>Temporary Password</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  className={`${inputClass} font-mono`}
+                  placeholder="e.g. Pits2024!"
+                />
+                <p className={hintClass}>
+                  Share this with the staff member. They cannot change it in the app yet.
+                </p>
+              </div>
+            )}
 
             <div>
               <label className={labelClass}>Role</label>

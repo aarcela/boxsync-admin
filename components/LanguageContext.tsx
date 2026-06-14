@@ -1,6 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 import { translations, Language, TranslationKey } from '../lib/translations';
 
 interface LanguageContextType {
@@ -11,44 +17,75 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLang] = useState<Language>('en');
+const LANGUAGE_STORAGE_KEY = 'language';
 
-  useEffect(() => {
-    // Load language from localStorage
-    const savedLang = localStorage.getItem('language') as Language;
-    if (savedLang && (savedLang === 'en' || savedLang === 'es')) {
-      setLang(savedLang);
-    } else {
-      // Default to user's browser language if it starts with 'es'
-      const browserLang = navigator.language.split('-')[0];
-      if (browserLang === 'es') {
-        setLang('es');
-      }
-    }
+let languageListeners: Array<() => void> = [];
+
+function subscribeToLanguage(callback: () => void) {
+  languageListeners.push(callback);
+  return () => {
+    languageListeners = languageListeners.filter((listener) => listener !== callback);
+  };
+}
+
+function emitLanguageChange() {
+  for (const listener of languageListeners) {
+    listener();
+  }
+}
+
+function readStoredLanguage(): Language {
+  const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language | null;
+  if (savedLang === 'en' || savedLang === 'es') {
+    return savedLang;
+  }
+
+  const browserLang = navigator.language.split('-')[0];
+  return browserLang === 'es' ? 'es' : 'en';
+}
+
+function getServerLanguageSnapshot(): Language {
+  return 'en';
+}
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const lang = useSyncExternalStore(
+    subscribeToLanguage,
+    readStoredLanguage,
+    getServerLanguageSnapshot
+  );
+
+  const setLanguage = useCallback((newLang: Language) => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
+    emitLanguageChange();
   }, []);
 
-  const setLanguage = (newLang: Language) => {
-    setLang(newLang);
-    localStorage.setItem('language', newLang);
-  };
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string | number>) => {
+      let text = translations[lang][key] || translations.en[key] || key;
 
-  const t = (key: TranslationKey, params?: Record<string, string | number>) => {
-    let text = translations[lang][key] || translations['en'][key] || key;
-    
-    if (params) {
-      Object.entries(params).forEach(([param, value]) => {
-        text = text.replace(`{{${param}}}`, String(value));
-      });
-    }
-    
-    return text;
-  };
+      if (params) {
+        Object.entries(params).forEach(([param, value]) => {
+          text = text.replace(`{{${param}}}`, String(value));
+        });
+      }
+
+      return text;
+    },
+    [lang]
+  );
+
+  const value = useMemo(
+    () => ({
+      lang,
+      setLanguage,
+      t,
+    }),
+    [lang, setLanguage, t]
+  );
 
   return (
-    <LanguageContext.Provider value={{ lang, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+    <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
   );
 };
 

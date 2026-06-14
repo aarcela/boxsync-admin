@@ -20,6 +20,10 @@ export function TenantProvider({
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }
 
+export function useOptionalTenant(): TenantContextValue | null {
+  return useContext(TenantContext);
+}
+
 export function useTenant(): TenantContextValue {
   const ctx = useContext(TenantContext);
   if (!ctx) {

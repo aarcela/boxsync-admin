@@ -6,10 +6,12 @@ import { resolveTenantSlug } from './lib/tenant-host';
 const SKIP_REWRITE_PREFIXES = [
   '/api',
   '/auth',
+  '/assets',
   '/_next',
   '/favicon.ico',
   '/forgot-password',
   '/reset-password',
+  '/welcome',
 ];
 
 function requiresStaffAuth(pathname: string): boolean {

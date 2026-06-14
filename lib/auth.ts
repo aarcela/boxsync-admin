@@ -12,6 +12,12 @@ export function getPasswordResetRedirectUrl(request: Request): string {
   return `${origin}/reset-password`;
 }
 
+export function getMemberInviteRedirectUrl(request: Request): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
+  const origin = siteUrl || new URL(request.url).origin;
+  return `${origin}/welcome`;
+}
+
 export function isStaffRole(role: string | null | undefined): role is StaffRole {
   return role === 'admin' || role === 'manager';
 }

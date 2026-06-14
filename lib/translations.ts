@@ -31,6 +31,22 @@ export const translations = {
     'Could not update password. Request a new link.': 'Could not update password. Request a new link.',
     'Reset link expired or invalid. Please request a new one.':
       'Reset link expired or invalid. Please request a new one.',
+    'Set your password': 'Set your password',
+    'Account ready': 'Account ready',
+    'Your password is set. Download the app to get started.':
+      'Your password is set. Download the app to get started.',
+    'Get the app': 'Get the app',
+    'Get on Google Play': 'Get on Google Play',
+    'iOS app coming soon.': 'iOS app coming soon.',
+    'Invite link expired or invalid. Contact your box to request a new one.':
+      'Invite link expired or invalid. Contact your box to request a new one.',
+    'An invite email will be sent so they can set their password.':
+      'An invite email will be sent so they can set their password.',
+    'Include country code for a welcome WhatsApp when provided.':
+      'Include country code for a welcome WhatsApp when provided.',
+    'User {{name}} created successfully! Invite email sent.':
+      'User {{name}} created successfully! Invite email sent.',
+    'User {{name}} created successfully!': 'User {{name}} created successfully!',
 
     // Sidebar
     Overview: 'Overview',
@@ -919,6 +935,22 @@ export const translations = {
       'No se pudo actualizar la contraseña. Solicita un nuevo enlace.',
     'Reset link expired or invalid. Please request a new one.':
       'El enlace expiró o no es válido. Solicita uno nuevo.',
+    'Set your password': 'Establece tu contraseña',
+    'Account ready': 'Cuenta lista',
+    'Your password is set. Download the app to get started.':
+      'Tu contraseña está lista. Descarga la app para empezar.',
+    'Get the app': 'Descargar la app',
+    'Get on Google Play': 'Descargar en Google Play',
+    'iOS app coming soon.': 'App iOS próximamente.',
+    'Invite link expired or invalid. Contact your box to request a new one.':
+      'El enlace de invitación expiró o no es válido. Contacta a tu box para solicitar uno nuevo.',
+    'An invite email will be sent so they can set their password.':
+      'Se enviará un correo de invitación para que establezcan su contraseña.',
+    'Include country code for a welcome WhatsApp when provided.':
+      'Incluye el código de país para enviar también un WhatsApp de bienvenida.',
+    'User {{name}} created successfully! Invite email sent.':
+      '¡Usuario {{name}} creado! Correo de invitación enviado.',
+    'User {{name}} created successfully!': '¡Usuario {{name}} creado con éxito!',
 
     // Sidebar
     Overview: 'Resumen',
