@@ -884,6 +884,18 @@ export const translations = {
     'Welcome invite resent to {{name}}': 'Welcome invite resent to {{name}}',
     'Failed to resend welcome invite': 'Failed to resend welcome invite',
     'Only members can receive welcome invites.': 'Only members can receive welcome invites.',
+    'Member has already completed registration.':
+      'This member has already completed registration.',
+    'Send password reset': 'Send password reset',
+    'Send password reset confirm message':
+      'Send a password reset email to {{name}}? They can use it to set a new password.',
+    'Password reset sent to {{name}}': 'Password reset email sent to {{name}}',
+    'Failed to send password reset': 'Failed to send password reset',
+    'Only members can receive password reset emails.':
+      'Only members can receive password reset emails.',
+    'Member has not completed registration. Use resend welcome invite instead.':
+      'This member has not finished signup yet. Use resend welcome invite instead.',
+    'User has no email address.': 'This member has no email address on file.',
     'Revoke Access': 'Revoke Access',
     'Restore Access': 'Restore Access',
     'Lock out confirm message': 'Lock out {{name}}? They will immediately lose booking access until reactivated.',
@@ -1818,6 +1830,18 @@ export const translations = {
     'Welcome invite resent to {{name}}': 'Invitación de bienvenida reenviada a {{name}}',
     'Failed to resend welcome invite': 'No se pudo reenviar la invitación de bienvenida',
     'Only members can receive welcome invites.': 'Solo los miembros pueden recibir invitaciones de bienvenida.',
+    'Member has already completed registration.':
+      'Este miembro ya completó el registro.',
+    'Send password reset': 'Enviar restablecimiento de contraseña',
+    'Send password reset confirm message':
+      '¿Enviar un correo de restablecimiento de contraseña a {{name}}? Podrá usarlo para elegir una nueva contraseña.',
+    'Password reset sent to {{name}}': 'Correo de restablecimiento enviado a {{name}}',
+    'Failed to send password reset': 'No se pudo enviar el restablecimiento de contraseña',
+    'Only members can receive password reset emails.':
+      'Solo los miembros pueden recibir correos de restablecimiento de contraseña.',
+    'Member has not completed registration. Use resend welcome invite instead.':
+      'Este miembro aún no terminó el registro. Usa reenviar invitación de bienvenida.',
+    'User has no email address.': 'Este miembro no tiene correo registrado.',
     'Revoke Access': 'Revocar acceso',
     'Restore Access': 'Restaurar acceso',
     'Lock out confirm message': '¿Bloquear a {{name}}? Perderá acceso a reservas hasta reactivación.',

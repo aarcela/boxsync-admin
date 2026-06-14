@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar, Mail, Loader2 } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar, Mail, Loader2, KeyRound } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -36,6 +36,8 @@ export default function AthletesPage() {
     changePlan,
     resendWelcomeInvite,
     resendingInviteId,
+    sendPasswordReset,
+    sendingResetId,
     refresh
   } = useAthletes();
 
@@ -56,6 +58,11 @@ export default function AthletesPage() {
     profile: Profile | null;
   }>({ isOpen: false, profile: null });
 
+  const [resetConfirm, setResetConfirm] = useState<{
+    isOpen: boolean;
+    profile: Profile | null;
+  }>({ isOpen: false, profile: null });
+
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
     const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
@@ -67,6 +74,12 @@ export default function AthletesPage() {
     const profile = inviteConfirm.profile;
     setInviteConfirm({ isOpen: false, profile: null });
     if (profile) await resendWelcomeInvite(profile);
+  };
+
+  const executeSendPasswordReset = async () => {
+    const profile = resetConfirm.profile;
+    setResetConfirm({ isOpen: false, profile: null });
+    if (profile) await sendPasswordReset(profile);
   };
 
   return (
@@ -339,7 +352,7 @@ export default function AthletesPage() {
                     {/* ACTIONS */}
                     <td className="px-6 py-4 text-right">
                        <div className="flex items-center justify-end gap-1">
-                        {profile.role === 'member' && (
+                        {profile.role === 'member' && profile.invite_pending && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -353,6 +366,23 @@ export default function AthletesPage() {
                               <Loader2 size={18} className="animate-spin" />
                             ) : (
                               <Mail size={18} />
+                            )}
+                          </button>
+                        )}
+                        {profile.role === 'member' && !profile.invite_pending && profile.email && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setResetConfirm({ isOpen: true, profile });
+                            }}
+                            disabled={sendingResetId === profile.id}
+                            className="p-2 text-pits-dim hover:text-pits-primary hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={t('Send password reset')}
+                          >
+                            {sendingResetId === profile.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <KeyRound size={18} />
                             )}
                           </button>
                         )}
@@ -418,6 +448,17 @@ export default function AthletesPage() {
         confirmLabel={t('Resend')}
         onConfirm={executeResendInvite}
         onCancel={() => setInviteConfirm({ isOpen: false, profile: null })}
+      />
+
+      <ConfirmDialog
+        isOpen={resetConfirm.isOpen}
+        title={t('Send password reset')}
+        message={t('Send password reset confirm message', {
+          name: resetConfirm.profile?.full_name || t('Unnamed'),
+        })}
+        confirmLabel={t('Send reset link')}
+        onConfirm={executeSendPasswordReset}
+        onCancel={() => setResetConfirm({ isOpen: false, profile: null })}
       />
 
     </div>

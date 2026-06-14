@@ -25,6 +25,7 @@ export async function POST(request: Request) {
 
     const allowedIds = (profiles ?? []).map((p) => p.id);
     const emails: Record<string, string> = {};
+    const invitePending: Record<string, boolean> = {};
 
     await Promise.all(
       allowedIds.map(async (id) => {
@@ -36,10 +37,11 @@ export async function POST(request: Request) {
         if (data.user?.email) {
           emails[id] = data.user.email;
         }
+        invitePending[id] = !data.user?.email_confirmed_at;
       })
     );
 
-    return NextResponse.json({ emails });
+    return NextResponse.json({ emails, invitePending });
   } catch (error: unknown) {
     console.error('Profile emails error:', error);
     const message = error instanceof Error ? error.message : 'Internal Server Error';

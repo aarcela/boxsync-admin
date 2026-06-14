@@ -13,6 +13,7 @@ export function useAthletes() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+  const [sendingResetId, setSendingResetId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   
@@ -37,10 +38,11 @@ export function useAthletes() {
         });
 
         if (emailResponse.ok) {
-          const { emails } = await emailResponse.json();
+          const { emails, invitePending } = await emailResponse.json();
           profilesWithEmails = data.map((p) => ({
             ...p,
             email: emails[p.id] ?? '',
+            invite_pending: invitePending?.[p.id] ?? false,
           }));
         }
       } catch (emailError) {
@@ -120,7 +122,11 @@ export function useAthletes() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to resend welcome invite');
+        const apiError =
+          data.error === 'Member has already completed registration.'
+            ? t('Member has already completed registration.')
+            : data.error;
+        throw new Error(apiError || t('Failed to resend welcome invite'));
       }
 
       if (data.emailWarning) {
@@ -143,6 +149,52 @@ export function useAthletes() {
       toast(message, 'error');
     } finally {
       setResendingInviteId(null);
+    }
+  };
+
+  const sendPasswordReset = async (profile: Profile) => {
+    if (profile.role !== 'member') {
+      toast(t('Only members can receive password reset emails.'), 'warning');
+      return;
+    }
+
+    if (!profile.email) {
+      toast(t('User has no email address.'), 'error');
+      return;
+    }
+
+    setSendingResetId(profile.id);
+    try {
+      const response = await fetch(`/api/admin/users/${profile.id}/send-password-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const apiError =
+          data.error === 'Member has not completed registration. Use resend welcome invite instead.'
+            ? t('Member has not completed registration. Use resend welcome invite instead.')
+            : data.error === 'User has no email address.'
+              ? t('User has no email address.')
+              : data.error;
+        throw new Error(apiError || t('Failed to send password reset'));
+      }
+
+      if (data.resetSent) {
+        toast(
+          t('Password reset sent to {{name}}', { name: profile.full_name || t('Unnamed') }),
+          'success'
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('Failed to send password reset');
+      toast(message, 'error');
+    } finally {
+      setSendingResetId(null);
     }
   };
 
@@ -212,6 +264,8 @@ export function useAthletes() {
     toggleInscription,
     resendWelcomeInvite,
     resendingInviteId,
+    sendPasswordReset,
+    sendingResetId,
     refresh: fetchProfiles
   };
 }

@@ -94,6 +94,8 @@ export interface Profile {
   id: string;
   full_name: string;
   email: string;
+  /** True when the auth user has not confirmed email / finished welcome setup. */
+  invite_pending?: boolean;
   phone: string;
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;

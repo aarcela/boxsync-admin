@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getMemberInviteRedirectUrl } from '@/lib/auth';
+import { getPasswordResetRedirectUrl } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
-import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
-import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
+import { sendPasswordResetEmail } from '@/lib/email/passwordResetEmail';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
 
@@ -30,7 +29,7 @@ export async function POST(
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, full_name, phone, role, tenant_id')
+      .select('id, full_name, role, tenant_id')
       .eq('id', id)
       .single();
 
@@ -44,7 +43,7 @@ export async function POST(
 
     if (profile.role !== 'member') {
       return NextResponse.json(
-        { error: 'Only members can receive welcome invites.' },
+        { error: 'Only members can receive password reset emails.' },
         { status: 400 }
       );
     }
@@ -55,93 +54,65 @@ export async function POST(
     if (authError) throw authError;
 
     const email = authData.user?.email?.trim().toLowerCase();
-    const fullName = profile.full_name?.trim() || authData.user?.user_metadata?.full_name || '';
+    const fullName =
+      profile.full_name?.trim() || authData.user?.user_metadata?.full_name || '';
 
     if (!email) {
       return NextResponse.json({ error: 'User has no email address.' }, { status: 400 });
     }
 
-    if (authData.user.email_confirmed_at) {
+    if (!authData.user.email_confirmed_at) {
       return NextResponse.json(
-        { error: 'Member has already completed registration.' },
+        { error: 'Member has not completed registration. Use resend welcome invite instead.' },
         { status: 400 }
       );
     }
 
     const { data: linkData, error: linkError } =
       await supabaseAdmin.auth.admin.generateLink({
-        type: 'invite',
+        type: 'recovery',
         email,
         options: {
-          redirectTo: getMemberInviteRedirectUrl(request),
-          data: { full_name: fullName, tenant_id: tenantId },
+          redirectTo: getPasswordResetRedirectUrl(request),
         },
       });
 
     if (linkError) throw linkError;
 
-    const inviteLink = linkData.properties?.action_link;
-    if (!inviteLink) {
-      throw new Error('Failed to generate invite link');
+    const resetLink = linkData.properties?.action_link;
+    if (!resetLink) {
+      throw new Error('Failed to generate password reset link');
     }
 
-    let emailWarning: string | undefined;
-    let whatsappWarning: string | undefined;
-
     try {
-      await sendMemberInviteEmail({
+      await sendPasswordResetEmail({
         to: email,
         fullName,
-        inviteLink,
+        resetLink,
         language: messageLanguage,
       });
     } catch (emailError) {
-      console.error('Resend invite email failed:', emailError);
-      emailWarning =
-        'Invite email could not be sent. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
-    }
-
-    if (profile.phone?.trim()) {
-      try {
-        await sendWelcomeWhatsApp({
-          phone: profile.phone.trim(),
-          fullName,
-          email,
-          language: messageLanguage,
-        });
-      } catch (whatsappError) {
-        console.error('Resend welcome WhatsApp failed:', whatsappError);
-        whatsappWarning = 'Welcome WhatsApp message could not be sent.';
-      }
-    }
-
-    if (emailWarning && whatsappWarning) {
+      console.error('Password reset email failed:', emailError);
       return NextResponse.json(
-        { error: `${emailWarning} ${whatsappWarning}` },
+        {
+          error:
+            'Password reset email could not be sent. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.',
+        },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      inviteSent: !emailWarning,
-      ...(emailWarning ? { emailWarning } : {}),
-      ...(whatsappWarning ? { whatsappWarning } : {}),
-    });
+    return NextResponse.json({ success: true, resetSent: true });
   } catch (error: unknown) {
-    console.error('Resend Invite Error:', error);
+    console.error('Send Password Reset Error:', error);
     let errorMessage =
       error instanceof Error ? error.message : 'Internal Server Error';
 
-    if (errorMessage.toLowerCase().includes('already been registered')) {
-      errorMessage = 'Member has already completed registration.';
-    } else if (errorMessage.toLowerCase().includes('invite email')) {
+    if (errorMessage.toLowerCase().includes('password reset email')) {
       errorMessage =
-        'Could not send invite email. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
+        'Password reset email could not be sent. Check SMTP_USER, SMTP_PASSWORD, and AUTH_FROM_EMAIL.';
     }
 
-    const status = errorMessage.includes('already completed registration') ? 400 : 500;
-
-    return NextResponse.json({ error: errorMessage }, { status });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
