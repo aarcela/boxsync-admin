@@ -5,17 +5,22 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const MIN_RESET_PASSWORD_LENGTH = 8;
 
-export function getPasswordResetRedirectUrl(request: Request): string {
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
+
+/** Public site origin for auth links in emails — never use request origin (localhost in dev). */
+function getPublicSiteOrigin(): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-  const origin = siteUrl || new URL(request.url).origin;
-  // Default Supabase emails append tokens in the URL hash; only a client page can read those.
-  return `${origin}/reset-password`;
+  if (siteUrl) return siteUrl;
+  return `https://${ROOT_DOMAIN}`;
 }
 
-export function getMemberInviteRedirectUrl(request: Request): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-  const origin = siteUrl || new URL(request.url).origin;
-  return `${origin}/welcome`;
+export function getPasswordResetRedirectUrl(_request: Request): string {
+  // Default Supabase emails append tokens in the URL hash; only a client page can read those.
+  return `${getPublicSiteOrigin()}/reset-password`;
+}
+
+export function getMemberInviteRedirectUrl(_request: Request): string {
+  return `${getPublicSiteOrigin()}/welcome`;
 }
 
 export function isStaffRole(role: string | null | undefined): role is StaffRole {
