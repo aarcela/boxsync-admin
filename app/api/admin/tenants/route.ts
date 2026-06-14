@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { tenantService } from '@/lib/services/tenantService';
+import { DEFAULT_UNLIMITED_MEMBERSHIP_PLAN } from '@/lib/types/gym';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_RE =
@@ -67,7 +69,19 @@ export async function POST(request: Request) {
       supabaseAdmin
     );
 
-    return NextResponse.json({ tenant }, { status: 201 });
+    let membershipPlan;
+    try {
+      membershipPlan = await membershipPlanService.createMembershipPlan(
+        supabaseAdmin,
+        tenant.id,
+        DEFAULT_UNLIMITED_MEMBERSHIP_PLAN
+      );
+    } catch (planError) {
+      await supabaseAdmin.from('tenants').delete().eq('id', tenant.id);
+      throw planError;
+    }
+
+    return NextResponse.json({ tenant, membershipPlan }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });

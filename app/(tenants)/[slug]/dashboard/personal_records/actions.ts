@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireAdminTenantId } from '@/lib/require-admin-tenant';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { prMovementService } from '@/lib/services/prMovementService';
 import type { PrCategory, PrRecordType } from '@/lib/types/pr';
 
 function parseMovementForm(formData: FormData) {
@@ -16,6 +18,7 @@ function parseMovementForm(formData: FormData) {
 }
 
 export async function createPrMovementAction(formData: FormData) {
+  const tenantId = await requireAdminTenantId();
   const { slug, name, category, record_type, sort_order, is_active } =
     parseMovementForm(formData);
 
@@ -23,7 +26,7 @@ export async function createPrMovementAction(formData: FormData) {
     throw new Error('Missing required fields');
   }
 
-  const { error } = await supabaseAdmin.from('pr_movements').insert({
+  await prMovementService.createPrMovement(supabaseAdmin, tenantId, {
     slug,
     name,
     category,
@@ -32,11 +35,11 @@ export async function createPrMovementAction(formData: FormData) {
     is_active,
   });
 
-  if (error) throw error;
   revalidatePath('/dashboard/personal_records');
 }
 
 export async function updatePrMovementAction(slug: string, formData: FormData) {
+  const tenantId = await requireAdminTenantId();
   const { name, category, record_type, sort_order, is_active } =
     parseMovementForm(formData);
 
@@ -44,12 +47,14 @@ export async function updatePrMovementAction(slug: string, formData: FormData) {
     throw new Error('Missing required fields');
   }
 
-  const { error } = await supabaseAdmin
-    .from('pr_movements')
-    .update({ name, category, record_type, sort_order, is_active })
-    .eq('slug', slug);
+  await prMovementService.updatePrMovement(supabaseAdmin, tenantId, slug, {
+    name,
+    category,
+    record_type,
+    sort_order,
+    is_active,
+  });
 
-  if (error) throw error;
   revalidatePath('/dashboard/personal_records');
 }
 
@@ -57,21 +62,15 @@ export async function togglePrMovementStatusAction(
   slug: string,
   is_active: boolean
 ) {
-  const { error } = await supabaseAdmin
-    .from('pr_movements')
-    .update({ is_active })
-    .eq('slug', slug);
-
-  if (error) throw error;
+  const tenantId = await requireAdminTenantId();
+  await prMovementService.updatePrMovement(supabaseAdmin, tenantId, slug, {
+    is_active,
+  });
   revalidatePath('/dashboard/personal_records');
 }
 
 export async function deletePrMovementAction(slug: string) {
-  const { error } = await supabaseAdmin
-    .from('pr_movements')
-    .delete()
-    .eq('slug', slug);
-
-  if (error) throw error;
+  const tenantId = await requireAdminTenantId();
+  await prMovementService.deletePrMovement(supabaseAdmin, tenantId, slug);
   revalidatePath('/dashboard/personal_records');
 }

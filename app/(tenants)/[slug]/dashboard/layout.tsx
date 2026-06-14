@@ -61,6 +61,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang, setLanguage, t } = useLanguage();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userFullName, setUserFullName] = useState<string | null>(null);
+
+  const userInitials = (() => {
+    if (!userFullName?.trim()) return 'AD';
+    const parts = userFullName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return userFullName.slice(0, 2).toUpperCase();
+  })();
 
   const navItems = useMemo((): NavItem[] => {
     const financialSubItems = [
@@ -135,7 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, full_name')
         .eq('id', user.id)
         .single();
       if (!isStaffRole(profile?.role)) {
@@ -144,6 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return;
       }
       setUserRole(profile?.role ?? null);
+      setUserFullName(profile?.full_name ?? null);
     };
     verifyStaffSession();
   }, [router]);
@@ -329,12 +340,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           
-          <div className="flex items-center">
+          <Link
+            href="/dashboard/profile"
+            className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
+          >
             <div className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
-              AD
+              {userInitials}
             </div>
-            <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted">{t('Admin')}</span>
-          </div>
+            <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
+              {userFullName || t('Admin')}
+            </span>
+          </Link>
         </header>
 
         {/* Scrollable Page Content */}

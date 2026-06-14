@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar, Mail, Loader2 } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
+import { Profile } from '@/lib/types/gym';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -33,6 +34,8 @@ export default function AthletesPage() {
     filteredProfiles,
     toggleSolvency,
     changePlan,
+    resendWelcomeInvite,
+    resendingInviteId,
     refresh
   } = useAthletes();
 
@@ -48,11 +51,22 @@ export default function AthletesPage() {
     currentSolvency: boolean;
   }>({ isOpen: false, profileId: '', profileName: '', currentSolvency: false });
 
+  const [inviteConfirm, setInviteConfirm] = useState<{
+    isOpen: boolean;
+    profile: Profile | null;
+  }>({ isOpen: false, profile: null });
+
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
     const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
     await toggleSolvency(id, currentStatus);
+  };
+
+  const executeResendInvite = async () => {
+    const profile = inviteConfirm.profile;
+    setInviteConfirm({ isOpen: false, profile: null });
+    if (profile) await resendWelcomeInvite(profile);
   };
 
   return (
@@ -185,6 +199,11 @@ export default function AthletesPage() {
                               <MessageCircle size={14} />
                             </a>
                           </div>
+                          {profile.email ? (
+                            <div className="text-[10px] text-pits-dim truncate max-w-[220px]">
+                              {profile.email}
+                            </div>
+                          ) : null}
                           <div className="text-[10px] text-pits-dim font-mono tracking-tighter uppercase whitespace-nowrap">
                             {profile.role} • ID: {profile.id.slice(0, 5)}
                           </div>
@@ -320,6 +339,23 @@ export default function AthletesPage() {
                     {/* ACTIONS */}
                     <td className="px-6 py-4 text-right">
                        <div className="flex items-center justify-end gap-1">
+                        {profile.role === 'member' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInviteConfirm({ isOpen: true, profile });
+                            }}
+                            disabled={resendingInviteId === profile.id}
+                            className="p-2 text-pits-dim hover:text-pits-primary hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={t('Resend welcome invite')}
+                          >
+                            {resendingInviteId === profile.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <Mail size={18} />
+                            )}
+                          </button>
+                        )}
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -371,6 +407,17 @@ export default function AthletesPage() {
         variant={confirmConfig.currentSolvency ? 'danger' : 'default'}
         onConfirm={executeSolvencyToggle}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <ConfirmDialog
+        isOpen={inviteConfirm.isOpen}
+        title={t('Resend welcome invite')}
+        message={t('Resend welcome invite confirm message', {
+          name: inviteConfirm.profile?.full_name || t('Unnamed'),
+        })}
+        confirmLabel={t('Resend')}
+        onConfirm={executeResendInvite}
+        onCancel={() => setInviteConfirm({ isOpen: false, profile: null })}
       />
 
     </div>

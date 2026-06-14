@@ -2,14 +2,17 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Profile, AthletePlan } from '@/lib/types/gym';
 import { athleteService } from '@/lib/services/athleteService';
 import { useToast } from '@/components/Toast';
+import { useLanguage } from '@/components/LanguageContext';
 
 export type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
 export type SortDir = 'asc' | 'desc';
 
 export function useAthletes() {
   const { toast } = useToast();
+  const { t, lang } = useLanguage();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   
@@ -24,7 +27,27 @@ export function useAthletes() {
     setLoading(true);
     try {
       const data = await athleteService.getProfiles();
-      setProfiles(data);
+      let profilesWithEmails = data;
+
+      try {
+        const emailResponse = await fetch('/api/admin/profiles/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: data.map((p) => p.id) }),
+        });
+
+        if (emailResponse.ok) {
+          const { emails } = await emailResponse.json();
+          profilesWithEmails = data.map((p) => ({
+            ...p,
+            email: emails[p.id] ?? '',
+          }));
+        }
+      } catch (emailError) {
+        console.error('Error fetching profile emails:', emailError);
+      }
+
+      setProfiles(profilesWithEmails);
     } catch (error) {
       console.error('Error fetching athletes:', error);
       toast('Failed to load athlete data', 'error');
@@ -78,6 +101,49 @@ export function useAthletes() {
       }
       delete planTimerRef.current[id];
     }, 1500);
+  };
+
+  const resendWelcomeInvite = async (profile: Profile) => {
+    if (profile.role !== 'member') {
+      toast(t('Only members can receive welcome invites.'), 'warning');
+      return;
+    }
+
+    setResendingInviteId(profile.id);
+    try {
+      const response = await fetch(`/api/admin/users/${profile.id}/resend-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend welcome invite');
+      }
+
+      if (data.emailWarning) {
+        toast(data.emailWarning, 'warning');
+      }
+
+      if (data.whatsappWarning) {
+        toast(data.whatsappWarning, 'warning');
+      }
+
+      if (data.inviteSent) {
+        toast(
+          t('Welcome invite resent to {{name}}', { name: profile.full_name || t('Unnamed') }),
+          'success'
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('Failed to resend welcome invite');
+      toast(message, 'error');
+    } finally {
+      setResendingInviteId(null);
+    }
   };
 
   const toggleInscription = async (id: string, currentStatus: boolean) => {
@@ -144,6 +210,8 @@ export function useAthletes() {
     toggleSolvency,
     changePlan,
     toggleInscription,
+    resendWelcomeInvite,
+    resendingInviteId,
     refresh: fetchProfiles
   };
 }

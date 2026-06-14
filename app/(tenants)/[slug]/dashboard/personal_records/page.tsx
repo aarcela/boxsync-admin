@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { supabase } from '@/lib/supabase';
 import { prMovementService } from '@/lib/services/prMovementService';
 import {
   PrMovement,
@@ -53,6 +54,7 @@ export default function PersonalRecordsPage() {
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [movements, setMovements] = useState<PrMovement[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<PrMovement | null>(null);
@@ -61,10 +63,10 @@ export default function PersonalRecordsPage() {
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [formData, setFormData] = useState(defaultForm);
 
-  const fetchMovements = async () => {
+  const fetchMovements = async (activeTenantId: string) => {
     setLoading(true);
     try {
-      const data = await prMovementService.getPrMovements();
+      const data = await prMovementService.getPrMovements(activeTenantId);
       setMovements(data);
     } catch (error) {
       console.error(error);
@@ -75,7 +77,28 @@ export default function PersonalRecordsPage() {
   };
 
   useEffect(() => {
-    fetchMovements();
+    const loadContext = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      const id = profile?.tenant_id ?? null;
+      setTenantId(id);
+      if (id) await fetchMovements(id);
+      else setLoading(false);
+    };
+
+    loadContext();
   }, []);
 
   const handleOpenForm = (movement?: PrMovement) => {
@@ -131,7 +154,7 @@ export default function PersonalRecordsPage() {
         }
 
         setIsFormOpen(false);
-        fetchMovements();
+        if (tenantId) fetchMovements(tenantId);
       } catch (error) {
         console.error(error);
         toast(t('Action failed'), 'error');
@@ -147,7 +170,7 @@ export default function PersonalRecordsPage() {
         await deletePrMovementAction(slugToDelete);
         toast(t('PR movement deleted'), 'success');
         setSlugToDelete(null);
-        fetchMovements();
+        if (tenantId) fetchMovements(tenantId);
       } catch (error) {
         console.error(error);
         toast(
@@ -163,7 +186,7 @@ export default function PersonalRecordsPage() {
       try {
         await togglePrMovementStatusAction(movement.slug, !movement.is_active);
         toast(t('Status updated'), 'success');
-        fetchMovements();
+        if (tenantId) fetchMovements(tenantId);
       } catch (error) {
         toast(t('Toggle failed'), 'error');
       }

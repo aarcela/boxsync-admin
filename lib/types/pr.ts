@@ -17,6 +17,7 @@ export interface PrMovement {
   sort_order: number;
   is_active: boolean;
   created_at: string;
+  tenant_id?: string;
 }
 
 export const PR_CATEGORIES: { value: PrCategory; label: TranslationKey }[] = [

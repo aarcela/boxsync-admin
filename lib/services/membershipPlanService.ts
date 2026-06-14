@@ -1,9 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ensureRowTenantId } from '../ensure-row-tenant-id';
 import { supabase } from '../supabase';
-import { MembershipPlan } from '../types/gym';
-
-type MembershipPlanInput = Omit<MembershipPlan, 'id' | 'created_at' | 'tenant_id'>;
+import { MembershipPlan, type MembershipPlanInput } from '../types/gym';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

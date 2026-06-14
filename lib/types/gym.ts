@@ -31,6 +31,17 @@ export interface MembershipPlan {
   created_at: string;
 }
 
+export type MembershipPlanInput = Omit<MembershipPlan, 'id' | 'created_at' | 'tenant_id'>;
+
+/** Default unlimited plan seeded when a new box (tenant) is provisioned. */
+export const DEFAULT_UNLIMITED_MEMBERSHIP_PLAN: MembershipPlanInput = {
+  name: 'Unlimited',
+  price_usd: 80,
+  description: null,
+  is_active: true,
+  weekly_limit: null,
+};
+
 export interface PaymentRecord {
   id: string;
   amount: number;
