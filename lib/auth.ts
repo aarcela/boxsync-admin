@@ -11,16 +11,23 @@ const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
 function getPublicSiteOrigin(): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (siteUrl) return siteUrl;
-  return `https://${ROOT_DOMAIN}`;
+  return `https://hq.${ROOT_DOMAIN}`;
+}
+
+const AUTH_CALLBACK_NEXT_PATHS = ['/reset-password', '/welcome'] as const;
+type AuthCallbackNextPath = (typeof AUTH_CALLBACK_NEXT_PATHS)[number];
+
+function getAuthCallbackRedirectUrl(nextPath: AuthCallbackNextPath): string {
+  const next = encodeURIComponent(nextPath);
+  return `${getPublicSiteOrigin()}/auth/callback?next=${next}`;
 }
 
 export function getPasswordResetRedirectUrl(_request: Request): string {
-  // Default Supabase emails append tokens in the URL hash; only a client page can read those.
-  return `${getPublicSiteOrigin()}/reset-password`;
+  return getAuthCallbackRedirectUrl('/reset-password');
 }
 
 export function getMemberInviteRedirectUrl(_request: Request): string {
-  return `${getPublicSiteOrigin()}/welcome`;
+  return getAuthCallbackRedirectUrl('/welcome');
 }
 
 export function isStaffRole(role: string | null | undefined): role is StaffRole {

@@ -26,13 +26,26 @@ function createSupabaseWithCookies(
   );
 }
 
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
-  const next = searchParams.get('next') ?? '/reset-password';
-  const redirectPath = next.startsWith('/') ? next : '/reset-password';
+const ALLOWED_NEXT_PATHS = new Set(['/reset-password', '/welcome']);
 
+function resolveNextPath(next: string | null): string {
+  const path = next?.startsWith('/') ? next : '/reset-password';
+  return ALLOWED_NEXT_PATHS.has(path) ? path : '/reset-password';
+}
+
+function resolveFailUrl(origin: string, redirectPath: string): URL {
+  if (redirectPath === '/welcome') {
+    return new URL('/welcome', origin);
+  }
   const failUrl = new URL('/forgot-password', origin);
   failUrl.searchParams.set('error', 'link_expired');
+  return failUrl;
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = request.nextUrl;
+  const redirectPath = resolveNextPath(searchParams.get('next'));
+  const failUrl = resolveFailUrl(origin, redirectPath);
 
   const successUrl = new URL(redirectPath, origin);
   let response = NextResponse.redirect(successUrl);
@@ -60,6 +73,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(failUrl);
   }
 
-  // No query params — implicit/hash flow lands on /reset-password directly (see reset-password page)
   return NextResponse.redirect(failUrl);
 }
