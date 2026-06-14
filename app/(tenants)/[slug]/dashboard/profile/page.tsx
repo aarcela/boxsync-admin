@@ -12,6 +12,7 @@ import {
   MIN_RESET_PASSWORD_LENGTH,
   resolvePasswordResetError,
 } from '@/lib/auth';
+import type { TranslationKey } from '@/lib/translations';
 
 const QR_ACCESS_PATH = '/assets/qr-access.png';
 const QR_DOWNLOAD_NAME = 'boxsync-app-access-qr.png';
@@ -32,7 +33,7 @@ function getInitials(name: string | null | undefined): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-function roleLabel(role: string, t: (key: string) => string): string {
+function roleLabel(role: string, t: (key: TranslationKey) => string): string {
   if (role === 'admin') return t('Admin');
   if (role === 'manager') return t('Manager');
   return role;
