@@ -31,7 +31,10 @@ export async function establishSessionFromAuthCallbackUrl(): Promise<boolean> {
         access_token,
         refresh_token,
       });
-      if (!error) return true;
+      if (!error) {
+        await supabase.auth.getSession();
+        return true;
+      }
     }
   }
 

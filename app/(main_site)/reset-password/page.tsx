@@ -9,11 +9,9 @@ import { useLanguage } from '@/components/LanguageContext';
 import { AuthPageShell } from '@/components/AuthPageShell';
 import { useAuthHashSession } from '@/hooks/useAuthHashSession';
 import {
-  isStaffRole,
   MIN_RESET_PASSWORD_LENGTH,
   resolvePasswordResetError,
 } from '@/lib/auth';
-import { resolvePostLoginTenantSlug } from '@/lib/resolve-post-login-tenant';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
 import { GOOGLE_PLAY_URL } from '@/lib/constants/app-links';
 
@@ -50,31 +48,42 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
+      const response = await fetch('/api/auth/update-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error('session_missing');
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string | null;
+        isStaff?: boolean;
+        tenantSlug?: string | null;
+      };
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || !profile) {
-        throw profileError ?? new Error('profile_missing');
+      if (!response.ok) {
+        if (response.status === 401) {
+          const { error: updateError } = await supabase.auth.updateUser({ password });
+          if (updateError) throw updateError;
+          await supabase.auth.signOut();
+          setCompleted(true);
+          return;
+        }
+        if (body.error === 'session_missing') {
+          throw new Error('session_missing');
+        }
+        if (body.code === 'same_password') {
+          throw new Error('same_password');
+        }
+        if (body.code === 'weak_password') {
+          throw new Error('weak_password');
+        }
+        throw new Error(body.error ?? 'update_failed');
       }
 
-      if (isStaffRole(profile.role)) {
-        const tenantSlug = await resolvePostLoginTenantSlug();
-        if (!tenantSlug) {
-          throw new Error(t('Missing tenant context.'));
-        }
-
-        window.location.href = buildTenantDashboardUrl(tenantSlug);
+      if (body.isStaff && body.tenantSlug) {
+        window.location.href = buildTenantDashboardUrl(body.tenantSlug);
         return;
       }
 

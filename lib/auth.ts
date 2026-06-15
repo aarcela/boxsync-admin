@@ -106,6 +106,18 @@ export function resolvePasswordResetError(
     return t('Too many login attempts. Please try again later.');
   }
 
+  if (msg === 'password_too_short') {
+    return t('Password must be at least 8 characters.');
+  }
+
+  if (msg === 'same_password' || msg.includes('different from the old password')) {
+    return t('New password must be different from your current password.');
+  }
+
+  if (msg === 'weak_password' || msg.includes('weak') || msg.includes('easy to guess')) {
+    return t('Choose a stronger password and try again.');
+  }
+
   if (
     msg.includes('session') ||
     msg.includes('jwt') ||

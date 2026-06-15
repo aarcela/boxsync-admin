@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import {
   establishSessionFromAuthCallbackUrl,
@@ -10,7 +10,6 @@ import {
 } from '@/lib/auth-callback';
 
 function AuthCallbackHandler() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -22,7 +21,8 @@ function AuthCallbackHandler() {
 
       if (cancelled) return;
 
-      router.replace(sessionOk ? next : resolveAuthCallbackFailPath(next));
+      const destination = sessionOk ? next : resolveAuthCallbackFailPath(next);
+      window.location.replace(destination);
     }
 
     handleCallback();
@@ -30,7 +30,7 @@ function AuthCallbackHandler() {
     return () => {
       cancelled = true;
     };
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-pits-surface flex items-center justify-center">

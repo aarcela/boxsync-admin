@@ -29,6 +29,9 @@ export const translations = {
     'Passwords do not match.': 'Passwords do not match.',
     'Password must be at least 8 characters.': 'Password must be at least 8 characters.',
     'Could not update password. Request a new link.': 'Could not update password. Request a new link.',
+    'New password must be different from your current password.':
+      'New password must be different from your current password.',
+    'Choose a stronger password and try again.': 'Choose a stronger password and try again.',
     'Reset link expired or invalid. Please request a new one.':
       'Reset link expired or invalid. Please request a new one.',
     'Set your password': 'Set your password',
@@ -971,6 +974,10 @@ export const translations = {
     'Password must be at least 8 characters.': 'La contraseña debe tener al menos 8 caracteres.',
     'Could not update password. Request a new link.':
       'No se pudo actualizar la contraseña. Solicita un nuevo enlace.',
+    'New password must be different from your current password.':
+      'La nueva contraseña debe ser distinta a la actual.',
+    'Choose a stronger password and try again.':
+      'Elige una contraseña más segura e inténtalo de nuevo.',
     'Reset link expired or invalid. Please request a new one.':
       'El enlace expiró o no es válido. Solicita uno nuevo.',
     'Set your password': 'Establece tu contraseña',
