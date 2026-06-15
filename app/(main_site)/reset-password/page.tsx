@@ -15,6 +15,7 @@ import {
 } from '@/lib/auth';
 import { resolvePostLoginTenantSlug } from '@/lib/resolve-post-login-tenant';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
+import { GOOGLE_PLAY_URL } from '@/lib/constants/app-links';
 
 export default function ResetPasswordPage() {
   const { t } = useLanguage();
@@ -23,6 +24,7 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -62,17 +64,22 @@ export default function ResetPasswordPage() {
         .eq('id', user.id)
         .single();
 
-      if (profileError || !isStaffRole(profile?.role)) {
-        await supabase.auth.signOut();
-        throw new Error(t('Unauthorized: Staff access only.'));
+      if (profileError || !profile) {
+        throw profileError ?? new Error('profile_missing');
       }
 
-      const tenantSlug = await resolvePostLoginTenantSlug();
-      if (!tenantSlug) {
-        throw new Error(t('Missing tenant context.'));
+      if (isStaffRole(profile.role)) {
+        const tenantSlug = await resolvePostLoginTenantSlug();
+        if (!tenantSlug) {
+          throw new Error(t('Missing tenant context.'));
+        }
+
+        window.location.href = buildTenantDashboardUrl(tenantSlug);
+        return;
       }
 
-      window.location.href = buildTenantDashboardUrl(tenantSlug);
+      await supabase.auth.signOut();
+      setCompleted(true);
     } catch (err: unknown) {
       setError(resolvePasswordResetError(err, t));
     } finally {
@@ -80,12 +87,33 @@ export default function ResetPasswordPage() {
     }
   };
 
+  const title = completed ? t('Account ready') : t('Set new password');
+  const subtitle = completed ? 'WODUS' : t('Command Center');
+
   return (
     <AuthPageShell
       ready={!checkingSession && hasSession}
-      title={t('Set new password')}
-      subtitle={t('Command Center')}
+      title={title}
+      subtitle={subtitle}
     >
+      {completed ? (
+        <div className="space-y-4 text-center">
+          <p className="text-sm font-medium text-pits-ink">
+            {t('Your password is set. Download the app to get started.')}
+          </p>
+          <a
+            href={GOOGLE_PLAY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full py-4 rounded-lg items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20 transition-all"
+          >
+            {t('Get on Google Play')}
+          </a>
+          <p className="text-xs font-bold text-pits-ink-muted uppercase tracking-wider">
+            {t('iOS app coming soon.')}
+          </p>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
@@ -149,6 +177,7 @@ export default function ResetPasswordPage() {
           </Link>
         </p>
       </form>
+      )}
     </AuthPageShell>
   );
 }

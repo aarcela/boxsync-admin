@@ -115,5 +115,10 @@ export function resolvePasswordResetError(
     return t('Reset link expired or invalid. Please request a new one.');
   }
 
+  const missingTenant = t('Missing tenant context.');
+  if (err.message === missingTenant) {
+    return missingTenant;
+  }
+
   return t('Could not update password. Request a new link.');
 }
