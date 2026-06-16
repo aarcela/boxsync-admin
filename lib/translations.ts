@@ -34,6 +34,10 @@ export const translations = {
     'Choose a stronger password and try again.': 'Choose a stronger password and try again.',
     'Reset link expired or invalid. Please request a new one.':
       'Reset link expired or invalid. Please request a new one.',
+    'Reset your password': 'Reset your password',
+    'Open the WODUS app to continue.': 'Open the WODUS app to continue.',
+    'Open WODUS to reset password': 'Open WODUS to reset password',
+    'Invalid or missing reset link.': 'Invalid or missing reset link.',
     'Set your password': 'Set your password',
     'Account ready': 'Account ready',
     'Your password is set. Download the app to get started.':
@@ -980,6 +984,10 @@ export const translations = {
       'Elige una contraseña más segura e inténtalo de nuevo.',
     'Reset link expired or invalid. Please request a new one.':
       'El enlace expiró o no es válido. Solicita uno nuevo.',
+    'Reset your password': 'Restablece tu contraseña',
+    'Open the WODUS app to continue.': 'Abre la app WODUS para continuar.',
+    'Open WODUS to reset password': 'Abrir WODUS para restablecer contraseña',
+    'Invalid or missing reset link.': 'Enlace de restablecimiento inválido o ausente.',
     'Set your password': 'Establece tu contraseña',
     'Account ready': 'Cuenta lista',
     'Your password is set. Download the app to get started.':
