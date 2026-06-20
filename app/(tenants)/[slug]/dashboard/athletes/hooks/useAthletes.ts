@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Profile, AthletePlan } from '@/lib/types/gym';
 import { athleteService } from '@/lib/services/athleteService';
 import { useToast } from '@/components/Toast';
@@ -7,92 +7,107 @@ import { useLanguage } from '@/components/LanguageContext';
 export type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
 export type SortDir = 'asc' | 'desc';
 
+const ITEMS_PER_PAGE = 20;
+
 export function useAthletes() {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [unpaidCount, setUnpaidCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [sendingResetId, setSendingResetId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  
-  // Sorting state
+
   const [sortKey, setSortKey] = useState<SortKey>('full_name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  // Debounce refs for plan changes
   const planTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearch, roleFilter, sortKey, sortDir]);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await athleteService.getProfiles();
-      let profilesWithEmails = data;
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        pageSize: String(ITEMS_PER_PAGE),
+        search: debouncedSearch,
+        role: roleFilter,
+        sortKey,
+        sortDir,
+      });
 
-      try {
-        const emailResponse = await fetch('/api/admin/profiles/emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: data.map((p) => p.id) }),
-        });
+      const response = await fetch(`/api/admin/profiles?${params}`);
+      const data = await response.json();
 
-        if (emailResponse.ok) {
-          const { emails, invitePending } = await emailResponse.json();
-          profilesWithEmails = data.map((p) => ({
-            ...p,
-            email: emails[p.id] ?? '',
-            invite_pending: invitePending?.[p.id] ?? false,
-          }));
-        }
-      } catch (emailError) {
-        console.error('Error fetching profile emails:', emailError);
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load athlete data');
       }
 
-      setProfiles(profilesWithEmails);
+      setProfiles(data.profiles);
+      setTotalCount(data.totalCount);
+      setUnpaidCount(data.unpaidCount);
     } catch (error) {
       console.error('Error fetching athletes:', error);
       toast('Failed to load athlete data', 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [currentPage, debouncedSearch, roleFilter, sortKey, sortDir, toast]);
 
   useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
 
-  // Actions
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
   const toggleSolvency = async (id: string, currentStatus: boolean) => {
     try {
-      // Optimistic Update
-      setProfiles(prev => prev.map(p => 
+      setProfiles(prev => prev.map(p =>
         p.id === id ? { ...p, is_solvent: !currentStatus } : p
       ));
-      
+
+      if (currentStatus) {
+        setUnpaidCount(prev => prev + 1);
+      } else {
+        setUnpaidCount(prev => Math.max(0, prev - 1));
+      }
+
       await athleteService.updateSolvency(id, !currentStatus);
       toast(
-        !currentStatus ? 'Athlete access restored' : 'Athlete access revoked', 
+        !currentStatus ? 'Athlete access restored' : 'Athlete access revoked',
         !currentStatus ? 'success' : 'warning'
       );
     } catch {
       toast('Failed to update status', 'error');
-      fetchProfiles(); // Revert
+      fetchProfiles();
     }
   };
 
   const changePlan = (id: string, newPlan: string) => {
-    // Optimistic Update immediately
-    setProfiles(prev => prev.map(p => 
+    setProfiles(prev => prev.map(p =>
       p.id === id ? { ...p, plan: newPlan as AthletePlan } : p
     ));
 
-    // Clear previous timer for this profile
     if (planTimerRef.current[id]) {
       clearTimeout(planTimerRef.current[id]);
     }
 
-    // Set new debounce timer
     planTimerRef.current[id] = setTimeout(async () => {
       try {
         await athleteService.updatePlan(id, newPlan);
@@ -198,6 +213,49 @@ export function useAthletes() {
     }
   };
 
+  const deleteAthlete = async (profile: Profile) => {
+    setDeletingId(profile.id);
+    try {
+      const response = await fetch(`/api/admin/users/${profile.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const apiError =
+          data.error === 'Only admins can delete athletes.'
+            ? t('Only admins can delete athletes.')
+            : data.error === 'You cannot delete your own account.'
+              ? t('You cannot delete your own account.')
+              : data.error;
+        throw new Error(apiError || t('Failed to delete athlete'));
+      }
+
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      if (profile.role === 'member' && !profile.is_solvent) {
+        setUnpaidCount((prev) => Math.max(0, prev - 1));
+      }
+
+      if (profiles.length === 1 && currentPage > 1) {
+        setCurrentPage((prev) => prev - 1);
+      } else {
+        await fetchProfiles();
+      }
+
+      toast(
+        t('Athlete deleted successfully', { name: profile.full_name || t('Unnamed') }),
+        'success'
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('Failed to delete athlete');
+      toast(message, 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const toggleInscription = async (id: string, currentStatus: boolean) => {
     try {
       setProfiles(prev => prev.map(p => p.id === id ? { ...p, inscription_paid: !currentStatus } : p));
@@ -212,7 +270,6 @@ export function useAthletes() {
     }
   };
 
-  // UI Derived state
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -221,32 +278,6 @@ export function useAthletes() {
       setSortDir('asc');
     }
   };
-
-  const filteredProfiles = useMemo(() => {
-    return profiles
-      .filter(profile => {
-        const matchesSearch = (profile.full_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesRole = roleFilter === 'all' || profile.role === roleFilter;
-        return matchesSearch && matchesRole;
-      })
-      .sort((a, b) => {
-        const dir = sortDir === 'asc' ? 1 : -1;
-        switch (sortKey) {
-          case 'full_name':
-            return dir * (a.full_name || '').localeCompare(b.full_name || '');
-          case 'is_solvent':
-            return dir * (Number(b.is_solvent) - Number(a.is_solvent));
-          case 'created_at':
-            return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          case 'plan':
-            return dir * (a.plan || '').localeCompare(b.plan || '');
-          case 'last_payment_date':
-            return dir * (new Date(a.last_payment_date || 0).getTime() - new Date(b.last_payment_date || 0).getTime());
-          default:
-            return 0;
-        }
-      });
-  }, [profiles, searchTerm, roleFilter, sortDir, sortKey]);
 
   return {
     profiles,
@@ -258,7 +289,11 @@ export function useAthletes() {
     sortKey,
     sortDir,
     handleSort,
-    filteredProfiles,
+    currentPage,
+    setCurrentPage,
+    totalCount,
+    totalPages,
+    unpaidCount,
     toggleSolvency,
     changePlan,
     toggleInscription,
@@ -266,6 +301,8 @@ export function useAthletes() {
     resendingInviteId,
     sendPasswordReset,
     sendingResetId,
+    deleteAthlete,
+    deletingId,
     refresh: fetchProfiles
   };
 }

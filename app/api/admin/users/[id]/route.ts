@@ -222,3 +222,70 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const staffAuth = await requireStaffApi();
+  if ('error' in staffAuth) return staffAuth.error;
+
+  if (staffAuth.profile.role !== 'admin') {
+    return NextResponse.json(
+      { error: 'Only admins can delete athletes.' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (id === staffAuth.user.id) {
+      return NextResponse.json(
+        { error: 'You cannot delete your own account.' },
+        { status: 400 }
+      );
+    }
+
+    const tenantId = staffAuth.profile.tenant_id as string | null;
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Missing tenant context.' },
+        { status: 400 }
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, tenant_id')
+      .eq('id', id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (profile.tenant_id !== tenantId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (deleteError) throw deleteError;
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error('Delete User Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+

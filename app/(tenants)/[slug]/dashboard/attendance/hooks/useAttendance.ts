@@ -117,7 +117,13 @@ export function useAttendance() {
     }
 
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7729/ingest/aa08aa43-142a-4241-a147-9baa0dcd0e11',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be8fa1'},body:JSON.stringify({sessionId:'be8fa1',location:'useAttendance.ts:addAthlete',message:'calling createBooking',data:{selectedClassId,userId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       const booking = await classService.createBooking(selectedClassId, userId);
+      // #region agent log
+      fetch('http://127.0.0.1:7729/ingest/aa08aa43-142a-4241-a147-9baa0dcd0e11',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be8fa1'},body:JSON.stringify({sessionId:'be8fa1',location:'useAttendance.ts:addAthlete:success',message:'createBooking succeeded',data:{bookingId:booking.id},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       setRoster(prev => [...prev, booking]);
       updateClassBookingCount(selectedClassId, 1);
       toast(t('Athlete added to class'), 'success');

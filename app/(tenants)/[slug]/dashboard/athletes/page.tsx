@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Filter, Edit2, ArrowUpDown, ChevronUp, ChevronDown, MessageCircle, Calendar, Mail, Loader2, KeyRound } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -10,6 +10,7 @@ import { useLanguage } from '@/components/LanguageContext';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 import { Profile } from '@/lib/types/gym';
+import { supabase } from '@/lib/supabase';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -31,15 +32,44 @@ export default function AthletesPage() {
     sortKey,
     sortDir,
     handleSort,
-    filteredProfiles,
+    currentPage,
+    setCurrentPage,
+    totalCount,
+    totalPages,
+    unpaidCount,
     toggleSolvency,
     changePlan,
     resendWelcomeInvite,
     resendingInviteId,
     sendPasswordReset,
     sendingResetId,
+    deleteAthlete,
+    deletingId,
     refresh
   } = useAthletes();
+
+  const [callerRole, setCallerRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const isAdmin = callerRole === 'admin';
+
+  useEffect(() => {
+    const loadContext = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setCurrentUserId(user.id);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      setCallerRole(profile?.role ?? null);
+    };
+
+    loadContext();
+  }, []);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,6 +93,11 @@ export default function AthletesPage() {
     profile: Profile | null;
   }>({ isOpen: false, profile: null });
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    profile: Profile | null;
+  }>({ isOpen: false, profile: null });
+
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
     const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
@@ -82,6 +117,12 @@ export default function AthletesPage() {
     if (profile) await sendPasswordReset(profile);
   };
 
+  const executeDeleteAthlete = async () => {
+    const profile = deleteConfirm.profile;
+    setDeleteConfirm({ isOpen: false, profile: null });
+    if (profile) await deleteAthlete(profile);
+  };
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -93,7 +134,7 @@ export default function AthletesPage() {
           <p className="text-pits-dim font-medium text-sm">
             {t('Retention & Revenue Command Center.')}
             <span className="ml-2 text-xs text-pits-red font-bold animate-pulse">
-              ● {t('{{count}} Unpaid', { count: profiles.filter(p => p.role === 'member' && !p.is_solvent).length })}
+              ● {t('{{count}} Unpaid', { count: unpaidCount })}
             </span>
           </p>
         </div>
@@ -174,7 +215,13 @@ export default function AthletesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-pits-edge">
-                {filteredProfiles.map((profile) => (
+                {profiles.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-pits-dim italic">
+                      {t('No records found.')}
+                    </td>
+                  </tr>
+                ) : profiles.map((profile) => (
                   <tr 
                     key={profile.id} 
                     onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
@@ -397,6 +444,23 @@ export default function AthletesPage() {
                         >
                           <Edit2 size={18} />
                         </button>
+                        {isAdmin && profile.id !== currentUserId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm({ isOpen: true, profile });
+                            }}
+                            disabled={deletingId === profile.id}
+                            className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={t('Delete athlete')}
+                          >
+                            {deletingId === profile.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={18} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
 
@@ -404,6 +468,53 @@ export default function AthletesPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && totalCount > 0 && (
+          <div className="p-4 bg-pits-surface-muted border-t border-pits-edge flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest italic">
+              {t('Showing {{count}} of {{total}} entries', { count: profiles.length, total: totalCount })}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || loading}
+                className="p-2 bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-primary-dark hover:text-pits-text text-pits-text transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = currentPage <= 3
+                    ? i + 1
+                    : currentPage >= totalPages - 2
+                      ? totalPages - 4 + i
+                      : currentPage - 2 + i;
+                  if (pageNum <= 0 || pageNum > totalPages) return null;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${
+                        currentPage === pageNum
+                          ? 'bg-pits-primary text-pits-dark-text shadow-lg rotate-1'
+                          : 'bg-pits-surface-elevated border border-pits-edge text-pits-dim hover:border-black hover:text-pits-text'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || loading}
+                className="p-2 bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-primary-dark hover:text-pits-text text-pits-text transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -459,6 +570,18 @@ export default function AthletesPage() {
         confirmLabel={t('Send reset link')}
         onConfirm={executeSendPasswordReset}
         onCancel={() => setResetConfirm({ isOpen: false, profile: null })}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title={t('Delete athlete')}
+        message={t('Delete athlete confirm message', {
+          name: deleteConfirm.profile?.full_name || t('Unnamed'),
+        })}
+        confirmLabel={t('Delete')}
+        variant="danger"
+        onConfirm={executeDeleteAthlete}
+        onCancel={() => setDeleteConfirm({ isOpen: false, profile: null })}
       />
 
     </div>

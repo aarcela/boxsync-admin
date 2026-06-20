@@ -313,7 +313,7 @@ export default function AttendancePage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredRoster.map((booking) => (
-                        <tr key={booking.id} className={`transition-colors group ${booking.status === 'attended' ? 'bg-green-50/30' : booking.status === 'no_show' ? 'opacity-60' : 'hover:bg-gray-50'}`}>
+                        <tr key={booking.id} className={`transition-colors ${booking.status === 'attended' ? 'bg-green-50/30' : booking.status === 'no_show' ? 'opacity-60' : 'hover:bg-gray-50'}`}>
                           <td className="px-6 py-4">
                             <div className="flex items-center">
                               <div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">

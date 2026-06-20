@@ -238,14 +238,14 @@ export default function DashboardPage() {
            className="bg-pits-panel p-6 rounded-3xl shadow-2xl shadow-pits-red/20 flex flex-col justify-between border-b-4 border-b-pits-red group transition-all hover:shadow-pits-red/40"
         >
           <div className="flex justify-between items-start mb-6">
-            <p className="text-white/60 font-black text-[10px] uppercase tracking-widest bg-pits-ink/10 px-2 py-0.5 rounded">{t('Roster')}</p>
+            <p className="text-pits-dim font-black text-[10px] uppercase tracking-widest bg-pits-ink/10 px-2 py-0.5 rounded">{t('Roster')}</p>
             <div className="p-2.5 bg-pits-ink/10 rounded-2xl text-pits-red">
               <CheckCircle size={20} />
             </div>
           </div>
           <div>
-            <p className="text-4xl font-black text-white italic leading-none">{stats.totalMembers.filter(m => m.is_solvent).length}</p>
-            <p className="text-[10px] text-white/50 font-black uppercase tracking-widest mt-2 italic flex items-center justify-between group-hover:text-white transition-colors">
+            <p className="text-4xl font-black text-pits-text italic leading-none">{stats.totalMembers.filter(m => m.is_solvent).length}</p>
+            <p className="text-[10px] text-pits-dim font-black uppercase tracking-widest mt-2 italic flex items-center justify-between group-hover:text-pits-text transition-colors">
               {t('Active Athletes')}
               <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </p>
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                         href={payment.proof_image_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800 font-black text-[10px] uppercase tracking-tighter transition-all hover:translate-y-px"
+                        className="inline-flex items-center text-blue-600 hover:text-pits-dark-text font-black text-[10px] uppercase tracking-tighter transition-all hover:translate-y-px"
                       >
                         <ExternalLink size={14} className="mr-1.5" />
                         {t('Audit Proof')}
@@ -335,16 +335,16 @@ export default function DashboardPage() {
                           userId: payment.user_id,
                           athleteName: payment.profiles?.full_name || t('Unknown Athlete')
                         })}
-                        className="inline-flex items-center justify-center p-3 rounded-2xl text-pits-error hover:bg-red-50 transition-all border  hover:border-red-200 shadow-sm"
+                        className="inline-flex items-center justify-center p-3 rounded-2xl text-pits-error hover:bg-red-50 hover:text-pits-dark-text transition-all border hover:border-red-200 shadow-sm"
                         title={t('Dismiss Payment')}
                       >
                         <XCircle size={20} />
                       </button>
                       <button 
                         onClick={() => handleApprove(payment.id, payment.user_id)}
-                        className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-pits-panel text-white hover:bg-black font-black text-[10px] tracking-[0.05em] transition-all shadow-lg hover:shadow-black/10 active:scale-95"
+                        className="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft hover:text-pits-dark-text font-black text-[10px] tracking-[0.05em] transition-all shadow-lg shadow-pits-primary/20 active:scale-95"
                       >
-                        <CheckCircle size={16} className="mr-2 text-green-400" />
+                        <CheckCircle size={16} className="mr-2 text-pits-success" />
                         {t('VERIFY & UNLOCK')}
                       </button>
                     </td>

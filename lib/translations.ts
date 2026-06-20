@@ -884,6 +884,13 @@ export const translations = {
     'Text on WhatsApp': 'Text on WhatsApp',
     'Inactive > 10 days': 'Inactive > 10 days',
     'Edit athlete': 'Edit athlete',
+    'Delete athlete': 'Delete athlete',
+    'Delete athlete confirm message':
+      'Permanently delete {{name}}? This removes their account, profile, and auth access. This cannot be undone.',
+    'Athlete deleted successfully': '{{name}} was deleted successfully.',
+    'Failed to delete athlete': 'Failed to delete athlete',
+    'Only admins can delete athletes.': 'Only admins can delete athletes.',
+    'You cannot delete your own account.': 'You cannot delete your own account.',
     'Resend welcome invite': 'Resend welcome invite',
     'Resend welcome invite confirm message':
       'Resend the welcome invite email and WhatsApp message to {{name}}?',
@@ -1838,6 +1845,13 @@ export const translations = {
     'Text on WhatsApp': 'Escribir por WhatsApp',
     'Inactive > 10 days': 'Inactivo > 10 días',
     'Edit athlete': 'Editar atleta',
+    'Delete athlete': 'Eliminar atleta',
+    'Delete athlete confirm message':
+      '¿Eliminar permanentemente a {{name}}? Se eliminará su cuenta, perfil y acceso. Esta acción no se puede deshacer.',
+    'Athlete deleted successfully': '{{name}} fue eliminado correctamente.',
+    'Failed to delete athlete': 'No se pudo eliminar el atleta',
+    'Only admins can delete athletes.': 'Solo los administradores pueden eliminar atletas.',
+    'You cannot delete your own account.': 'No puedes eliminar tu propia cuenta.',
     'Resend welcome invite': 'Reenviar invitación de bienvenida',
     'Resend welcome invite confirm message':
       '¿Reenviar el correo de invitación y el mensaje de bienvenida por WhatsApp a {{name}}?',
