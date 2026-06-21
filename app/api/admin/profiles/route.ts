@@ -72,11 +72,19 @@ async function enrichWithEmails(ids: string[]) {
   return { emails, invitePending };
 }
 
-function applyProfileFilters<T extends { eq: (col: string, val: unknown) => T; ilike: (col: string, val: string) => T }>(
-  query: T,
+/** Shallow filter surface — documents the methods this helper uses on Supabase builders. */
+type ProfileFilterQuery = {
+  eq(col: string, val: unknown): ProfileFilterQuery;
+  ilike(col: string, val: string): ProfileFilterQuery;
+};
+
+function applyProfileFilters(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: any,
   { tenantId, search, role }: { tenantId: string | null; search: string; role: string }
-): T {
-  let filtered = query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+  let filtered: ProfileFilterQuery = query;
 
   if (tenantId) {
     filtered = filtered.eq('tenant_id', tenantId);
@@ -132,7 +140,7 @@ export async function GET(request: NextRequest) {
       if (idError) throw idError;
 
       totalCount = count ?? 0;
-      const allIds = (idRows ?? []).map((r) => r.id);
+      const allIds = (idRows ?? []).map((r: { id: string }) => r.id);
       const lastPaymentDates = await getLastPaymentDates(staffAuth.supabase, allIds);
 
       const sortedIds = [...allIds].sort((a, b) => {
@@ -171,7 +179,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
 
       totalCount = count ?? 0;
-      const pageIds = (data ?? []).map((p) => p.id);
+      const pageIds = (data ?? []).map((p: { id: string }) => p.id);
       const lastPaymentDates = await getLastPaymentDates(staffAuth.supabase, pageIds);
 
       profiles = (data as Profile[]).map((p) => ({
