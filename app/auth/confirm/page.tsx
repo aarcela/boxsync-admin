@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -21,10 +21,6 @@ function AuthConfirmContent() {
     return `${redirectTo}?${params.toString()}`;
   }, [tokenHash, type, redirectTo]);
 
-  const openApp = useCallback(() => {
-    if (appLink) window.location.href = appLink;
-  }, [appLink]);
-
   if (!tokenHash) {
     return (
       <AuthPageShell ready title={t('Reset your password')} subtitle="WODUS">
@@ -39,13 +35,14 @@ function AuthConfirmContent() {
     <AuthPageShell ready title={t('Reset your password')} subtitle="WODUS">
       <div className="space-y-4 text-center">
         <p className="text-sm font-medium text-pits-ink">{t('Open the WODUS app to continue.')}</p>
-        <button
-          type="button"
-          onClick={openApp}
-          className="w-full py-4 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20 transition-all"
-        >
-          {t('Open WODUS to reset password')}
-        </button>
+        {appLink ? (
+          <a
+            href={appLink}
+            className="block w-full py-4 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20 transition-all text-center no-underline"
+          >
+            {t('Open WODUS to reset password')}
+          </a>
+        ) : null}
       </div>
     </AuthPageShell>
   );

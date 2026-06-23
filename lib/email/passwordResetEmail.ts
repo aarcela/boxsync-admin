@@ -12,8 +12,8 @@ function buildPasswordResetEmailHtml(params: {
   const title = isEs ? 'Restablece tu contraseña' : 'Reset your password';
   const greeting = isEs ? `Hola ${firstName},` : `Hi ${firstName},`;
   const body = isEs
-    ? 'Tu box solicitó un enlace para restablecer tu contraseña de WODUS. Haz clic abajo para elegir una nueva.'
-    : 'Your box requested a link to reset your WODUS password. Click below to choose a new one.';
+    ? 'Haz clic abajo para abrir WODUS y elegir una nueva contraseña.'
+    : 'Tap below to open WODUS and choose a new password.';
   const note = isEs
     ? 'Este enlace expira pronto por seguridad.'
     : 'This link expires soon for your security.';
@@ -36,9 +36,15 @@ function buildPasswordResetEmailHtml(params: {
           <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#15171A;">${greeting}</p>
           <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#5A6068;">${body}</p>
           <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#5A6068;">${note}</p>
-          <a href="${params.resetLink}" target="_blank" style="display:inline-block;width:100%;box-sizing:border-box;padding:16px 24px;background-color:#6B8E00;color:#0D0D0D;text-decoration:none;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;border-radius:8px;">${button}</a>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
+            <tr>
+              <td align="center" bgcolor="#6B8E00" style="border-radius:8px;">
+                <a href="${params.resetLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:16px 32px;background-color:#6B8E00;color:#0D0D0D;text-decoration:none;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;border-radius:8px;">${button}</a>
+              </td>
+            </tr>
+          </table>
           <p style="margin:24px 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#5A6068;">${fallback}</p>
-          <p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#5A6068;word-break:break-all;"><a href="${params.resetLink}" style="color:#6B8E00;">${params.resetLink}</a></p>
+          <p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#5A6068;word-break:break-all;"><a href="${params.resetLink}" target="_blank" rel="noopener noreferrer" style="color:#6B8E00;">${params.resetLink}</a></p>
           <p style="margin:0;font-size:11px;line-height:1.5;color:#5A6068;opacity:0.85;">${ignore}</p>
         </td></tr>
       </table>
@@ -60,11 +66,15 @@ export async function sendPasswordResetEmail(params: {
 }): Promise<void> {
   const isEs = params.language === 'es';
   const subject = isEs ? 'Restablece tu contraseña de WODUS' : 'Reset your WODUS password';
+  const textBody = isEs
+    ? `${params.fullName ? `Hola ${params.fullName.trim().split(/\s+/)[0] || params.fullName},` : 'Hola,'}\n\nHaz clic en este enlace para abrir WODUS y restablecer tu contraseña:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
+    : `${params.fullName ? `Hi ${params.fullName.trim().split(/\s+/)[0] || params.fullName},` : 'Hi,'}\n\nTap this link to open WODUS and reset your password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`;
 
   await sendEmail({
     to: params.to,
     subject,
     html: buildPasswordResetEmailHtml(params),
+    text: textBody,
     from: getAuthFromEmail(),
   });
 }

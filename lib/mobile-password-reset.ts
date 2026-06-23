@@ -1,5 +1,5 @@
 import {
-  buildMobilePasswordResetLink,
+  buildMobilePasswordResetEmailLink,
   MOBILE_RESET_PASSWORD_DEEP_LINK,
 } from '@/lib/constants/app-links';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -15,7 +15,7 @@ export async function createMobilePasswordResetLink(email: string): Promise<stri
 
   const tokenHash = data.properties?.hashed_token;
   if (tokenHash) {
-    return buildMobilePasswordResetLink(tokenHash);
+    return buildMobilePasswordResetEmailLink(tokenHash);
   }
 
   const actionLink = data.properties?.action_link;

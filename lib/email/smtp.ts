@@ -11,6 +11,7 @@ export type SendEmailParams = {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   from?: string;
   attachments?: EmailAttachment[];
 };
@@ -105,6 +106,7 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     to,
     subject: params.subject,
     html: params.html,
+    text: params.text,
   };
 
   if (params.attachments?.length) {
