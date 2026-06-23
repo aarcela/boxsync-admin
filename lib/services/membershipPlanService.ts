@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ensureRowTenantId } from '../ensure-row-tenant-id';
 import { supabase } from '../supabase';
-import { MembershipPlan, type MembershipPlanInput } from '../types/gym';
+import { MembershipPlan, MembershipPlanWithUsage, type MembershipPlanInput } from '../types/gym';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +16,29 @@ export const membershipPlanService = {
 
     if (error) throw error;
     return data as MembershipPlan[];
+  },
+
+  async getMembershipPlansWithUsage(tenantId: string): Promise<MembershipPlanWithUsage[]> {
+    const plans = await this.getMembershipPlans(tenantId);
+
+    const { data: profileRows, error } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('tenant_id', tenantId);
+
+    if (error) throw error;
+
+    const countByPlan: Record<string, number> = {};
+    for (const row of profileRows ?? []) {
+      if (row.plan) {
+        countByPlan[row.plan] = (countByPlan[row.plan] ?? 0) + 1;
+      }
+    }
+
+    return plans.map((plan) => ({
+      ...plan,
+      member_count: countByPlan[plan.id] ?? 0,
+    }));
   },
 
   async getActiveMembershipPlans(tenantId: string): Promise<MembershipPlan[]> {

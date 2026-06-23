@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { supabase } from '@/lib/supabase';
+import { buildPaymentApprovedProfileUpdate } from '@/lib/plan-period';
 import { 
   CheckCircle, XCircle, ExternalLink, RefreshCw, 
   AlertTriangle, ShieldAlert,
@@ -62,9 +63,11 @@ export default function DashboardPage() {
       
       if (payError) throw payError;
 
+      const profileUpdate = await buildPaymentApprovedProfileUpdate(supabase, userId);
+
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ is_solvent: true })
+        .update(profileUpdate)
         .eq('id', userId);
 
       if (profileError) throw profileError;

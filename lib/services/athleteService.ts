@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { Profile, AthletePlan } from '../types/gym';
+import { buildPlanChangeFields } from '../plan-period';
 import { financialService } from './financialService';
 import { membershipPlanService } from './membershipPlanService';
 
@@ -54,9 +55,24 @@ export const athleteService = {
    * Updates an athlete's membership plan.
    */
   async updatePlan(id: string, plan: AthletePlan | string): Promise<void> {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, tenant_id')
+      .eq('id', id)
+      .single();
+
+    if (profileError) throw profileError;
+    if (profile?.plan === plan) return;
+
+    const planFields = await buildPlanChangeFields(
+      supabase,
+      plan,
+      profile?.tenant_id ?? undefined
+    );
+
     const { error } = await supabase
       .from('profiles')
-      .update({ plan })
+      .update(planFields)
       .eq('id', id);
 
     if (error) throw error;

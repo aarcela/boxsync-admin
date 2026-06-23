@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save } from 'lucide-react';
 import { useToast } from './Toast';
-import { AthletePlan, InscriptionPlan } from '../lib/types/gym';
+import { AthletePlan, InscriptionPlan, MembershipPlan } from '../lib/types/gym';
 import { supabase } from '@/lib/supabase';
 import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
+import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { useLanguage } from './LanguageContext';
 
 const inputClass =
@@ -25,13 +26,15 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
   const [fetching, setFetching] = useState(false);
   const [callerRole, setCallerRole] = useState<string | null>(null);
   const [loadedUserRole, setLoadedUserRole] = useState<string | null>(null);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
     phone: '',
-    password: '', // Optional - only update if provided
+    password: '',
     role: 'member' as 'member' | 'coach' | 'manager' | 'admin',
-    plan: 'unlimited' as AthletePlan,
+    plan: '' as AthletePlan,
     inscription_plan: 'standard' as InscriptionPlan,
     inscription_paid: false,
     discount: '',
@@ -43,9 +46,10 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     if (isOpen && userId) {
       fetchUserData();
     } else if (!isOpen) {
-      setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: 'unlimited', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
+      setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: '', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
       setLoadedUserRole(null);
       setCallerRole(null);
+      setMembershipPlans([]);
     }
   }, [isOpen, userId]);
 
@@ -56,19 +60,32 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
       if (!user) return;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .single();
       setCallerRole(profile?.role ?? null);
+
+      if (profile?.tenant_id) {
+        setPlansLoading(true);
+        try {
+          const plans = await membershipPlanService.getActiveMembershipPlans(profile.tenant_id);
+          setMembershipPlans(plans);
+        } catch (error) {
+          console.error(error);
+          toast(t('Failed to load membership plans'), 'error');
+        } finally {
+          setPlansLoading(false);
+        }
+      }
     };
     loadCallerRole();
-  }, [isOpen]);
+  }, [isOpen, toast, t]);
 
   useEffect(() => {
     if (isStaffProfileRole(formData.role)) {
-      setFormData(prev => ({ ...prev, plan: 'unlimited' }));
+      setFormData(prev => ({ ...prev, plan: membershipPlans[0]?.id ?? prev.plan }));
     }
-  }, [formData.role]);
+  }, [formData.role, membershipPlans]);
 
   useEffect(() => {
     if (callerRole !== 'admin' && formData.role === 'admin' && loadedUserRole !== 'admin') {
@@ -96,7 +113,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         phone: data.phone || '',
         password: '', // Don't pre-fill password
         role: userRole,
-        plan: data.plan || 'unlimited',
+        plan: data.plan || membershipPlans[0]?.id || '',
         inscription_plan: data.inscription_plan || 'standard',
         inscription_paid: data.inscription_paid ?? false,
         discount: data.discount !== null ? String(data.discount) : '',
@@ -283,15 +300,15 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 </label>
                 <select
                   value={formData.plan}
-                  onChange={e => setFormData({...formData, plan: e.target.value as AthletePlan})}
+                  onChange={e => setFormData({...formData, plan: e.target.value})}
+                  disabled={plansLoading || membershipPlans.length === 0}
                   className={inputClass}
                 >
-                  <option value="unlimited">Unlimited</option>
-                  <option value="3x_week">3x / Week</option>
-                  <option value="4x_week">4x / Week</option>
-                  <option value="5x_week">5x / Week</option>
-                  <option value="open_box">Open Box</option>
-                  <option value="crossfit_kids">CrossFit Kids</option>
+                  {membershipPlans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}

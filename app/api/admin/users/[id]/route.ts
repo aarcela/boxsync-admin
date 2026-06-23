@@ -1,9 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
+import { buildPlanChangeFields } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
 
-// Initialize the Admin Client (Bypasses RLS)
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveUnlimitedPlanId(tenantId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .or('limit_type.eq.none,limit_type.is.null')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data?.id) return data.id;
+
+  const { data: legacy, error: legacyError } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .is('weekly_limit', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (legacyError) throw legacyError;
+  return legacy?.id ?? null;
+}
+
+async function validatePlanForTenant(tenantId: string, planId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('id', planId)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data?.id;
+}
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -108,7 +152,7 @@ export async function PUT(
 
     const { data: existingProfile, error: existingError } = await supabaseAdmin
       .from('profiles')
-      .select('role')
+      .select('role, plan, tenant_id')
       .eq('id', id)
       .single();
 
@@ -153,6 +197,7 @@ export async function PUT(
       phone?: string;
       role: string;
       plan?: string;
+      plan_period_start?: string;
       inscription_plan?: string;
       inscription_paid?: boolean;
       is_solvent?: boolean;
@@ -165,11 +210,35 @@ export async function PUT(
       role: role || 'member'
     };
 
-    // Set plan: 'unlimited' for coaches/managers/admins, or the provided plan for members
+    const tenantId = existingProfile.tenant_id as string | null;
+
     if (role === 'coach' || role === 'manager' || role === 'admin') {
-      profileUpdateData.plan = 'unlimited';
+      if (tenantId) {
+        const unlimitedPlanId = await resolveUnlimitedPlanId(tenantId);
+        if (unlimitedPlanId) {
+          profileUpdateData.plan = unlimitedPlanId;
+        }
+      }
     } else if (plan) {
-      profileUpdateData.plan = plan;
+      if (tenantId && UUID_RE.test(plan)) {
+        const valid = await validatePlanForTenant(tenantId, plan);
+        if (!valid) {
+          return NextResponse.json(
+            { error: 'Invalid membership plan for this tenant.' },
+            { status: 400 }
+          );
+        }
+      }
+
+      if (plan !== existingProfile?.plan) {
+        const planFields = await buildPlanChangeFields(supabaseAdmin, plan, tenantId ?? undefined);
+        profileUpdateData.plan = planFields.plan;
+        if (planFields.plan_period_start) {
+          profileUpdateData.plan_period_start = planFields.plan_period_start;
+        }
+      } else {
+        profileUpdateData.plan = plan;
+      }
     }
 
     if (inscription_plan) {

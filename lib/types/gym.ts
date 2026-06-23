@@ -20,6 +20,8 @@ export interface PaymentMethod {
   created_at: string;
 }
 
+export type PlanLimitType = 'weekly' | 'period' | 'none';
+
 export interface MembershipPlan {
   id: string;
   name: string;
@@ -27,8 +29,15 @@ export interface MembershipPlan {
   description: string | null;
   is_active: boolean;
   weekly_limit: number | null;
+  limit_type: PlanLimitType;
+  session_limit: number | null;
+  validity_days: number | null;
   tenant_id: string;
   created_at: string;
+}
+
+export interface MembershipPlanWithUsage extends MembershipPlan {
+  member_count: number;
 }
 
 export type MembershipPlanInput = Omit<MembershipPlan, 'id' | 'created_at' | 'tenant_id'>;
@@ -40,6 +49,9 @@ export const DEFAULT_UNLIMITED_MEMBERSHIP_PLAN: MembershipPlanInput = {
   description: null,
   is_active: true,
   weekly_limit: null,
+  limit_type: 'none',
+  session_limit: null,
+  validity_days: null,
 };
 
 export interface PaymentRecord {
@@ -87,7 +99,8 @@ export interface Booking {
   };
 }
 
-export type AthletePlan = 'unlimited' | '3x_week' | '4x_week' | '5x_week' | 'open_box' | 'crossfit_kids';
+/** Legacy slug values; athletes now use membership_plans.id (UUID). */
+export type AthletePlan = string;
 export type InscriptionPlan = 'standard' | 'promo' | 're-entry' | 'founder';
 
 export interface Profile {
@@ -100,6 +113,7 @@ export interface Profile {
   role: 'member' | 'coach' | 'manager' | 'admin';
   is_solvent: boolean;
   plan: AthletePlan;
+  plan_period_start?: string | null;
   plan_name?: string;
   inscription_plan: InscriptionPlan;
   inscription_paid: boolean;

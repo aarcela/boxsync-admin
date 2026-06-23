@@ -9,7 +9,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
-import { Profile } from '@/lib/types/gym';
+import { Profile, MembershipPlan } from '@/lib/types/gym';
+import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabase } from '@/lib/supabase';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
@@ -50,6 +51,7 @@ export default function AthletesPage() {
 
   const [callerRole, setCallerRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const isAdmin = callerRole === 'admin';
 
   useEffect(() => {
@@ -61,11 +63,20 @@ export default function AthletesPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, tenant_id')
         .eq('id', user.id)
         .single();
 
       setCallerRole(profile?.role ?? null);
+
+      if (profile?.tenant_id) {
+        try {
+          const plans = await membershipPlanService.getActiveMembershipPlans(profile.tenant_id);
+          setMembershipPlans(plans);
+        } catch (error) {
+          console.error(error);
+        }
+      }
     };
 
     loadContext();
@@ -98,6 +109,17 @@ export default function AthletesPage() {
     profile: Profile | null;
   }>({ isOpen: false, profile: null });
 
+  const [planConfirm, setPlanConfirm] = useState<{
+    isOpen: boolean;
+    profileId: string;
+    profileName: string;
+    currentPlanId: string;
+    newPlanId: string;
+  }>({ isOpen: false, profileId: '', profileName: '', currentPlanId: '', newPlanId: '' });
+
+  const planLabel = (planId: string) =>
+    membershipPlans.find((p) => p.id === planId)?.name ?? planId.replace(/_/g, ' ');
+
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
     const { profileId: id, currentSolvency: currentStatus } = confirmConfig;
@@ -121,6 +143,14 @@ export default function AthletesPage() {
     const profile = deleteConfirm.profile;
     setDeleteConfirm({ isOpen: false, profile: null });
     if (profile) await deleteAthlete(profile);
+  };
+
+  const executePlanChange = async () => {
+    const { profileId, newPlanId, currentPlanId } = planConfirm;
+    setPlanConfirm((prev) => ({ ...prev, isOpen: false }));
+    if (profileId && newPlanId && newPlanId !== currentPlanId) {
+      await changePlan(profileId, newPlanId);
+    }
   };
 
   return (
@@ -275,17 +305,30 @@ export default function AthletesPage() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <select
-                          value={profile.plan || 'unlimited'}
-                          onChange={(e) => changePlan(profile.id, e.target.value)}
+                          value={profile.plan || ''}
+                          disabled={membershipPlans.length === 0}
+                          onChange={(e) => {
+                            const newPlanId = e.target.value;
+                            if (!newPlanId || newPlanId === profile.plan) return;
+                            setPlanConfirm({
+                              isOpen: true,
+                              profileId: profile.id,
+                              profileName: profile.full_name || t('Unnamed'),
+                              currentPlanId: profile.plan || '',
+                              newPlanId,
+                            });
+                          }}
                           onClick={(e) => e.stopPropagation()}
-                          className="bg-transparent border-none text-pits-text text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors"
+                          className="bg-transparent border-none text-pits-text text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <option value="unlimited">Unlimited</option>
-                          <option value="3x_week">3x / Week</option>
-                          <option value="4x_week">4x / Week</option>
-                          <option value="5x_week">5x / Week</option>
-                          <option value="open_box">Open Box</option>
-                          <option value="crossfit_kids">Kids</option>
+                          {profile.plan && !membershipPlans.some((p) => p.id === profile.plan) && (
+                            <option value={profile.plan}>{planLabel(profile.plan)}</option>
+                          )}
+                          {membershipPlans.map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.name}
+                            </option>
+                          ))}
                         </select>
                         <div className="flex items-center gap-1">
                           <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
@@ -582,6 +625,19 @@ export default function AthletesPage() {
         variant="danger"
         onConfirm={executeDeleteAthlete}
         onCancel={() => setDeleteConfirm({ isOpen: false, profile: null })}
+      />
+
+      <ConfirmDialog
+        isOpen={planConfirm.isOpen}
+        title={t('Change plan')}
+        message={t('Change plan confirm message', {
+          name: planConfirm.profileName,
+          from: planLabel(planConfirm.currentPlanId),
+          to: planLabel(planConfirm.newPlanId),
+        })}
+        confirmLabel={t('Change plan')}
+        onConfirm={executePlanChange}
+        onCancel={() => setPlanConfirm((prev) => ({ ...prev, isOpen: false }))}
       />
 
     </div>

@@ -187,12 +187,8 @@ export async function POST(request: Request) {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .upsert({
-        id: user.user.id,
-        email,
-        full_name,
-        ...profileUpdate,
-      })
+      .update({ full_name, ...profileUpdate })
+      .eq('id', user.user.id)
       .select('id, tenant_id, role, plan')
       .single();
 

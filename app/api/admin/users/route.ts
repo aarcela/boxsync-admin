@@ -6,6 +6,7 @@ import {
 } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { buildPlanChangeFields } from '@/lib/plan-period';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
@@ -40,13 +41,26 @@ async function resolvePlanIdForTenant(
     .select('id')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
-    .is('weekly_limit', null)
+    .or('limit_type.eq.none,limit_type.is.null')
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (unlimitedError) throw unlimitedError;
-  return unlimitedPlan?.id ?? null;
+  if (unlimitedPlan?.id) return unlimitedPlan.id;
+
+  const { data: legacyUnlimited, error: legacyError } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .is('weekly_limit', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (legacyError) throw legacyError;
+  return legacyUnlimited?.id ?? null;
 }
 
 export async function POST(request: Request) {
@@ -163,12 +177,13 @@ export async function POST(request: Request) {
       is_solvent: boolean;
       tenant_id: string;
       plan?: string;
+      plan_period_start?: string;
       inscription_plan: string;
       inscription_cost: number;
       inscription_paid: boolean;
       discount?: number | null;
       phone?: string;
-    } = { 
+    } = {
       role: role || 'member',
       is_solvent: true,
       tenant_id: tenantId,
@@ -199,6 +214,11 @@ export async function POST(request: Request) {
     }
 
     profileUpdate.plan = planId;
+
+    const planFields = await buildPlanChangeFields(supabaseAdmin, planId, tenantId);
+    if (planFields.plan_period_start) {
+      profileUpdate.plan_period_start = planFields.plan_period_start;
+    }
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { buildPaymentApprovedProfileUpdate } from '../plan-period';
 import { 
   CurrencyType, 
   PaymentMethod, 
@@ -69,9 +70,11 @@ export const financialService = {
     
     if (payError) throw payError;
 
+    const profileUpdate = await buildPaymentApprovedProfileUpdate(supabase, userId);
+
     const { error: profError } = await supabase
       .from('profiles')
-      .update({ is_solvent: true })
+      .update(profileUpdate)
       .eq('id', userId);
 
     if (profError) throw profError;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Profile, AthletePlan } from '@/lib/types/gym';
 import { athleteService } from '@/lib/services/athleteService';
 import { useToast } from '@/components/Toast';
@@ -26,8 +26,6 @@ export function useAthletes() {
 
   const [sortKey, setSortKey] = useState<SortKey>('full_name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-
-  const planTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
@@ -99,25 +97,26 @@ export function useAthletes() {
     }
   };
 
-  const changePlan = (id: string, newPlan: string) => {
-    setProfiles(prev => prev.map(p =>
-      p.id === id ? { ...p, plan: newPlan as AthletePlan } : p
-    ));
+  const changePlan = async (id: string, newPlan: string) => {
+    const previousPlan = profiles.find((p) => p.id === id)?.plan;
 
-    if (planTimerRef.current[id]) {
-      clearTimeout(planTimerRef.current[id]);
-    }
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, plan: newPlan as AthletePlan } : p))
+    );
 
-    planTimerRef.current[id] = setTimeout(async () => {
-      try {
-        await athleteService.updatePlan(id, newPlan);
-        toast('Plan updated', 'success');
-      } catch {
-        toast('Failed to update plan', 'error');
+    try {
+      await athleteService.updatePlan(id, newPlan);
+      toast('Plan updated', 'success');
+    } catch {
+      toast('Failed to update plan', 'error');
+      if (previousPlan !== undefined) {
+        setProfiles((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, plan: previousPlan } : p))
+        );
+      } else {
         fetchProfiles();
       }
-      delete planTimerRef.current[id];
-    }, 1500);
+    }
   };
 
   const resendWelcomeInvite = async (profile: Profile) => {
