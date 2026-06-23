@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import {
-  getMobilePasswordResetRedirectUrl,
   getPasswordResetRedirectUrl,
   isStaffRole,
 } from '@/lib/auth';
@@ -9,6 +8,8 @@ import {
   isPasswordResetEmailConfigured,
   sendPasswordResetEmail,
 } from '@/lib/email/passwordResetEmail';
+import { createMobilePasswordResetLink } from '@/lib/mobile-password-reset';
+import { MOBILE_RESET_PASSWORD_DEEP_LINK } from '@/lib/constants/app-links';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
 
@@ -50,20 +51,8 @@ async function sendMobilePasswordReset(params: {
   fullName: string;
   language: Language;
 }): Promise<void> {
-  const redirectTo = getMobilePasswordResetRedirectUrl();
-
   if (isPasswordResetEmailConfigured()) {
-    const { data: linkData, error: linkError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email: params.email,
-        options: { redirectTo },
-      });
-
-    if (linkError) throw linkError;
-
-    const resetLink = linkData.properties?.action_link;
-    if (!resetLink) throw new Error('Failed to generate password reset link');
+    const resetLink = await createMobilePasswordResetLink(params.email);
 
     await sendPasswordResetEmail({
       to: params.email,
@@ -75,7 +64,7 @@ async function sendMobilePasswordReset(params: {
   }
 
   const { error } = await supabaseAdmin.auth.resetPasswordForEmail(params.email, {
-    redirectTo,
+    redirectTo: MOBILE_RESET_PASSWORD_DEEP_LINK,
   });
   if (error) throw error;
 }

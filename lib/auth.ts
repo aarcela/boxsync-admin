@@ -1,4 +1,5 @@
 import type { TranslationKey } from './translations';
+import { MOBILE_RESET_PASSWORD_DEEP_LINK } from '@/lib/constants/app-links';
 
 export const STAFF_ROLES = ['admin', 'manager'] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
@@ -26,9 +27,9 @@ export function getPasswordResetRedirectUrl(_request: Request): string {
   return getAuthCallbackRedirectUrl('/reset-password');
 }
 
-/** Mobile app reset — lands on public auth/confirm, then deep-links into the app. */
+/** Supabase redirect_to for mobile recovery emails. */
 export function getMobilePasswordResetRedirectUrl(): string {
-  return `${getPublicSiteOrigin()}/auth/confirm`;
+  return MOBILE_RESET_PASSWORD_DEEP_LINK;
 }
 
 export function getMemberInviteRedirectUrl(_request: Request): string {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getPasswordResetRedirectUrl } from '@/lib/auth';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { sendPasswordResetEmail } from '@/lib/email/passwordResetEmail';
+import { createMobilePasswordResetLink } from '@/lib/mobile-password-reset';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
 
@@ -68,21 +68,7 @@ export async function POST(
       );
     }
 
-    const { data: linkData, error: linkError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: {
-          redirectTo: getPasswordResetRedirectUrl(request),
-        },
-      });
-
-    if (linkError) throw linkError;
-
-    const resetLink = linkData.properties?.action_link;
-    if (!resetLink) {
-      throw new Error('Failed to generate password reset link');
-    }
+    const resetLink = await createMobilePasswordResetLink(email);
 
     try {
       await sendPasswordResetEmail({
