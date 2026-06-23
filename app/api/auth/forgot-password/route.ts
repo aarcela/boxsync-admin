@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
-import { getPasswordResetRedirectUrl, isStaffRole } from '@/lib/auth';
+import {
+  getMobilePasswordResetRedirectUrl,
+  getPasswordResetRedirectUrl,
+  isStaffRole,
+} from '@/lib/auth';
+import {
+  isPasswordResetEmailConfigured,
+  sendPasswordResetEmail,
+} from '@/lib/email/passwordResetEmail';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import type { Language } from '@/lib/translations';
 
 const SUCCESS_MESSAGE =
   'If an account exists for this email, we sent reset instructions.';
@@ -36,34 +45,83 @@ async function findUserByEmail(email: string): Promise<User | null> {
   }
 }
 
+async function sendMobilePasswordReset(params: {
+  email: string;
+  fullName: string;
+  language: Language;
+}): Promise<void> {
+  const redirectTo = getMobilePasswordResetRedirectUrl();
+
+  if (isPasswordResetEmailConfigured()) {
+    const { data: linkData, error: linkError } =
+      await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: params.email,
+        options: { redirectTo },
+      });
+
+    if (linkError) throw linkError;
+
+    const resetLink = linkData.properties?.action_link;
+    if (!resetLink) throw new Error('Failed to generate password reset link');
+
+    await sendPasswordResetEmail({
+      to: params.email,
+      fullName: params.fullName,
+      resetLink,
+      language: params.language,
+    });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.auth.resetPasswordForEmail(params.email, {
+    redirectTo,
+  });
+  if (error) throw error;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const rawEmail = typeof body?.email === 'string' ? body.email : '';
     const email = rawEmail.trim().toLowerCase();
+    const isMobileClient = body?.client === 'mobile';
+    const language: Language =
+      body?.language === 'es' || body?.language === 'en' ? body.language : 'en';
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ message: SUCCESS_MESSAGE });
     }
 
     const user = await findUserByEmail(email);
+    if (!user) {
+      return NextResponse.json({ message: SUCCESS_MESSAGE });
+    }
 
-    if (user) {
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role, full_name')
+      .eq('id', user.id)
+      .single();
 
-      if (isStaffRole(profile?.role)) {
-        await supabaseAdmin.auth.resetPasswordForEmail(email, {
-          redirectTo: getPasswordResetRedirectUrl(request),
-        });
+    if (isMobileClient) {
+      if (!user.email_confirmed_at) {
+        return NextResponse.json({ message: SUCCESS_MESSAGE });
       }
+
+      const fullName =
+        profile?.full_name?.trim() || user.user_metadata?.full_name || '';
+
+      await sendMobilePasswordReset({ email, fullName, language });
+    } else if (isStaffRole(profile?.role)) {
+      await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: getPasswordResetRedirectUrl(request),
+      });
     }
 
     return NextResponse.json({ message: SUCCESS_MESSAGE });
-  } catch {
+  } catch (error) {
+    console.error('Forgot password error:', error);
     return NextResponse.json({ message: SUCCESS_MESSAGE });
   }
 }

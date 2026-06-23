@@ -26,6 +26,11 @@ export function getPasswordResetRedirectUrl(_request: Request): string {
   return getAuthCallbackRedirectUrl('/reset-password');
 }
 
+/** Mobile app reset — lands on public auth/confirm, then deep-links into the app. */
+export function getMobilePasswordResetRedirectUrl(): string {
+  return `${getPublicSiteOrigin()}/auth/confirm`;
+}
+
 export function getMemberInviteRedirectUrl(_request: Request): string {
   return getAuthCallbackRedirectUrl('/welcome');
 }
