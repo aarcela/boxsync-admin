@@ -26,10 +26,15 @@ import {
   Trophy,
   Tags,
   Banknote,
-  Receipt
+  Receipt,
+  Clock
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
+import { useToast } from '@/components/Toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import Tooltip from '@/components/Tooltip';
+import { financialService } from '@/lib/services/financialService';
 import Image from 'next/image';
 
 type NavSubItem = {
@@ -59,9 +64,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     () => typeof window !== 'undefined' && window.innerWidth >= 1024
   );
   const { lang, setLanguage, t } = useLanguage();
+  const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(null);
+  const [runningExpiry, setRunningExpiry] = useState(false);
+  const [confirmExpiryOpen, setConfirmExpiryOpen] = useState(false);
+
+  const runExpiry = async () => {
+    setRunningExpiry(true);
+    try {
+      const res = await financialService.runExpiryCheck();
+      toast(res.message, 'info');
+    } catch {
+      toast('Expiry sync error.', 'error');
+    } finally {
+      setRunningExpiry(false);
+    }
+  };
 
   const userInitials = (() => {
     if (!userFullName?.trim()) return 'AD';
@@ -339,18 +359,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
             </div>
           </div>
-          
-          <Link
-            href="/dashboard/profile"
-            className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
-          >
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Tooltip content={t('Sync solvency expiry tip')}>
+              <button
+                type="button"
+                onClick={() => setConfirmExpiryOpen(true)}
+                disabled={runningExpiry}
+                className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors border border-pits-shell-edge disabled:opacity-50"
+              >
+                <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">
+                  {t('Run Expiry Sync')}
+                </span>
+              </button>
+            </Tooltip>
+
+            <Link
+              href="/dashboard/profile"
+              className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
+            >
             <div className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
               {userInitials}
             </div>
             <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
               {userFullName || t('Admin')}
             </span>
-          </Link>
+            </Link>
+          </div>
         </header>
 
         {/* Scrollable Page Content */}
@@ -359,6 +395,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
+      <ConfirmDialog
+        isOpen={confirmExpiryOpen}
+        title={t('Operational Halt?')}
+        message={t('Expiry warning message')}
+        confirmLabel={t('EXECUTE')}
+        variant="warning"
+        onConfirm={async () => {
+          setConfirmExpiryOpen(false);
+          await runExpiry();
+        }}
+        onCancel={() => setConfirmExpiryOpen(false)}
+      />
     </div>
   );
 }
