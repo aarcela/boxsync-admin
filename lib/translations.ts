@@ -469,6 +469,19 @@ export const translations = {
     'Staff': 'Staff',
     'Class deleted successfully': 'Class deleted successfully',
     'Could not delete class': 'Could not delete class',
+    'Classes updated successfully': 'Classes updated successfully',
+    'Apply changes': 'Apply changes',
+    'No change': 'No change',
+    'Failed to load schedule': 'Failed to load schedule',
+    Clear: 'Clear',
+    'Previous week': 'Previous week',
+    'Next week': 'Next week',
+    'Click a slot to schedule · Ctrl+click to multi-select':
+      'Click a slot to schedule · Ctrl+click to multi-select',
+    'Click a slot to schedule · Use checkboxes to multi-select':
+      'Click a slot to schedule · Use checkboxes to multi-select',
+    'Class date': 'Class date',
+    'Delete selected classes?': 'Delete selected classes?',
 
     // Attendance Page
     'Daily Attendance': 'Daily Attendance',
@@ -1443,6 +1456,19 @@ export const translations = {
     'Staff': 'Personal',
     'Class deleted successfully': 'Clase eliminada con éxito',
     'Could not delete class': 'No se pudo eliminar la clase',
+    'Classes updated successfully': 'Clases actualizadas con éxito',
+    'Apply changes': 'Aplicar cambios',
+    'No change': 'Sin cambios',
+    'Failed to load schedule': 'Error al cargar el horario',
+    Clear: 'Limpiar',
+    'Previous week': 'Semana anterior',
+    'Next week': 'Semana siguiente',
+    'Click a slot to schedule · Ctrl+click to multi-select':
+      'Haz clic en un horario para programar · Ctrl+clic para multiselección',
+    'Click a slot to schedule · Use checkboxes to multi-select':
+      'Haz clic en un horario para programar · Usa casillas para multiselección',
+    'Class date': 'Fecha de la clase',
+    'Delete selected classes?': '¿Eliminar las clases seleccionadas?',
 
     // Attendance Page
     'Daily Attendance': 'Asistencia Diaria',

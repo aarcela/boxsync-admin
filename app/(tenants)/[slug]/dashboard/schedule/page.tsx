@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users } from 'lucide-react';
+import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar } from 'lucide-react';
 import CreateClassModal from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
+import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
+
+type ViewTab = 'list' | 'calendar';
 
 export default function SchedulePage() {
   const { t, lang } = useLanguage();
@@ -23,7 +26,11 @@ export default function SchedulePage() {
   } = useSchedule();
 
   const { toast } = useToast();
+  const [viewTab, setViewTab] = useState<ViewTab>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
+  const [modalInitialTime, setModalInitialTime] = useState<string | undefined>();
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
@@ -38,9 +45,27 @@ export default function SchedulePage() {
     try {
       await deleteClass(classId);
       toast(t('Class deleted successfully'), 'success');
+      setCalendarRefreshKey((k) => k + 1);
     } catch {
       toast(t('Could not delete class'), 'error');
     }
+  };
+
+  const openCreateModal = (date?: string, time?: string) => {
+    setModalInitialDate(date);
+    setModalInitialTime(time);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setModalInitialDate(undefined);
+    setModalInitialTime(undefined);
+  };
+
+  const handleScheduleSuccess = () => {
+    fetchSchedule();
+    setCalendarRefreshKey((k) => k + 1);
   };
 
   return (
@@ -57,7 +82,7 @@ export default function SchedulePage() {
           </p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => openCreateModal()}
           className="flex items-center justify-center px-6 py-3 bg-pits-primary text-pits-dark-text rounded-lg font-black uppercase text-xs tracking-widest shadow-lg shadow-pits-primary/50 hover:bg-pits-primary-dark transition-all"
         >
           <Plus size={18} className="mr-2" />
@@ -65,7 +90,40 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* List */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setViewTab('list')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+            viewTab === 'list'
+              ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
+              : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
+          }`}
+        >
+          <Clock size={14} />
+          {t('Class List')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewTab('calendar')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+            viewTab === 'calendar'
+              ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
+              : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
+          }`}
+        >
+          <Calendar size={14} />
+          {t('Class Calendar')}
+        </button>
+      </div>
+
+      {viewTab === 'calendar' ? (
+        <ScheduleWeekCalendar
+          refreshKey={calendarRefreshKey}
+          onCreateSlot={(date, time) => openCreateModal(date, time)}
+          onClassesChanged={handleScheduleSuccess}
+        />
+      ) : (
       <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">{t('Loading schedule...')}</div>
@@ -212,11 +270,14 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
+      )}
 
       <CreateClassModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={fetchSchedule}
+        onClose={handleModalClose}
+        onSuccess={handleScheduleSuccess}
+        initialDate={modalInitialDate}
+        initialTime={modalInitialTime}
       />
 
       {isDetailsModalOpen && selectedClassId && (

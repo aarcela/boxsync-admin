@@ -9,6 +9,8 @@ interface CreateClassModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialDate?: string;
+  initialTime?: string;
 }
 
 interface Coach {
@@ -29,7 +31,13 @@ const DAYS_OF_WEEK = [
   { label: 'S', value: 0 },
 ];
 
-export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateClassModalProps) {
+export default function CreateClassModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialDate,
+  initialTime,
+}: CreateClassModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -47,6 +55,13 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [untilDate, setUntilDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialDate) setDate(initialDate);
+      if (initialTime) setTime(initialTime);
+    }
+  }, [isOpen, initialDate, initialTime]);
 
   useEffect(() => {
     const fetchCoaches = async () => {

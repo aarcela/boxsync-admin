@@ -2,6 +2,20 @@ import { supabase } from '../supabase';
 import { ClassSession, Booking, BookingStatus } from '../types/gym';
 import { getCaracasDayRange, getCaracasDate } from '../utils/date';
 
+export type ClassUpdateFields = {
+  coach_id?: string | null;
+  class_type?: string;
+  max_capacity?: number;
+  start_time?: string;
+  end_time?: string;
+};
+
+const classSelect = `
+  *,
+  coach:profiles(full_name),
+  bookings:bookings(count)
+`;
+
 export const classService = {
   /**
    * Fetches classes for a specific date (YYYY-MM-DD)
@@ -11,11 +25,7 @@ export const classService = {
     
     const { data, error } = await supabase
       .from('classes')
-      .select(`
-        *,
-        coach:profiles(full_name),
-        bookings:bookings(count)
-      `)
+      .select(classSelect)
       .gte('start_time', startUtc)
       .lte('start_time', endUtc)
       .order('start_time', { ascending: true });
@@ -33,16 +43,35 @@ export const classService = {
     
     const { data, error } = await supabase
       .from('classes')
-      .select(`
-        *,
-        coach:profiles(full_name),
-        bookings:bookings(count)
-      `)
+      .select(classSelect)
       .gte('start_time', startUtc)
       .order('start_time', { ascending: true });
 
     if (error) throw error;
     return data as ClassSession[];
+  },
+
+  async getClassesByRange(startUtc: string, endUtc: string): Promise<ClassSession[]> {
+    const { data, error } = await supabase
+      .from('classes')
+      .select(classSelect)
+      .gte('start_time', startUtc)
+      .lte('start_time', endUtc)
+      .order('start_time', { ascending: true });
+
+    if (error) throw error;
+    return data as ClassSession[];
+  },
+
+  async updateClass(id: string, updates: ClassUpdateFields): Promise<void> {
+    const { error } = await supabase.from('classes').update(updates).eq('id', id);
+    if (error) throw error;
+  },
+
+  async bulkUpdateClasses(ids: string[], updates: ClassUpdateFields): Promise<void> {
+    if (ids.length === 0) return;
+    const { error } = await supabase.from('classes').update(updates).in('id', ids);
+    if (error) throw error;
   },
 
   /**
