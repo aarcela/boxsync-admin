@@ -111,3 +111,94 @@ export async function sendWelcomeWhatsApp(params: {
   });
   await sendWhatsAppMessage(params.phone, body);
 }
+
+export function buildExpiryReminderMessage(params: {
+  fullName: string;
+  language: Language;
+  expiryDate?: Date | null;
+  planName?: string;
+  isExpired?: boolean;
+}): string {
+  const firstName = params.fullName.trim().split(/\s+/)[0] || params.fullName;
+  const dateLabel = params.expiryDate
+    ? params.expiryDate.toLocaleDateString(params.language === 'es' ? 'es-ES' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+
+  if (params.language === 'es') {
+    if (params.isExpired) {
+      return [
+        `Hola ${firstName}! 👋`,
+        '',
+        dateLabel
+          ? `Tu membresía${params.planName ? ` (${params.planName})` : ''} venció el ${dateLabel}.`
+          : `Tu membresía${params.planName ? ` (${params.planName})` : ''} ha vencido.`,
+        '',
+        'Renueva tu plan para seguir reservando clases y mantener tu acceso al box.',
+        '',
+        'Si ya pagaste, envíanos el comprobante para reactivarte de inmediato.',
+        '',
+        '¡Te esperamos! 💪',
+      ].join('\n');
+    }
+
+    return [
+      `Hola ${firstName}! 👋`,
+      '',
+      dateLabel
+        ? `Te recordamos que tu membresía${params.planName ? ` (${params.planName})` : ''} vence el ${dateLabel}.`
+        : `Te recordamos que tu membresía${params.planName ? ` (${params.planName})` : ''} está por vencer.`,
+      '',
+      'Renueva a tiempo para no perder acceso a reservas.',
+      '',
+      'Si ya pagaste, envíanos el comprobante para mantener tu cuenta activa.',
+      '',
+      '¡Nos vemos en el box! 💪',
+    ].join('\n');
+  }
+
+  if (params.isExpired) {
+    return [
+      `Hi ${firstName}! 👋`,
+      '',
+      dateLabel
+        ? `Your membership${params.planName ? ` (${params.planName})` : ''} expired on ${dateLabel}.`
+        : `Your membership${params.planName ? ` (${params.planName})` : ''} has expired.`,
+      '',
+      'Renew your plan to keep booking classes and maintain box access.',
+      '',
+      'If you already paid, send us your proof of payment so we can reactivate your account.',
+      '',
+      'See you at the box! 💪',
+    ].join('\n');
+  }
+
+  return [
+    `Hi ${firstName}! 👋`,
+    '',
+    dateLabel
+      ? `This is a reminder that your membership${params.planName ? ` (${params.planName})` : ''} expires on ${dateLabel}.`
+      : `This is a reminder that your membership${params.planName ? ` (${params.planName})` : ''} is expiring soon.`,
+    '',
+    'Renew on time to avoid losing booking access.',
+    '',
+    'If you already paid, send us your proof of payment to keep your account active.',
+    '',
+    'See you at the box! 💪',
+  ].join('\n');
+}
+
+export async function sendExpiryReminderWhatsApp(params: {
+  phone: string;
+  fullName: string;
+  language: Language;
+  expiryDate?: Date | null;
+  planName?: string;
+  isExpired?: boolean;
+}): Promise<void> {
+  const body = buildExpiryReminderMessage(params);
+  await sendWhatsAppMessage(params.phone, body);
+}

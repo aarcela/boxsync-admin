@@ -19,6 +19,7 @@ export function useAthletes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [sendingResetId, setSendingResetId] = useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -212,6 +213,52 @@ export function useAthletes() {
     }
   };
 
+  const sendExpiryReminder = async (profile: Profile) => {
+    if (profile.role !== 'member') {
+      toast(t('Only members can receive expiry reminders.'), 'warning');
+      return;
+    }
+
+    if (!profile.phone?.trim()) {
+      toast(t('Member has no phone number on file.'), 'error');
+      return;
+    }
+
+    setSendingReminderId(profile.id);
+    try {
+      const response = await fetch(`/api/admin/users/${profile.id}/send-expiry-reminder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const apiError =
+          data.error === 'Member has no phone number on file.'
+            ? t('Member has no phone number on file.')
+            : data.error === 'Only members can receive expiry reminders.'
+              ? t('Only members can receive expiry reminders.')
+              : data.error;
+        throw new Error(apiError || t('Failed to send expiry reminder'));
+      }
+
+      if (data.reminderSent) {
+        toast(
+          t('Expiry reminder sent to {{name}}', { name: profile.full_name || t('Unnamed') }),
+          'success'
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('Failed to send expiry reminder');
+      toast(message, 'error');
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   const deleteAthlete = async (profile: Profile) => {
     setDeletingId(profile.id);
     try {
@@ -300,6 +347,8 @@ export function useAthletes() {
     resendingInviteId,
     sendPasswordReset,
     sendingResetId,
+    sendExpiryReminder,
+    sendingReminderId,
     deleteAthlete,
     deletingId,
     refresh: fetchProfiles

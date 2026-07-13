@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound, MoreVertical, Clock } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -19,6 +20,9 @@ function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: Sort
     ? <ChevronUp size={12} className="ml-1 text-pits-red" />
     : <ChevronDown size={12} className="ml-1 text-pits-red" />;
 }
+
+const ACTION_MENU_WIDTH = 220;
+const ACTION_MENU_ITEM_HEIGHT = 40;
 
 export default function AthletesPage() {
   const router = useRouter();
@@ -44,6 +48,8 @@ export default function AthletesPage() {
     resendingInviteId,
     sendPasswordReset,
     sendingResetId,
+    sendExpiryReminder,
+    sendingReminderId,
     deleteAthlete,
     deletingId,
     refresh
@@ -109,6 +115,90 @@ export default function AthletesPage() {
     profile: Profile | null;
   }>({ isOpen: false, profile: null });
 
+  const [reminderConfirm, setReminderConfirm] = useState<{
+    isOpen: boolean;
+    profile: Profile | null;
+  }>({ isOpen: false, profile: null });
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const openMenuProfile = openMenuId
+    ? profiles.find((profile) => profile.id === openMenuId) ?? null
+    : null;
+
+  const getActionMenuItemCount = useCallback((profile: Profile) => {
+    let count = 1;
+    if (profile.role === 'member') {
+      count += 1;
+      if (profile.invite_pending || profile.email) count += 1;
+    }
+    if (isAdmin && profile.id !== currentUserId) count += 1;
+    return count;
+  }, [isAdmin, currentUserId]);
+
+  const updateMenuPosition = useCallback((profileId: string) => {
+    const button = menuButtonRefs.current[profileId];
+    const profile = profiles.find((item) => item.id === profileId);
+    if (!button || !profile) return;
+
+    const rect = button.getBoundingClientRect();
+    const menuHeight = getActionMenuItemCount(profile) * ACTION_MENU_ITEM_HEIGHT + 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < menuHeight + 8 && spaceAbove > spaceBelow;
+    const top = openUp ? rect.top - menuHeight - 4 : rect.bottom + 4;
+    const left = Math.max(
+      8,
+      Math.min(rect.right - ACTION_MENU_WIDTH, window.innerWidth - ACTION_MENU_WIDTH - 8)
+    );
+
+    setMenuPosition({ top, left });
+  }, [profiles, getActionMenuItemCount]);
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+    setMenuPosition(null);
+  };
+
+  const toggleMenu = (profileId: string) => {
+    if (openMenuId === profileId) {
+      closeMenu();
+      return;
+    }
+    setOpenMenuId(profileId);
+  };
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    updateMenuPosition(openMenuId);
+  }, [openMenuId, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (menuButtonRefs.current[openMenuId]?.contains(target)) return;
+      closeMenu();
+    };
+
+    const handleReposition = () => updateMenuPosition(openMenuId);
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleReposition, true);
+    window.addEventListener('resize', handleReposition);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleReposition, true);
+      window.removeEventListener('resize', handleReposition);
+    };
+  }, [openMenuId, updateMenuPosition]);
+
   const [planConfirm, setPlanConfirm] = useState<{
     isOpen: boolean;
     profileId: string;
@@ -143,6 +233,12 @@ export default function AthletesPage() {
     const profile = deleteConfirm.profile;
     setDeleteConfirm({ isOpen: false, profile: null });
     if (profile) await deleteAthlete(profile);
+  };
+
+  const executeSendExpiryReminder = async () => {
+    const profile = reminderConfirm.profile;
+    setReminderConfirm({ isOpen: false, profile: null });
+    if (profile) await sendExpiryReminder(profile);
   };
 
   const executePlanChange = async () => {
@@ -441,69 +537,22 @@ export default function AthletesPage() {
 
                     {/* ACTIONS */}
                     <td className="px-6 py-4 text-right">
-                       <div className="flex items-center justify-end gap-1">
-                        {profile.role === 'member' && profile.invite_pending && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setInviteConfirm({ isOpen: true, profile });
-                            }}
-                            disabled={resendingInviteId === profile.id}
-                            className="p-2 text-pits-dim hover:text-pits-primary hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={t('Resend welcome invite')}
-                          >
-                            {resendingInviteId === profile.id ? (
-                              <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                              <Mail size={18} />
-                            )}
-                          </button>
-                        )}
-                        {profile.role === 'member' && !profile.invite_pending && profile.email && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setResetConfirm({ isOpen: true, profile });
-                            }}
-                            disabled={sendingResetId === profile.id}
-                            className="p-2 text-pits-dim hover:text-pits-primary hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={t('Send password reset')}
-                          >
-                            {sendingResetId === profile.id ? (
-                              <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                              <KeyRound size={18} />
-                            )}
-                          </button>
-                        )}
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedUserId(profile.id);
-                            setIsEditModalOpen(true);
+                      <div
+                        className="inline-flex items-center justify-end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          ref={(element) => {
+                            menuButtonRefs.current[profile.id] = element;
                           }}
+                          onClick={() => toggleMenu(profile.id)}
                           className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
-                          title={t('Edit athlete')}
+                          title={t('More actions')}
+                          aria-label={t('More actions')}
+                          aria-expanded={openMenuId === profile.id}
                         >
-                          <Edit2 size={18} />
+                          <MoreVertical size={18} />
                         </button>
-                        {isAdmin && profile.id !== currentUserId && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm({ isOpen: true, profile });
-                            }}
-                            disabled={deletingId === profile.id}
-                            className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={t('Delete athlete')}
-                          >
-                            {deletingId === profile.id ? (
-                              <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                              <Trash2 size={18} />
-                            )}
-                          </button>
-                        )}
                       </div>
                     </td>
 
@@ -616,6 +665,17 @@ export default function AthletesPage() {
       />
 
       <ConfirmDialog
+        isOpen={reminderConfirm.isOpen}
+        title={t('Send expiry reminder')}
+        message={t('Send expiry reminder confirm message', {
+          name: reminderConfirm.profile?.full_name || t('Unnamed'),
+        })}
+        confirmLabel={t('Send Reminder')}
+        onConfirm={executeSendExpiryReminder}
+        onCancel={() => setReminderConfirm({ isOpen: false, profile: null })}
+      />
+
+      <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title={t('Delete athlete')}
         message={t('Delete athlete confirm message', {
@@ -639,6 +699,95 @@ export default function AthletesPage() {
         onConfirm={executePlanChange}
         onCancel={() => setPlanConfirm((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {openMenuProfile && menuPosition && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          style={{ top: menuPosition.top, left: menuPosition.left, width: ACTION_MENU_WIDTH }}
+          className="fixed z-200 rounded-xl border border-pits-edge bg-pits-surface-elevated shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-150"
+        >
+          {openMenuProfile.role === 'member' && openMenuProfile.invite_pending && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setInviteConfirm({ isOpen: true, profile: openMenuProfile });
+              }}
+              disabled={resendingInviteId === openMenuProfile.id}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
+            >
+              {resendingInviteId === openMenuProfile.id ? (
+                <Loader2 size={14} className="animate-spin shrink-0" />
+              ) : (
+                <Mail size={14} className="shrink-0 text-pits-dim" />
+              )}
+              {t('Resend welcome invite')}
+            </button>
+          )}
+          {openMenuProfile.role === 'member' && !openMenuProfile.invite_pending && openMenuProfile.email && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setResetConfirm({ isOpen: true, profile: openMenuProfile });
+              }}
+              disabled={sendingResetId === openMenuProfile.id}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
+            >
+              {sendingResetId === openMenuProfile.id ? (
+                <Loader2 size={14} className="animate-spin shrink-0" />
+              ) : (
+                <KeyRound size={14} className="shrink-0 text-pits-dim" />
+              )}
+              {t('Send password reset')}
+            </button>
+          )}
+          {openMenuProfile.role === 'member' && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setReminderConfirm({ isOpen: true, profile: openMenuProfile });
+              }}
+              disabled={sendingReminderId === openMenuProfile.id || !openMenuProfile.phone?.trim()}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
+            >
+              {sendingReminderId === openMenuProfile.id ? (
+                <Loader2 size={14} className="animate-spin shrink-0" />
+              ) : (
+                <Clock size={14} className="shrink-0 text-pits-dim" />
+              )}
+              {t('Send expiry reminder')}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              closeMenu();
+              setSelectedUserId(openMenuProfile.id);
+              setIsEditModalOpen(true);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors"
+          >
+            <Edit2 size={14} className="shrink-0 text-pits-dim" />
+            {t('Edit athlete')}
+          </button>
+          {isAdmin && openMenuProfile.id !== currentUserId && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setDeleteConfirm({ isOpen: true, profile: openMenuProfile });
+              }}
+              disabled={deletingId === openMenuProfile.id}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-error hover:bg-pits-primary-soft transition-colors disabled:opacity-50"
+            >
+              {deletingId === openMenuProfile.id ? (
+                <Loader2 size={14} className="animate-spin shrink-0" />
+              ) : (
+                <Trash2 size={14} className="shrink-0" />
+              )}
+              {t('Delete athlete')}
+            </button>
+          )}
+        </div>,
+        document.body
+      )}
 
     </div>
   );

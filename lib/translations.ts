@@ -935,6 +935,14 @@ export const translations = {
     'Member has not completed registration. Use resend welcome invite instead.':
       'This member has not finished signup yet. Use resend welcome invite instead.',
     'User has no email address.': 'This member has no email address on file.',
+    'Send expiry reminder': 'Send expiry reminder',
+    'Send expiry reminder confirm message':
+      'Send a membership expiry reminder via WhatsApp to {{name}}?',
+    'Expiry reminder sent to {{name}}': 'Expiry reminder sent to {{name}}',
+    'Failed to send expiry reminder': 'Failed to send expiry reminder',
+    'Only members can receive expiry reminders.': 'Only members can receive expiry reminders.',
+    'Member has no phone number on file.': 'This member has no phone number on file.',
+    'More actions': 'More actions',
     'Revoke Access': 'Revoke Access',
     'Restore Access': 'Restore Access',
     'Lock out confirm message': 'Lock out {{name}}? They will immediately lose booking access until reactivated.',
@@ -1924,6 +1932,15 @@ export const translations = {
     'Member has not completed registration. Use resend welcome invite instead.':
       'Este miembro aún no terminó el registro. Usa reenviar invitación de bienvenida.',
     'User has no email address.': 'Este miembro no tiene correo registrado.',
+    'Send expiry reminder': 'Enviar recordatorio de vencimiento',
+    'Send expiry reminder confirm message':
+      '¿Enviar un recordatorio de vencimiento de membresía por WhatsApp a {{name}}?',
+    'Expiry reminder sent to {{name}}': 'Recordatorio de vencimiento enviado a {{name}}',
+    'Failed to send expiry reminder': 'No se pudo enviar el recordatorio de vencimiento',
+    'Only members can receive expiry reminders.':
+      'Solo los miembros pueden recibir recordatorios de vencimiento.',
+    'Member has no phone number on file.': 'Este miembro no tiene teléfono registrado.',
+    'More actions': 'Más acciones',
     'Revoke Access': 'Revocar acceso',
     'Restore Access': 'Restaurar acceso',
     'Lock out confirm message': '¿Bloquear a {{name}}? Perderá acceso a reservas hasta reactivación.',
