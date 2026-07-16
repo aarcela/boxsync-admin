@@ -3,6 +3,7 @@ import { Profile, AthletePlan } from '../types/gym';
 import { buildPlanChangeFields } from '../plan-period';
 import { financialService } from './financialService';
 import { membershipPlanService } from './membershipPlanService';
+import { renewDateToIso } from '../renew-date';
 
 export const athleteService = {
   /**
@@ -73,6 +74,22 @@ export const athleteService = {
     const { error } = await supabase
       .from('profiles')
       .update(planFields)
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Updates the membership renew / period-start date.
+   */
+  async updatePlanPeriodStart(id: string, planPeriodStart: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        plan_period_start: planPeriodStart
+          ? renewDateToIso(planPeriodStart)
+          : null,
+      })
       .eq('id', id);
 
     if (error) throw error;

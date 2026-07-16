@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { canAssignProfileRole, isStaffProfileRole } from '@/lib/auth';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { useLanguage } from './LanguageContext';
+import { getRenewDateInputValue } from '@/lib/renew-date';
 
 const inputClass =
   'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-50';
@@ -35,6 +36,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     password: '',
     role: 'member' as 'member' | 'coach' | 'manager' | 'admin',
     plan: '' as AthletePlan,
+    plan_period_start: '',
     inscription_plan: 'standard' as InscriptionPlan,
     inscription_paid: false,
     discount: '',
@@ -46,7 +48,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
     if (isOpen && userId) {
       fetchUserData();
     } else if (!isOpen) {
-      setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: '', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
+      setFormData({ full_name: '', email: '', phone: '', password: '', role: 'member', plan: '', plan_period_start: '', inscription_plan: 'standard', inscription_paid: false, discount: '', is_solvent: true });
       setLoadedUserRole(null);
       setCallerRole(null);
       setMembershipPlans([]);
@@ -114,6 +116,10 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         password: '', // Don't pre-fill password
         role: userRole,
         plan: data.plan || membershipPlans[0]?.id || '',
+        plan_period_start: getRenewDateInputValue({
+          plan_period_start: data.plan_period_start,
+          is_solvent: data.is_solvent ?? true,
+        }),
         inscription_plan: data.inscription_plan || 'standard',
         inscription_paid: data.inscription_paid ?? false,
         discount: data.discount !== null ? String(data.discount) : '',
@@ -310,6 +316,20 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {formData.role === 'member' && (
+              <div>
+                <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
+                  {t('Renew date')}
+                </label>
+                <input
+                  type="date"
+                  value={formData.plan_period_start}
+                  onChange={e => setFormData({ ...formData, plan_period_start: e.target.value })}
+                  className={inputClass}
+                />
               </div>
             )}
 

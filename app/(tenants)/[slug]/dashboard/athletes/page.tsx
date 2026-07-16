@@ -13,6 +13,7 @@ import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 import { Profile, MembershipPlan } from '@/lib/types/gym';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabase } from '@/lib/supabase';
+import { getRenewDateInputValue } from '@/lib/renew-date';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -44,6 +45,7 @@ export default function AthletesPage() {
     unpaidCount,
     toggleSolvency,
     changePlan,
+    updateRenewDate,
     resendWelcomeInvite,
     resendingInviteId,
     sendPasswordReset,
@@ -335,6 +337,7 @@ export default function AthletesPage() {
                       {t('Last Payment')} <SortIcon column="last_payment_date" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
+                  <th className="px-6 py-4 whitespace-nowrap">{t('Renew date')}</th>
                   <th className="px-6 py-4">{t('Utilization')}</th>
                   <th className="px-6 py-4">{t('Last Visit')}</th>
                   <th className="px-6 py-4 text-right">{t('Actions')}</th>
@@ -343,7 +346,7 @@ export default function AthletesPage() {
               <tbody className="divide-y divide-pits-edge">
                 {profiles.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-pits-dim italic">
+                    <td colSpan={9} className="px-6 py-12 text-center text-pits-dim italic">
                       {t('No records found.')}
                     </td>
                   </tr>
@@ -483,6 +486,24 @@ export default function AthletesPage() {
                           <span className="text-xs text-pits-dim italic">{t('No payments')}</span>
                         )}
                       </div>
+                    </td>
+
+                    {/* RENEW DATE */}
+                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {profile.role === 'member' ? (
+                        <input
+                          type="date"
+                          value={getRenewDateInputValue(profile)}
+                          onChange={(e) => {
+                            const value = e.target.value || null;
+                            void updateRenewDate(profile.id, value);
+                          }}
+                          className="bg-transparent border border-pits-edge rounded-lg px-2 py-1.5 text-xs font-bold text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none hover:border-pits-red transition-colors max-w-[140px]"
+                          title={t('Renew date')}
+                        />
+                      ) : (
+                        <span className="text-xs text-pits-dim">—</span>
+                      )}
                     </td>
 
                     {/* UTILIZATION / ATTENDANCE */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { UNIQUE_TECHNIQUES } from '@/lib/techniques';
+import { prMovementService } from '@/lib/services/prMovementService';
 import {
   addDays,
   addWeeks,
@@ -48,6 +48,7 @@ export default function WodEditorPage() {
   // Combobox State
   const [techniqueDropdownOpen, setTechniqueDropdownOpen] = useState(false);
   const [techniqueSearch, setTechniqueSearch] = useState('');
+  const [prMovements, setPrMovements] = useState<string[]>([]);
 
   const [scheduledDates, setScheduledDates] = useState<Set<string>>(new Set());
   const [tenantId, setTenantId] = useState<string | null>(null);
@@ -67,6 +68,22 @@ export default function WodEditorPage() {
     };
     loadTenant();
   }, []);
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const loadMovements = async () => {
+      try {
+        const data = await prMovementService.getPrMovements(tenantId);
+        setPrMovements(
+          data.filter((m) => m.is_active).map((m) => m.name),
+        );
+      } catch {
+        toast(t('Failed to load PR movements'), 'error');
+      }
+    };
+    loadMovements();
+  }, [tenantId]);
 
   const selectedDate = useMemo(() => parseISO(date), [date]);
   const weekStart = useMemo(
@@ -508,21 +525,31 @@ export default function WodEditorPage() {
 
               {techniqueDropdownOpen && (
                 <div className="absolute z-50 left-6 right-6 mt-2 bg-pits-surface-elevated border border-pits-edge rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                  {UNIQUE_TECHNIQUES.filter(tech => tech.toLowerCase().includes(techniqueSearch.toLowerCase())).map((tech) => (
-                    <div 
-                      key={tech}
-                      className="px-5 py-3 hover:bg-pits-surface-muted cursor-pointer text-sm font-bold text-pits-text transition-colors border-b border-pits-edge last:border-0 flex items-center justify-between group/item"
-                      onClick={() => {
-                        setTechnique(tech);
-                        setTechniqueDropdownOpen(false);
-                      }}
-                    >
-                      {tech}
-                      <MoveRight size={14} className="opacity-0 group-hover/item:opacity-100 text-pits-primary" />
-                    </div>
-                  )) || (
-                    <div className="p-4 text-center text-xs text-pits-dim">{t('No match found')}</div>
-                  )}
+                  {(() => {
+                    const filtered = prMovements.filter((tech) =>
+                      tech.toLowerCase().includes(techniqueSearch.toLowerCase()),
+                    );
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="p-4 text-center text-xs text-pits-dim">
+                          {t('No match found')}
+                        </div>
+                      );
+                    }
+                    return filtered.map((tech) => (
+                      <div
+                        key={tech}
+                        className="px-5 py-3 hover:bg-pits-surface-muted cursor-pointer text-sm font-bold text-pits-text transition-colors border-b border-pits-edge last:border-0 flex items-center justify-between group/item"
+                        onClick={() => {
+                          setTechnique(tech);
+                          setTechniqueDropdownOpen(false);
+                        }}
+                      >
+                        {tech}
+                        <MoveRight size={14} className="opacity-0 group-hover/item:opacity-100 text-pits-primary" />
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
             </div>

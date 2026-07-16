@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
 import { buildPlanChangeFields } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
+import { renewDateToIso } from '@/lib/renew-date';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -104,12 +105,14 @@ export async function GET(
       phone: profile.phone || '',
       role: profile.role,
       plan: profile.plan || 'unlimited',
+      plan_period_start: profile.plan_period_start ?? null,
       inscription_plan: profile.inscription_plan || 'standard',
       inscription_paid: profile.inscription_paid ?? false,
       is_solvent: profile.is_solvent ?? true,
       avatar_url: profile.avatar_url,
       discount: profile.discount ?? null,
-      created_at: profile.created_at
+      created_at: profile.created_at,
+      invite_pending: !authUser.user?.email_confirmed_at,
     });
 
   } catch (error: unknown) {
@@ -133,7 +136,19 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email, password, full_name, phone, role, plan, inscription_plan, inscription_paid, is_solvent, discount } = body;
+    const {
+      email,
+      password,
+      full_name,
+      phone,
+      role,
+      plan,
+      plan_period_start,
+      inscription_plan,
+      inscription_paid,
+      is_solvent,
+      discount,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -197,7 +212,7 @@ export async function PUT(
       phone?: string;
       role: string;
       plan?: string;
-      plan_period_start?: string;
+      plan_period_start?: string | null;
       inscription_plan?: string;
       inscription_paid?: boolean;
       is_solvent?: boolean;
@@ -252,6 +267,16 @@ export async function PUT(
     // Only update is_solvent if provided (boolean)
     if (typeof is_solvent === 'boolean') {
       profileUpdateData.is_solvent = is_solvent;
+    }
+
+    if (plan_period_start !== undefined) {
+      if (plan_period_start === null || String(plan_period_start).trim() === '') {
+        profileUpdateData.plan_period_start = null;
+      } else {
+        profileUpdateData.plan_period_start = renewDateToIso(
+          String(plan_period_start).slice(0, 10)
+        );
+      }
     }
 
     if (discount !== undefined) {

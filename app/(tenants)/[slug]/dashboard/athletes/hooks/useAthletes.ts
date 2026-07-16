@@ -3,6 +3,7 @@ import { Profile, AthletePlan } from '@/lib/types/gym';
 import { athleteService } from '@/lib/services/athleteService';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { renewDateToIso } from '@/lib/renew-date';
 
 export type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
 export type SortDir = 'asc' | 'desc';
@@ -117,6 +118,25 @@ export function useAthletes() {
       } else {
         fetchProfiles();
       }
+    }
+  };
+
+  const updateRenewDate = async (id: string, renewDate: string | null) => {
+    const previous = profiles.find((p) => p.id === id)?.plan_period_start ?? null;
+    const nextIso = renewDate ? renewDateToIso(renewDate) : null;
+
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, plan_period_start: nextIso } : p))
+    );
+
+    try {
+      await athleteService.updatePlanPeriodStart(id, renewDate);
+      toast(t('Renew date updated'), 'success');
+    } catch {
+      toast(t('Failed to update renew date'), 'error');
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, plan_period_start: previous } : p))
+      );
     }
   };
 
@@ -342,6 +362,7 @@ export function useAthletes() {
     unpaidCount,
     toggleSolvency,
     changePlan,
+    updateRenewDate,
     toggleInscription,
     resendWelcomeInvite,
     resendingInviteId,
