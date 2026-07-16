@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar } from 'lucide-react';
+import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert } from 'lucide-react';
 import CreateClassModal from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
@@ -13,14 +13,18 @@ import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
 type ViewTab = 'list' | 'calendar';
 
 export default function SchedulePage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const {
     classes,
     loading,
     selectedClassId,
     setSelectedClassId,
     roster,
+    waitlist,
+    capacityInsights,
     loadingRoster,
+    coachBrief,
+    coachBriefError,
     fetchSchedule,
     deleteClass
   } = useSchedule();
@@ -90,6 +94,40 @@ export default function SchedulePage() {
         </button>
       </div>
 
+      {capacityInsights.length > 0 && (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3" aria-label="Capacity insights">
+          {capacityInsights.map((insight) => (
+            <div
+              key={insight.id}
+              className={`rounded-xl border p-4 ${
+                insight.kind === 'no_show'
+                  ? 'border-red-500/30 bg-red-500/5'
+                  : insight.kind === 'high_demand'
+                    ? 'border-green-500/30 bg-green-500/5'
+                  : 'border-amber-500/30 bg-amber-500/5'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle
+                  size={18}
+                  className={
+                    insight.kind === 'no_show'
+                      ? 'text-red-400'
+                      : insight.kind === 'high_demand'
+                        ? 'text-green-400'
+                        : 'text-amber-400'
+                  }
+                />
+                <div>
+                  <p className="text-xs font-black uppercase text-pits-text">{insight.title}</p>
+                  <p className="mt-1 text-xs text-pits-dim">{insight.detail}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
@@ -145,6 +183,7 @@ export default function SchedulePage() {
               const timeStr = startDate.toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
 
               const bookingCount = session.bookings[0]?.count || 0;
+              const waitlistCount = session.waitlist?.[0]?.count || 0;
               const occupancyRate = (bookingCount / session.max_capacity) * 100;
               const isHighOccupancy = occupancyRate > 80;
 
@@ -219,7 +258,9 @@ export default function SchedulePage() {
                         {occupancyRate.toFixed(0)}% {t('Capacity')}
                       </span>
                       {bookingCount >= session.max_capacity ? (
-                        <span className="text-[9px] font-black text-pits-red uppercase italic animate-pulse">{t('Full')}</span>
+                        <span className="text-[9px] font-black text-pits-red uppercase italic animate-pulse">
+                          {t('Full')}{waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ''}
+                        </span>
                       ) : (
                         <span className="text-[9px] font-bold text-pits-dim uppercase italic">
                           {session.max_capacity - bookingCount} {t('Spots')}
@@ -326,6 +367,62 @@ export default function SchedulePage() {
                       </div>
                     </div>
 
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ShieldAlert size={16} className="text-amber-400" />
+                        <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider italic">
+                          {t('Private Coach Brief')}
+                        </h4>
+                      </div>
+                      {loadingRoster ? (
+                        <p className="text-pits-dim text-sm">{t('Loading schedule...')}</p>
+                      ) : coachBriefError ? (
+                        <p className="text-red-300 text-sm">{coachBriefError}</p>
+                      ) : coachBrief ? (
+                        <div className="space-y-4">
+                          <p className="text-amber-100/80 text-xs leading-relaxed">{coachBrief.notice}</p>
+                          <div className="rounded-lg border border-pits-edge bg-pits-surface-muted p-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+                              {t("Today's WOD")}
+                            </p>
+                            <p className="text-pits-text font-bold mt-1">
+                              {coachBrief.wodTitle || t('No WOD scheduled')}
+                            </p>
+                          </div>
+                          {coachBrief.athletes.map((athlete) => (
+                            <div key={athlete.userId} className="rounded-lg border border-pits-edge bg-pits-background p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <p className="font-black text-pits-text">{athlete.name}</p>
+                                <span className="text-[10px] uppercase tracking-widest text-pits-dim">
+                                  {athlete.level || t('Level not set')}
+                                </span>
+                              </div>
+                              <div className="space-y-2 text-sm text-pits-dim">
+                                {athlete.suggestedLoad && (
+                                  <p><strong className="text-pits-text">{t('Suggested load')}:</strong> {athlete.suggestedLoad}</p>
+                                )}
+                                <p><strong className="text-pits-text">{t('Scaling')}:</strong> {athlete.scalingNote}</p>
+                                <p><strong className="text-pits-text">{t('Pacing target')}:</strong> {athlete.pacingTarget}</p>
+                                {athlete.healthCaution && (
+                                  <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-100 leading-relaxed">
+                                    <strong>{t('Health caution')}:</strong> {athlete.healthCaution}
+                                  </p>
+                                )}
+                                <details className="text-xs">
+                                  <summary className="cursor-pointer font-bold uppercase tracking-wider text-pits-primary">
+                                    {t('Why this guidance')}
+                                  </summary>
+                                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                                    {athlete.explanation.map((reason) => <li key={reason}>{reason}</li>)}
+                                  </ul>
+                                </details>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
                     <div>
                       <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic">{t('Athletes')}</h4>
                       {loadingRoster ? (
@@ -358,6 +455,38 @@ export default function SchedulePage() {
                               `}>
                                 {booking.status}
                               </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic">
+                        Waitlist ({waitlist.length})
+                      </h4>
+                      {loadingRoster ? (
+                        <p className="text-pits-dim text-sm">Loading waitlist...</p>
+                      ) : waitlist.length === 0 ? (
+                        <p className="text-pits-dim text-sm p-4 bg-pits-background rounded-lg text-center">
+                          No athletes are waiting.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {waitlist.map((entry, index) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border border-pits-border bg-pits-background"
+                            >
+                              <span className="w-7 h-7 rounded-full bg-pits-primary/10 text-pits-primary flex items-center justify-center text-xs font-black">
+                                {index + 1}
+                              </span>
+                              <div>
+                                <p className="font-bold text-pits-text text-sm">{entry.profiles.full_name}</p>
+                                <p className="text-[10px] text-pits-dim">
+                                  Joined {new Date(entry.joined_at).toLocaleString()}
+                                </p>
+                              </div>
                             </div>
                           ))}
                         </div>

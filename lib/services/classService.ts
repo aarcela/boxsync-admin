@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { ClassSession, Booking, BookingStatus } from '../types/gym';
+import { ClassSession, Booking, BookingStatus, CapacityInsight, WaitlistEntry } from '../types/gym';
 import { getCaracasDayRange, getCaracasDate } from '../utils/date';
 
 export type ClassUpdateFields = {
@@ -13,7 +13,8 @@ export type ClassUpdateFields = {
 const classSelect = `
   *,
   coach:profiles(full_name),
-  bookings:bookings(count)
+  bookings:bookings(count),
+  waitlist:class_waitlist(count)
 `;
 
 export const classService = {
@@ -88,11 +89,200 @@ export const classService = {
 
     if (error) throw error;
     
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item) => ({
       id: item.id,
       status: item.status as BookingStatus,
       profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
     }));
+  },
+
+  async getWaitlist(classId: string): Promise<WaitlistEntry[]> {
+    const { data, error } = await supabase
+      .from('class_waitlist')
+      .select(`
+        id, joined_at, status,
+        profiles:user_id (id, full_name, avatar_url)
+      `)
+      .eq('class_id', classId)
+      .eq('status', 'active')
+      .order('joined_at', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map((item) => ({
+      id: item.id,
+      joined_at: item.joined_at,
+      status: item.status,
+      profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles,
+    }));
+  },
+
+  async getCapacityInsights(): Promise<CapacityInsight[]> {
+    const now = new Date();
+    const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const [classesResult, profilesResult, plansResult, ratesResult] =
+      await Promise.all([
+        supabase
+          .from('classes')
+          .select(
+            'id, start_time, class_type, max_capacity, coach_id, bookings:bookings(status, user_id)'
+          )
+          .gte('start_time', start.toISOString())
+          .lt('start_time', now.toISOString())
+          .eq('is_cancelled', false),
+        supabase
+          .from('profiles')
+          .select('id, plan, salary_tier_id'),
+        supabase
+          .from('membership_plans')
+          .select('id, price_usd'),
+        supabase
+          .from('coach_salary_tier_rates')
+          .select('tier_id, class_type, rate_usd'),
+      ]);
+
+    const firstError =
+      classesResult.error ||
+      profilesResult.error ||
+      plansResult.error ||
+      ratesResult.error;
+    if (firstError) throw firstError;
+
+    const data = classesResult.data || [];
+    const profiles = new Map(
+      (profilesResult.data || []).map((profile) => [profile.id, profile])
+    );
+    const planPrices = new Map(
+      (plansResult.data || []).map((plan) => [
+        plan.id,
+        Number(plan.price_usd || 0),
+      ])
+    );
+    const coachRates = new Map(
+      (ratesResult.data || []).map((rate) => [
+        `${rate.tier_id}:${rate.class_type}`,
+        Number(rate.rate_usd || 0),
+      ])
+    );
+    const attendedVisits = new Map<string, number>();
+    for (const cls of data) {
+      for (const booking of cls.bookings || []) {
+        if (booking.status === 'attended') {
+          attendedVisits.set(
+            booking.user_id,
+            (attendedVisits.get(booking.user_id) || 0) + 1
+          );
+        }
+      }
+    }
+
+    const slots = new Map<
+      string,
+      {
+        booked: number;
+        capacity: number;
+        classes: number;
+        attributedRevenue: number;
+        coachCost: number;
+      }
+    >();
+    const types = new Map<string, { noShows: number; bookings: number }>();
+
+    for (const cls of data) {
+      const slot = new Date(cls.start_time).toLocaleTimeString('en-US', {
+        timeZone: 'America/Caracas',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const bookings = cls.bookings || [];
+      const slotData = slots.get(slot) || {
+        booked: 0,
+        capacity: 0,
+        classes: 0,
+        attributedRevenue: 0,
+        coachCost: 0,
+      };
+      slotData.booked += bookings.length;
+      slotData.capacity += cls.max_capacity || 0;
+      slotData.classes += 1;
+      for (const booking of bookings) {
+        if (booking.status !== 'attended') continue;
+        const member = profiles.get(booking.user_id);
+        const monthlyPrice = member?.plan
+          ? planPrices.get(member.plan) || 0
+          : 0;
+        slotData.attributedRevenue +=
+          monthlyPrice / Math.max(attendedVisits.get(booking.user_id) || 1, 1);
+      }
+      const coach = cls.coach_id ? profiles.get(cls.coach_id) : null;
+      if (coach?.salary_tier_id) {
+        slotData.coachCost +=
+          coachRates.get(`${coach.salary_tier_id}:${cls.class_type}`) || 0;
+      }
+      slots.set(slot, slotData);
+
+      const typeData = types.get(cls.class_type) || { noShows: 0, bookings: 0 };
+      typeData.bookings += bookings.length;
+      typeData.noShows += bookings.filter((booking) => booking.status === 'no_show').length;
+      types.set(cls.class_type, typeData);
+    }
+
+    const lowOccupancy = Array.from(slots.entries())
+      .map(([slot, value]) => ({
+        slot,
+        ...value,
+        rate: value.capacity > 0 ? value.booked / value.capacity : 0,
+        contribution: value.attributedRevenue - value.coachCost,
+      }))
+      .filter((value) => value.classes >= 2 && value.rate < 0.4)
+      .sort((a, b) => a.rate - b.rate)
+      .slice(0, 3)
+      .map<CapacityInsight>((value) => ({
+        id: `occupancy-${value.slot}`,
+        kind: 'low_occupancy',
+        title: `${value.slot} averages ${Math.round(value.rate * 100)}% occupancy`,
+        detail: `Based on ${value.classes} completed classes (${value.booked}/${value.capacity} spots), estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Consider consolidating, moving, or promoting this slot.`,
+        sampleSize: value.classes,
+      }));
+
+    const highDemand = Array.from(slots.entries())
+      .map(([slot, value]) => ({
+        slot,
+        ...value,
+        rate: value.capacity > 0 ? value.booked / value.capacity : 0,
+        contribution: value.attributedRevenue - value.coachCost,
+      }))
+      .filter(
+        (value) =>
+          value.classes >= 2 && value.rate >= 0.85 && value.contribution > 0
+      )
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 2)
+      .map<CapacityInsight>((value) => ({
+        id: `demand-${value.slot}`,
+        kind: 'high_demand',
+        title: `${value.slot} is running at ${Math.round(value.rate * 100)}% occupancy`,
+        detail: `Across ${value.classes} classes, estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Test added capacity or an adjacent time slot.`,
+        sampleSize: value.classes,
+      }));
+
+    const noShows = Array.from(types.entries())
+      .map(([classType, value]) => ({
+        classType,
+        ...value,
+        rate: value.bookings > 0 ? value.noShows / value.bookings : 0,
+      }))
+      .filter((value) => value.bookings >= 5 && value.noShows > 0 && value.rate >= 0.15)
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 2)
+      .map<CapacityInsight>((value) => ({
+        id: `no-show-${value.classType}`,
+        kind: 'no_show',
+        title: `${value.classType}: ${Math.round(value.rate * 100)}% no-show rate`,
+        detail: `${value.noShows} no-shows across ${value.bookings} bookings in the last 30 days. Review reminders or cancellation policy.`,
+        sampleSize: value.bookings,
+      }));
+
+    return [...highDemand, ...lowOccupancy, ...noShows];
   },
 
   /**

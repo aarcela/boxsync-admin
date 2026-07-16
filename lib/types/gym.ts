@@ -62,7 +62,9 @@ export interface PaymentRecord {
   proof_image_url: string;
   created_at: string;
   user_id: string;
-  currency_type: string;
+  currency: string;
+  /** Legacy compatibility for older API payloads. */
+  currency_type?: string;
   profiles: {
     full_name: string | null;
   } | null;
@@ -97,6 +99,25 @@ export interface Booking {
     full_name: string;
     avatar_url: string | null;
   };
+}
+
+export interface WaitlistEntry {
+  id: string;
+  joined_at: string;
+  status: 'active' | 'promoted' | 'cancelled' | 'ineligible';
+  profiles: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface CapacityInsight {
+  id: string;
+  kind: 'low_occupancy' | 'no_show' | 'high_demand';
+  title: string;
+  detail: string;
+  sampleSize: number;
 }
 
 /** Legacy slug values; athletes now use membership_plans.id (UUID). */
@@ -166,6 +187,7 @@ export type ClassSession = {
   is_cancelled: boolean;
   coach: { full_name: string } | null;
   bookings: { count: number }[];
+  waitlist?: { count: number }[];
 }
 
 export type ExpenseCategory = 

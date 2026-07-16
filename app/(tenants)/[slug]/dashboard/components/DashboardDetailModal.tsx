@@ -1,14 +1,16 @@
 'use client';
 
-import { X, Calendar, User, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, User, Clock, CheckCircle } from 'lucide-react';
 import { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
+
+type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 
 interface DashboardDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   type: 'athletes' | 'classes' | 'payments';
-  data: any[];
+  data: DashboardModalItem[];
 }
 
 export default function DashboardDetailModal({ isOpen, onClose, title, type, data }: DashboardDetailModalProps) {
@@ -105,14 +107,18 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-pits-text">€{payment.amount}</p>
-                    <a 
-                      href={payment.proof_image_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-[9px] font-black text-blue-400 uppercase hover:underline"
-                    >
-                      View Proof
-                    </a>
+                    {payment.proof_image_url ? (
+                      <a
+                        href={payment.proof_image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] font-black text-blue-400 uppercase hover:underline"
+                      >
+                        View Proof
+                      </a>
+                    ) : (
+                      <span className="text-[9px] font-black text-pits-dim uppercase">Proof unavailable</span>
+                    )}
                   </div>
                 </div>
               ))}

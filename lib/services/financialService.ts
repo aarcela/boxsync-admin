@@ -1,20 +1,33 @@
 import { supabase } from '../supabase';
 import { buildPaymentApprovedProfileUpdate } from '../plan-period';
-import { 
-  CurrencyType, 
-  PaymentMethod, 
-  PaymentRecord, 
-  CurrencyStats, 
-  FinancialStats 
-} from '@/lib/types/gym';
+import { PaymentMethod, PaymentRecord } from '@/lib/types/gym';
 
-const PLAN_PRICES_EUR: Record<string, number> = { 
-  unlimited: 80, 
-  '5x_week': 70, 
-  '4x_week': 60, 
-  '3x_week': 50, 
-  'open_box': 40 
-};
+const PAYMENT_PROOFS_BUCKET = 'payment-proofs';
+const SIGNED_URL_TTL_SECONDS = 60 * 10;
+
+function getPaymentProofPath(value: string): string {
+  if (!value.startsWith('http')) return value.replace(/^payment-proofs\//, '');
+
+  const decoded = decodeURIComponent(value);
+  const marker = '/payment-proofs/';
+  const markerIndex = decoded.indexOf(marker);
+  return markerIndex >= 0 ? decoded.slice(markerIndex + marker.length).split('?')[0] : '';
+}
+
+export async function signPaymentProofUrl(storedPathOrUrl: string): Promise<string> {
+  const path = getPaymentProofPath(storedPathOrUrl);
+  if (!path) return '';
+
+  const { data, error } = await supabase.storage
+    .from(PAYMENT_PROOFS_BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+
+  if (error) {
+    console.error('Failed to sign payment proof:', error);
+    return '';
+  }
+  return data.signedUrl;
+}
 
 export const financialService = {
   async getPaymentMethods(): Promise<PaymentMethod[]> {
@@ -32,13 +45,18 @@ export const financialService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return Promise.all((data || []).map(async payment => ({
+      ...payment,
+      proof_image_url: payment.proof_image_url
+        ? await signPaymentProofUrl(payment.proof_image_url)
+        : '',
+    }))) as Promise<PaymentRecord[]>;
   },
 
   async getMemberStats(): Promise<{ active: number; inactive: number; projectedEUR: number; overdueEUR: number }> {
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('is_solvent, plan')
+      .select('is_solvent, membership_plans!profiles_plan_fkey(price_usd)')
       .eq('role', 'member');
 
     if (error) throw error;
@@ -49,7 +67,8 @@ export const financialService = {
     let overdueEUR = 0;
 
     profiles?.forEach(p => {
-      const price = PLAN_PRICES_EUR[p.plan] || 0;
+      const plan = Array.isArray(p.membership_plans) ? p.membership_plans[0] : p.membership_plans;
+      const price = Number(plan?.price_usd) || 0;
       projectedEUR += price;
       if (p.is_solvent) {
         active++;
@@ -101,7 +120,7 @@ export const financialService = {
       return Number(data.promedio);
     } catch (error) {
       console.error('Failed to fetch official rate:', error);
-      return 545.9483; // Final fallback based on user prompt
+      return 0;
     }
   },
 

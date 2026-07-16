@@ -448,6 +448,7 @@ export default function ScheduleWeekCalendar({
                       const height = Math.max((durationMin / 60) * SLOT_HEIGHT - 4, 28);
                       const isSelected = selectedIds.has(cls.id);
                       const bookingCount = cls.bookings[0]?.count ?? 0;
+                      const waitlistCount = cls.waitlist?.[0]?.count ?? 0;
 
                       if (hour < START_HOUR || hour > END_HOUR) return null;
 
@@ -478,6 +479,7 @@ export default function ScheduleWeekCalendar({
                             </p>
                             <p className="text-[9px] font-black opacity-75 mt-0.5">
                               {bookingCount}/{cls.max_capacity}
+                              {waitlistCount > 0 ? ` · W${waitlistCount}` : ''}
                             </p>
                           </div>
                         </div>

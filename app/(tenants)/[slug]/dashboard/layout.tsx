@@ -27,7 +27,8 @@ import {
   Tags,
   Banknote,
   Receipt,
-  Clock
+  Clock,
+  Rocket
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -138,8 +139,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       },
       { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
       { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
+      { name: lang === 'es' ? 'Piloto Fundador' : 'Founding Pilot', href: '/dashboard/pilot', icon: Rocket },
     ];
-  }, [t, userRole]);
+  }, [t, userRole, lang]);
 
   const toggleMenu = (menuName: string) => {
     setOpenMenus(prev => 

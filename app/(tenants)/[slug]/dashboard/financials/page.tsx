@@ -65,6 +65,7 @@ export default function FinancialsPage() {
     setStatusFilter,
     searchTerm,
     setSearchTerm,
+    payments,
     filteredPayments,
     currentPage,
     setCurrentPage,
@@ -97,12 +98,13 @@ export default function FinancialsPage() {
   };
 
   const todayEURCashReceived =
-    filteredPayments
+    payments
       .filter(
         (p) =>
           p.status === 'approved' &&
-          p.currency_type === 'EUR' &&
-          (p.method?.toLowerCase().includes('cash') || p.method?.toLowerCase().includes('efectivo'))
+          (p.currency || p.currency_type) === 'EUR' &&
+          toDateInputValue(new Date(p.created_at)) === todayStr &&
+          isCashRef(p.method)
       )
       .reduce((sum, p) => sum + p.amount, 0) +
     incomes
@@ -140,8 +142,7 @@ export default function FinancialsPage() {
   const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
 
   // Business calculations
-  const combinedTotalEUR = stats.EUR.totalRevenue + (stats.VES.totalRevenue / exchangeRate);
-  const efficiencyRate = stats.projectedRevenueEUR > 0 ? Math.round((combinedTotalEUR / stats.projectedRevenueEUR) * 100) : 0;
+  const combinedTotalEUR = stats.EUR.totalRevenue + (exchangeRate > 0 ? stats.VES.totalRevenue / exchangeRate : 0);
 
   const handleConfirmAction = async () => {
     const { action, paymentId, userId } = confirmConfig;
@@ -161,7 +162,7 @@ export default function FinancialsPage() {
         p.profiles?.full_name || 'Anonymous',
         p.method || 'N/A',
         p.amount,
-        p.currency_type || 'EUR',
+        p.currency || p.currency_type || 'EUR',
         p.status
       ].map(f => `"${f}"`).join(','))
     ].join('\n');
@@ -296,9 +297,9 @@ export default function FinancialsPage() {
         <StatCard label={t('Collected (EUR)')} value={stats.EUR.totalRevenue} symbol="€" trend="positive" color="success" />
         <StatCard label={t('Collected (VES)')} value={stats.VES.totalRevenue} symbol="Bs." trend="positive" color="primary" />
         <StatCard label={t('Consolidated')} value={combinedTotalEUR} symbol="€" trend="neutral" color="muted" info={t('Consolidated EUR base')} />
-        <StatCard label={t('Pending Liquidity')} value={stats.EUR.pendingAmount + (stats.VES.pendingAmount / exchangeRate)} symbol="€" trend="warning" color="warning" />
+        <StatCard label={t('Pending Liquidity')} value={stats.EUR.pendingAmount + (exchangeRate > 0 ? stats.VES.pendingAmount / exchangeRate : 0)} symbol="€" trend="warning" color="warning" />
         <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol="€" trend="danger" color="danger" />
-        <StatCard label={t('Efficiency')} value={efficiencyRate} symbol="%" trend={efficiencyRate > 80 ? 'positive' : 'warning'} color="primary" />
+        <StatCard label={t('Active Athletes')} value={stats.activeMembers} symbol="" trend="neutral" color="primary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
@@ -406,14 +407,18 @@ export default function FinancialsPage() {
                          </div>
                       </td>
                       <td className="px-6 py-4">
-                         <a 
-                           href={p.proof_image_url} 
-                           target="_blank" 
-                           rel="noreferrer"
-                           className="inline-flex items-center px-2 py-1 bg-pits-surface-muted text-pits-primary rounded-lg text-[9px] font-black uppercase hover:bg-pits-primary-soft transition-colors"
-                         >
-                            {t('Check Proof')} <ExternalLink size={10} className="ml-1" />
-                         </a>
+                         {p.proof_image_url ? (
+                           <a
+                             href={p.proof_image_url}
+                             target="_blank"
+                             rel="noreferrer"
+                             className="inline-flex items-center px-2 py-1 bg-pits-surface-muted text-pits-primary rounded-lg text-[9px] font-black uppercase hover:bg-pits-primary-soft transition-colors"
+                           >
+                              {t('Check Proof')} <ExternalLink size={10} className="ml-1" />
+                           </a>
+                         ) : (
+                           <span className="text-[9px] font-black uppercase text-pits-dim">—</span>
+                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
                          <div className="flex justify-end items-center gap-2">
@@ -546,8 +551,6 @@ export default function FinancialsPage() {
                 <div className="space-y-4">
                    <MetricRow 
                       label={t('Contract Health')} value={`${stats.solvencyRate}%`} color="primary" progress={stats.solvencyRate} tooltip={t('Contract Health Tip')} />
-                   <MetricRow label={t('Growth Velocity')} value="+4.2%" color="success" progress={75} tooltip={t('Growth Velocity Tip')} />
-                   <MetricRow label={t('Churn Risk')} value={t('Low')} color="muted" progress={20} tooltip={t('Churn Risk Tip')} />
                 </div>
              </div>
 
@@ -645,6 +648,8 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, pendingLa
     success: 'bg-pits-success',
     primary: 'bg-pits-primary',
   };
+  const trackedAmount = stats.totalRevenue + stats.pendingAmount;
+  const collectionRate = trackedAmount > 0 ? Math.round((stats.totalRevenue / trackedAmount) * 100) : 0;
 
   return (
     <div 
@@ -671,7 +676,7 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, pendingLa
            </p>
         </div>
         <div className="h-1.5 w-24 rounded-full overflow-hidden bg-pits-surface-muted">
-           <div className={`h-full rounded-full ${barColors[color] ?? 'bg-pits-dim'} transition-all duration-1000`} style={{ width: '65%' }} />
+           <div className={`h-full rounded-full ${barColors[color] ?? 'bg-pits-dim'} transition-all duration-1000`} style={{ width: `${collectionRate}%` }} />
         </div>
       </div>
     </div>

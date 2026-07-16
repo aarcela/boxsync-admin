@@ -27,8 +27,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [officialRate, setOfficialRate] = useState<number>(545.9483);
-  const [exchangeRate, setExchangeRate] = useState<number>(545.9483);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(CurrencyType.EUR);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,7 +91,6 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       setPayments(paymentsData);
       setIncomes(incomesData);
       setPaymentMethods(methodsData);
-      setOfficialRate(rate);
       setExchangeRate(rate);
 
       const EURStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} };
@@ -100,7 +98,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
 
       paymentsData.forEach(p => {
         const methodObj = methodsData.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-        const isVes = methodObj ? methodObj.currency === CurrencyType.VES : p.currency_type === 'VES';
+        const isVes = methodObj ? methodObj.currency === CurrencyType.VES : (p.currency || p.currency_type) === 'VES';
         const targetStats = isVes ? VESStats : EURStats;
 
         if (p.status === 'approved') {
@@ -160,7 +158,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
       const methodObj = paymentMethods.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-      const isVes = methodObj ? methodObj.currency === CurrencyType.VES : p.currency_type === 'VES';
+      const isVes = methodObj ? methodObj.currency === CurrencyType.VES : (p.currency || p.currency_type) === 'VES';
       
       const matchesCurrency = activeCurrency === CurrencyType.VES ? isVes : !isVes;
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter;

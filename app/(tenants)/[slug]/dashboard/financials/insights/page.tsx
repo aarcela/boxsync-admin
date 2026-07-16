@@ -1,434 +1,676 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { 
-  TrendingUp, Users, 
-  DollarSign, Zap, UserCheck, 
-  Clock, Filter, MessageCircle, AlertCircle, ArrowUpRight
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  MessageCircle,
+  RefreshCw,
+  ShieldCheck,
+  TrendingUp,
+  UserCheck,
+  Users,
 } from 'lucide-react';
-import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
+import { useToast } from '@/components/Toast';
+import {
+  InterventionStatus,
+  InterventionEvent,
+  RescueIntervention,
+  RescueSignalType,
+  revenueRescueService,
+} from '@/lib/services/revenueRescueService';
 
-interface Recommendation {
+type StaffMember = {
   id: string;
-  type: 'recovery' | 'upsell' | 'retention' | 'inscription';
-  title: string;
-  description: string;
-  impact: string;
-  impactValue: number; // For sorting
-  actionLabel: string;
-  athleteName?: string;
-  athleteId?: string;
-  phone?: string;
-  priority: 'urgent' | 'high' | 'medium';
-}
+  full_name: string | null;
+  role: string;
+};
 
-type FilterType = 'all' | 'recovery' | 'upsell' | 'retention' | 'inscription';
+type ViewFilter = 'actionable' | 'contacted' | 'snoozed' | 'resolved' | 'all';
 
-const PLAN_PRICES: Record<string, number> = { 
-  unlimited: 80, 
-  '5x_week': 70, 
-  '4x_week': 60, 
-  '3x_week': 50, 
-  'open_box': 40 
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2 };
+
+const SIGNAL_LABELS: Record<RescueSignalType, string> = {
+  payment: 'Payment',
+  attendance: 'Attendance',
+  onboarding: 'First 90 days',
+  no_show: 'No-show',
+  feedback: 'Experience',
+  registration: 'Registration',
+};
+
+const STATUS_STYLES: Record<InterventionStatus, string> = {
+  open: 'bg-amber-50 text-amber-700 border-amber-200',
+  contacted: 'bg-blue-50 text-blue-700 border-blue-200',
+  snoozed: 'bg-gray-100 text-gray-600 border-gray-200',
+  resolved: 'bg-green-50 text-green-700 border-green-200',
+  escalated: 'bg-red-50 text-red-700 border-red-200',
 };
 
 export default function FinancialInsightsPage() {
+  const { tenantId } = useTenant();
+  const { lang } = useLanguage();
   const { toast } = useToast();
-  const { t } = useLanguage();
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [interventions, setInterventions] = useState<RescueIntervention[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totals, setTotals] = useState({ recoveredPotential: 0, upsellPotential: 0 });
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [view, setView] = useState<ViewFilter>('actionable');
+  const [signalFilter, setSignalFilter] = useState<RescueSignalType | 'all'>('all');
+  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
+  const [eventHistory, setEventHistory] = useState<
+    Record<string, InterventionEvent[]>
+  >({});
+  const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
 
-  const analyzeData = async () => {
+  const copy =
+    lang === 'es'
+      ? {
+          title: 'Rescate de Ingresos',
+          subtitle:
+            'Las conversaciones que tu equipo debe completar hoy para proteger ingresos.',
+          atRisk: 'Ingreso mensual en riesgo',
+          recovered: 'Ingreso recuperado',
+          actions: 'Acciones abiertas',
+          completion: 'Tasa de resolución',
+          actionable: 'Prioridades',
+          contacted: 'Contactados',
+          snoozed: 'Pausados',
+          resolved: 'Recuperados',
+          all: 'Todos',
+          refresh: 'Actualizar señales',
+          assigned: 'Responsable',
+          unassigned: 'Sin asignar',
+          due: 'Vence',
+          evidence: 'Por qué aparece',
+          recommendation: 'Siguiente acción',
+          send: 'Abrir WhatsApp',
+          snooze: 'Pausar',
+          resolve: 'Resolver',
+          escalate: 'Escalar',
+          noPhone: 'El atleta no tiene teléfono.',
+          empty: 'No hay intervenciones en esta vista.',
+          loading: 'Calculando ingresos en riesgo...',
+          returned: 'volvieron a entrenar',
+        }
+      : {
+          title: 'Revenue Rescue',
+          subtitle:
+            'The conversations your team should complete today to protect revenue.',
+          atRisk: 'Monthly revenue at risk',
+          recovered: 'Revenue recovered',
+          actions: 'Open actions',
+          completion: 'Resolution rate',
+          actionable: 'Priorities',
+          contacted: 'Contacted',
+          snoozed: 'Snoozed',
+          resolved: 'Recovered',
+          all: 'All',
+          refresh: 'Refresh signals',
+          assigned: 'Owner',
+          unassigned: 'Unassigned',
+          due: 'Due',
+          evidence: 'Why this surfaced',
+          recommendation: 'Next best action',
+          send: 'Open WhatsApp',
+          snooze: 'Snooze',
+          resolve: 'Resolve',
+          escalate: 'Escalate',
+          noPhone: 'This member has no phone number.',
+          empty: 'No interventions in this view.',
+          loading: 'Calculating revenue at risk...',
+          returned: 'returned to class',
+        };
+
+  const loadData = useCallback(async () => {
     setLoading(true);
-    const newRecs: Recommendation[] = [];
-    let recoveryTotal = 0;
-    let upsellTotal = 0;
-
     try {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'member');
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select('user_id, created_at, status')
-        .gte('created_at', thirtyDaysAgo.toISOString());
-
-      if (!profiles) return;
-
-      // --- LOGIC A: REVENUE RECOVERY (Debt) ---
-      const insolvent = profiles.filter(p => !p.is_solvent);
-      insolvent.forEach(p => {
-        const planPrice = PLAN_PRICES[p.plan] || 60;
-        recoveryTotal += planPrice;
-        newRecs.push({
-          id: `recovery-${p.id}`,
-          type: 'recovery',
-          title: t('Debt Recovery'),
-          athleteName: p.full_name,
-          athleteId: p.id,
-          phone: p.phone,
-          description: `Locked account: €${planPrice} due. Reach out to restore access.`,
-          impact: `+€${planPrice}`,
-          impactValue: planPrice * 5, // High weight
-          actionLabel: t('Send Reminder'),
-          priority: 'urgent'
-        });
-      });
-
-      // --- LOGIC B: UPSELL (Plan Saturation) ---
-      const limitedProfiles = profiles.filter(p => p.plan === '3x_week' || p.plan === '4x_week');
-      limitedProfiles.forEach(p => {
-        const userBookings = bookings?.filter(b => b.user_id === p.id && b.status === 'attended') || [];
-        if (userBookings.length >= 11) {
-          const currentPrice = PLAN_PRICES[p.plan] || 50;
-          const nextPlanKey = p.plan === '3x_week' ? '4x_week' : '5x_week';
-          const nextPrice = PLAN_PRICES[nextPlanKey];
-          const delta = (nextPrice || 60) - currentPrice;
-          upsellTotal += delta;
-          newRecs.push({
-            id: `upsell-${p.id}`,
-            type: 'upsell',
-            title: t('Plan Saturation'),
-            athleteName: p.full_name,
-            athleteId: p.id,
-            phone: p.phone,
-            description: `${userBookings.length} sessions this month. They've outgrown the ${p.plan.replace('_', ' ')} plan.`,
-            impact: `+€${delta}/mo`,
-            impactValue: delta * 3,
-            actionLabel: t('Suggest Upgrade'),
-            priority: 'high'
-          });
-        }
-      });
-
-      // --- LOGIC C: RETENTION (Silent Churn) ---
-      const twelveDaysAgo = new Date();
-      twelveDaysAgo.setDate(twelveDaysAgo.getDate() - 12);
-
-      const activePaying = profiles.filter(p => p.is_solvent);
-      activePaying.forEach(p => {
-        const userBookingsDesc = bookings?.filter(b => b.user_id === p.id)
-          .sort((a,b) => b.created_at.localeCompare(a.created_at));
-        
-        const lastBooking = userBookingsDesc?.[0];
-        
-        if (!lastBooking || new Date(lastBooking.created_at) < twelveDaysAgo) {
-          const daysInactive = lastBooking 
-            ? Math.floor((new Date().getTime() - new Date(lastBooking.created_at).getTime()) / (1000 * 3600 * 24))
-            : '30+';
-
-          newRecs.push({
-            id: `retention-${p.id}`,
-            type: 'retention',
-            title: t('Churn Risk'),
-            athleteName: p.full_name,
-            athleteId: p.id,
-            phone: p.phone,
-            description: `${daysInactive} days inactive. Member is currently paying but not attending.`,
-            impact: t('Protect Rev'),
-            impactValue: 100, // Fixed high importance for retention
-            actionLabel: t('Missing You'),
-            priority: 'high'
-          });
-        }
-      });
-
-      // --- LOGIC D: INSCRIPTION (One-time Recovery) ---
-      const unpaidIns = profiles.filter(p => !p.inscription_paid);
-      if (unpaidIns.length > 0) {
-        if (unpaidIns.length > 3) {
-          newRecs.push({
-            id: 'ins-bulk',
-            type: 'inscription',
-            title: t('Bulk Inscription Recovery'),
-            description: `${unpaidIns.length} athletes have pending registration fees.`,
-            impact: 'Multiple',
-            impactValue: unpaidIns.length * 20,
-            actionLabel: t('View Roster'),
-            priority: 'medium'
-          });
-        } else {
-          unpaidIns.forEach(p => {
-             newRecs.push({
-              id: `ins-${p.id}`,
-              type: 'inscription',
-              title: t('Pending Registration'),
-              athleteName: p.full_name,
-              athleteId: p.id,
-              phone: p.phone,
-              description: `Registration fee still pending for ${p.full_name.split(' ')[0]}.`,
-              impact: 'One-time',
-              impactValue: 50,
-              actionLabel: t('Mark Paid'),
-              priority: 'medium'
-            });
-          });
-        }
-      }
-
-      newRecs.sort((a, b) => b.impactValue - a.impactValue);
-      setRecommendations(newRecs);
-      setTotals({ recoveredPotential: recoveryTotal, upsellPotential: upsellTotal });
-
+      const [nextInterventions, nextStaff] = await Promise.all([
+        revenueRescueService.syncAndList(tenantId),
+        revenueRescueService.listStaff(tenantId),
+      ]);
+      setInterventions(nextInterventions);
+      setStaff(nextStaff as StaffMember[]);
+      setMessageDrafts(
+        Object.fromEntries(
+          nextInterventions.map((item) => [item.id, item.whatsapp_message])
+        )
+      );
     } catch (error) {
       console.error(error);
-      toast(t('Failed to analyze data'), 'error');
+      toast(
+        lang === 'es'
+          ? 'No se pudo cargar Rescate de Ingresos.'
+          : 'Could not load Revenue Rescue.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [lang, tenantId, toast]);
 
   useEffect(() => {
-    analyzeData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
-  const getWhatsAppLink = (rec: Recommendation) => {
-    if (!rec.phone) return null;
-    const cleanPhone = rec.phone.replace(/[^0-9]/g, '');
-    let message = '';
+  const summary = useMemo(
+    () => revenueRescueService.summarize(interventions),
+    [interventions]
+  );
 
-    switch (rec.type) {
-      case 'recovery':
-        message = `Hola ${rec.athleteName?.split(' ')[0]}! Notamos un problema con tu suscripción en PITS. ¿Podemos ayudarte a regularizarlo para que no pierdas tus reservas?`;
-        break;
-      case 'upsell':
-        message = `¡Hola ${rec.athleteName?.split(' ')[0]}! Estás a tope este mes. Notamos que estás aprovechando al máximo tu plan actual, ¿te interesaría subir al siguiente nivel para entrenar sin límites?`;
-        break;
-      case 'retention':
-        message = `¡Hola ${rec.athleteName?.split(' ')[0]}! Te extrañamos en el Box. Te escribo para ver si todo bien y motivarte a volver a los entrenamientos. ¡Te esperamos!`;
-        break;
+  const visible = useMemo(() => {
+    return interventions
+      .filter((item) => {
+        if (signalFilter !== 'all' && item.signal_type !== signalFilter) return false;
+        if (view === 'all') return true;
+        if (view === 'actionable') {
+          return item.status === 'open' || item.status === 'escalated';
+        }
+        return item.status === view;
+      })
+      .sort((a, b) => {
+        const priorityDelta =
+          PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+        if (priorityDelta !== 0) return priorityDelta;
+        return Number(b.monthly_value) - Number(a.monthly_value);
+      });
+  }, [interventions, signalFilter, view]);
+
+  const runAction = async (id: string, action: () => Promise<void>) => {
+    setBusyId(id);
+    try {
+      await action();
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      toast(
+        lang === 'es' ? 'No se pudo guardar la acción.' : 'Could not save action.',
+        'error'
+      );
+    } finally {
+      setBusyId(null);
     }
-
-    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
   };
 
-  const handleAction = async (rec: Recommendation) => {
-    if (rec.id === 'ins-bulk') {
-      window.location.href = '/dashboard/athletes';
+  const handleAssign = (id: string, assigneeId: string) =>
+    runAction(id, () =>
+      revenueRescueService.assign(id, assigneeId || null)
+    );
+
+  const handleContact = async (item: RescueIntervention) => {
+    const phone = item.member?.phone?.replace(/\D/g, '');
+    if (!phone) {
+      toast(copy.noPhone, 'warning');
       return;
     }
+    const message = messageDrafts[item.id] || item.whatsapp_message;
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+    await runAction(item.id, () =>
+      revenueRescueService.markContacted(item.id, message)
+    );
+  };
 
-    switch (rec.type) {
-      case 'inscription':
-        if (!rec.athleteId) return;
-        try {
-          const { error } = await supabase
-            .from('profiles')
-            .update({ inscription_paid: true })
-            .eq('id', rec.athleteId);
-          if (error) throw error;
-          toast(`${t('Registration marked as paid for')} ${rec.athleteName}`, 'success');
-          setDismissed(prev => new Set(prev).add(rec.id));
-        } catch {
-          toast('Failed to update registration', 'error');
-        }
-        break;
+  const handleSnooze = async (item: RescueIntervention) => {
+    const reason = window.prompt(
+      lang === 'es'
+        ? 'Motivo: vacaciones, lesión, horario, finanzas u otro'
+        : 'Reason: vacation, injury, schedule, finances, or other'
+    );
+    if (!reason?.trim()) return;
+    await runAction(item.id, () =>
+      revenueRescueService.snooze(item.id, reason.trim())
+    );
+  };
 
-      default:
-        const waLink = getWhatsAppLink(rec);
-        if (waLink) {
-          window.open(waLink, '_blank');
-          toast(t('WhatsApp message opened'), 'info');
-        } else {
-          toast(`Contact ${rec.athleteName} directly (No phone on file)`, 'warning');
-        }
-        break;
+  const handleResolve = async (item: RescueIntervention) => {
+    const reason = window.prompt(
+      lang === 'es'
+        ? 'Resultado: volvió, pagó, cambió de plan u otro'
+        : 'Outcome: returned, paid, changed plan, or other'
+    );
+    if (!reason?.trim()) return;
+    const recovered = window.confirm(
+      lang === 'es'
+        ? '¿Esta acción protegió el valor mensual de la membresía?'
+        : 'Did this action protect the monthly membership value?'
+    )
+      ? Number(item.monthly_value)
+      : 0;
+    await runAction(item.id, () =>
+      revenueRescueService.resolve(item.id, reason.trim(), recovered)
+    );
+  };
+
+  const toggleHistory = async (interventionId: string) => {
+    if (openHistoryId === interventionId) {
+      setOpenHistoryId(null);
+      return;
+    }
+    setOpenHistoryId(interventionId);
+    if (eventHistory[interventionId]) return;
+    try {
+      const events = await revenueRescueService.listEvents(interventionId);
+      setEventHistory((previous) => ({
+        ...previous,
+        [interventionId]: events,
+      }));
+    } catch (error) {
+      console.error(error);
+      toast(
+        lang === 'es' ? 'No se pudo cargar el historial.' : 'Could not load history.',
+        'error'
+      );
     }
   };
 
-  const handleDismiss = (recId: string) => {
-    setDismissed(prev => new Set(prev).add(recId));
-    toast(t('Dismiss'), 'info');
-  };
-
-  const visibleRecs = recommendations.filter(r => {
-    if (dismissed.has(r.id)) return false;
-    if (activeFilter === 'all') return true;
-    return r.type === activeFilter;
-  });
-
-  const FILTER_TABS: { key: FilterType; label: string; count: number }[] = [
-    { key: 'all', label: t('All'), count: recommendations.filter(r => !dismissed.has(r.id)).length },
-    { key: 'recovery', label: t('Recovery'), count: recommendations.filter(r => r.type === 'recovery' && !dismissed.has(r.id)).length },
-    { key: 'upsell', label: t('Upsell'), count: recommendations.filter(r => r.type === 'upsell' && !dismissed.has(r.id)).length },
-    { key: 'retention', label: t('Retention'), count: recommendations.filter(r => r.type === 'retention' && !dismissed.has(r.id)).length },
-    { key: 'inscription', label: t('Registration'), count: recommendations.filter(r => r.type === 'inscription' && !dismissed.has(r.id)).length },
+  const viewTabs: Array<{ key: ViewFilter; label: string; count: number }> = [
+    {
+      key: 'actionable',
+      label: copy.actionable,
+      count: interventions.filter(
+        (item) => item.status === 'open' || item.status === 'escalated'
+      ).length,
+    },
+    {
+      key: 'contacted',
+      label: copy.contacted,
+      count: interventions.filter((item) => item.status === 'contacted').length,
+    },
+    {
+      key: 'snoozed',
+      label: copy.snoozed,
+      count: interventions.filter((item) => item.status === 'snoozed').length,
+    },
+    {
+      key: 'resolved',
+      label: copy.resolved,
+      count: interventions.filter((item) => item.status === 'resolved').length,
+    },
+    { key: 'all', label: copy.all, count: interventions.length },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
-            {t('Action Center')}
-          </h2>
-          <p className="text-pits-dim font-medium text-sm">
-            {t('High-impact decisions to recover revenue and protect growth.')}
+          <div className="mb-2 flex items-center gap-2">
+            <ShieldCheck size={18} className="text-pits-primary" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-primary">
+              Coach-owned retention
+            </span>
+          </div>
+          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+            {copy.title}
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm font-medium text-pits-dim">
+            {copy.subtitle}
           </p>
         </div>
-        <div className="bg-pits-panel text-pits-text px-4 py-2 rounded-lg flex items-center shadow-lg">
-          <Zap size={16} className="text-yellow-400 mr-2 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-widest">
-            {visibleRecs.filter(r => r.priority === 'urgent' || r.priority === 'high').length} {t('Critical Actions')}
-          </span>
-        </div>
-      </div>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void loadData()}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-pits-primary hover:text-pits-dark-text disabled:opacity-50"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          {copy.refresh}
+        </button>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
-          <div>
-            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Recoverable Debt')}</p>
-            <p className="text-4xl font-black text-pits-text italic">€{totals.recoveredPotential}</p>
-            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Immediate Cash Flow')}</p>
-          </div>
-          <DollarSign size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
-        </div>
-        
-        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
-          <div>
-            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Monthly Growth')}</p>
-            <p className="text-4xl font-black text-pits-text italic">+€{totals.upsellPotential}<span className="text-sm">/mo</span></p>
-            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Plan Optimization')}</p>
-          </div>
-          <TrendingUp size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
-        </div>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label={copy.atRisk}
+          value={`$${summary.openRevenueAtRisk.toLocaleString()}`}
+          detail={`${summary.openCount} ${copy.actions.toLowerCase()}`}
+          icon={AlertCircle}
+          tone="danger"
+        />
+        <MetricCard
+          label={copy.recovered}
+          value={`$${summary.recoveredRevenue.toLocaleString()}`}
+          detail={`${summary.returnedCount} ${copy.returned}`}
+          icon={DollarSign}
+          tone="success"
+        />
+        <MetricCard
+          label={copy.actions}
+          value={String(summary.openCount)}
+          detail={`${summary.contactedCount} ${copy.contacted.toLowerCase()}`}
+          icon={Users}
+        />
+        <MetricCard
+          label={copy.completion}
+          value={`${summary.completionRate}%`}
+          detail={lang === 'es' ? 'Ciclo completo medido' : 'Closed loop measured'}
+          icon={TrendingUp}
+        />
+      </section>
 
-        <div className="bg-pits-surface-elevated p-6 border border-pits-edge rounded-2xl shadow-sm flex items-center justify-between group cursor-default">
-          <div>
-            <p className="text-pits-dim text-[10px] font-black uppercase tracking-widest mb-1">{t('Churn Risk')}</p>
-            <p className="text-4xl font-black text-pits-text italic">{recommendations.filter(r => r.type === 'retention').length}</p>
-            <p className="text-pits-dim text-[10px] mt-2 font-bold uppercase">{t('Members Missing more 12d')}</p>
-          </div>
-          <AlertCircle size={40} className="text-pits-dim/30 group-hover:scale-110 transition-transform" />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 bg-pits-surface-elevated p-2 rounded-xl border border-pits-edge shadow-sm overflow-x-auto no-scrollbar">
-        <Filter size={16} className="text-pits-dim shrink-0 ml-2" />
-        {FILTER_TABS.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveFilter(tab.key)}
-            className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
-              activeFilter === tab.key 
-                ? 'bg-pits-panel text-pits-text shadow-md' 
-                : 'text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted'
-            }`}
-          >
-            {tab.label}
-            {tab.count > 0 && (
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black ${
-                activeFilter === tab.key ? 'bg-pits-surface-elevated text-black' : 'bg-pits-surface-muted text-pits-dim'
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <div className="col-span-full py-20 text-center">
-            <Clock className="animate-spin mx-auto text-pits-red mb-4" size={32} />
-            <p className="text-pits-dim font-bold uppercase text-[10px] tracking-widest">{t('Running Intelligence Layer...')}</p>
-          </div>
-        ) : (
-          visibleRecs.map((rec) => (
-            <div 
-              key={rec.id} 
-              className={`bg-pits-surface-elevated border rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 relative overflow-hidden
-                ${rec.priority === 'urgent' ? 'border-2 border-pits-error' : 'border-pits-edge'}
-              `}
+      <section className="flex flex-col gap-3 rounded-2xl border border-pits-edge bg-pits-surface-elevated p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex gap-2 overflow-x-auto">
+          {viewTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setView(tab.key)}
+              className={`whitespace-nowrap rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+                view === tab.key
+                  ? 'bg-pits-panel text-white'
+                  : 'text-pits-dim hover:bg-pits-surface-muted hover:text-pits-text'
+              }`}
             >
-              {rec.priority === 'urgent' && (
-                <div className="absolute top-0 right-0 bg-pits-error text-pits-text text-[8px] font-black uppercase px-3 py-1 rounded-bl-lg tracking-widest">
-                  {t('Urgent Recovery')}
+              {tab.label} <span className="ml-1 opacity-70">{tab.count}</span>
+            </button>
+          ))}
+        </div>
+        <select
+          value={signalFilter}
+          onChange={(event) =>
+            setSignalFilter(event.target.value as RescueSignalType | 'all')
+          }
+          className="min-h-10 rounded-xl border border-pits-edge bg-pits-surface-muted px-3 text-xs font-bold text-pits-text outline-none focus:border-pits-primary"
+        >
+          <option value="all">{copy.all} signals</option>
+          {Object.entries(SIGNAL_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {loading ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-pits-edge bg-pits-surface-elevated">
+          <RefreshCw size={30} className="mb-4 animate-spin text-pits-primary" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-dim">
+            {copy.loading}
+          </p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-pits-edge bg-pits-surface-elevated">
+          <UserCheck size={36} className="mb-3 text-pits-success" />
+          <p className="font-black uppercase italic text-pits-text">{copy.empty}</p>
+        </div>
+      ) : (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {visible.map((item) => (
+            <article
+              key={item.id}
+              className={`rounded-2xl border bg-pits-surface-elevated p-5 shadow-sm ${
+                item.priority === 'urgent'
+                  ? 'border-2 border-pits-error'
+                  : 'border-pits-edge'
+              }`}
+            >
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-pits-primary-soft px-2 py-1 text-[8px] font-black uppercase tracking-widest text-pits-primary">
+                      {SIGNAL_LABELS[item.signal_type]}
+                    </span>
+                    <span
+                      className={`rounded-md border px-2 py-1 text-[8px] font-black uppercase tracking-widest ${STATUS_STYLES[item.status]}`}
+                    >
+                      {item.status}
+                    </span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                      {item.priority}
+                    </span>
+                  </div>
+                  <h2 className="truncate text-lg font-black uppercase italic tracking-tight text-pits-text">
+                    {item.member?.full_name || 'Member'}
+                  </h2>
+                  <p className="text-sm font-bold text-pits-dim">{item.title}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-2xl font-black italic text-pits-text">
+                    ${Number(item.monthly_value).toLocaleString()}
+                  </p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                    MRR at risk
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-pits-surface-muted p-3">
+                  <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                    {copy.evidence}
+                  </p>
+                  <p className="text-xs font-semibold leading-relaxed text-pits-text">
+                    {item.explanation}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-pits-primary-soft/50 p-3">
+                  <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-primary">
+                    {copy.recommendation}
+                  </p>
+                  <p className="text-xs font-semibold leading-relaxed text-pits-text">
+                    {item.suggested_action}
+                  </p>
+                </div>
+              </div>
+
+              {item.status !== 'resolved' && (
+                <>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
+                    <label className="block">
+                      <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                        {copy.assigned}
+                      </span>
+                      <select
+                        value={item.assigned_to || ''}
+                        disabled={busyId === item.id}
+                        onChange={(event) =>
+                          void handleAssign(item.id, event.target.value)
+                        }
+                        className="min-h-10 w-full rounded-xl border border-pits-edge bg-pits-surface-muted px-3 text-xs font-bold text-pits-text outline-none focus:border-pits-primary"
+                      >
+                        <option value="">{copy.unassigned}</option>
+                        {staff.map((person) => (
+                          <option key={person.id} value={person.id}>
+                            {person.full_name || person.role} · {person.role}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                        WhatsApp
+                      </span>
+                      <textarea
+                        rows={2}
+                        value={messageDrafts[item.id] || ''}
+                        onChange={(event) =>
+                          setMessageDrafts((previous) => ({
+                            ...previous,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                        className="w-full resize-none rounded-xl border border-pits-edge bg-pits-surface-muted px-3 py-2 text-xs font-medium text-pits-text outline-none focus:border-pits-primary"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-pits-edge pt-4">
+                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-pits-dim">
+                      {item.assignee?.full_name && (
+                        <span>{item.assignee.full_name}</span>
+                      )}
+                      {item.due_at && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={11} />
+                          {copy.due}{' '}
+                          {new Date(item.due_at).toLocaleDateString(
+                            lang === 'es' ? 'es-ES' : 'en-US'
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void toggleHistory(item.id)}
+                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
+                      >
+                        {lang === 'es' ? 'Historial' : 'History'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void handleSnooze(item)}
+                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
+                      >
+                        {copy.snooze}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() =>
+                          void runAction(item.id, () =>
+                            revenueRescueService.escalate(item.id)
+                          )
+                        }
+                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-error hover:bg-red-50"
+                      >
+                        {copy.escalate}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void handleResolve(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-pits-edge px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-text hover:bg-pits-surface-muted"
+                      >
+                        <CheckCircle2 size={12} />
+                        {copy.resolve}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void handleContact(item)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-pits-primary px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dark-text shadow-sm hover:bg-pits-primary-dark"
+                      >
+                        <MessageCircle size={12} />
+                        {copy.send}
+                        <ArrowUpRight size={11} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {item.status === 'resolved' && (
+                <>
+                  <div className="mt-4 flex items-center justify-between rounded-xl bg-green-50 p-3 text-green-800">
+                    <div>
+                      <p className="text-[8px] font-black uppercase tracking-widest">
+                        {item.outcome_type || item.resolution_reason}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold">
+                        {item.outcome_detected_at
+                          ? new Date(item.outcome_detected_at).toLocaleDateString(
+                              lang === 'es' ? 'es-ES' : 'en-US'
+                            )
+                          : ''}
+                      </p>
+                    </div>
+                    <p className="text-lg font-black">
+                      +${Number(item.recovered_amount).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void toggleHistory(item.id)}
+                    className="mt-2 text-[9px] font-black uppercase tracking-wider text-pits-dim"
+                  >
+                    {lang === 'es' ? 'Ver historial' : 'View history'}
+                  </button>
+                </>
+              )}
+
+              {openHistoryId === item.id && (
+                <div className="mt-4 rounded-xl border border-pits-edge bg-pits-surface-muted p-3">
+                  <p className="mb-3 text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                    {lang === 'es' ? 'Historial de intervención' : 'Intervention history'}
+                  </p>
+                  {(eventHistory[item.id] || []).length === 0 ? (
+                    <p className="text-xs text-pits-dim">
+                      {lang === 'es' ? 'Sin eventos todavía.' : 'No events yet.'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {eventHistory[item.id].map((event) => (
+                        <div
+                          key={event.id}
+                          className="flex items-center justify-between gap-3 text-xs"
+                        >
+                          <span className="font-bold capitalize text-pits-text">
+                            {event.event_type.replace(/_/g, ' ')}
+                            {event.actor?.full_name
+                              ? ` · ${event.actor.full_name}`
+                              : ''}
+                          </span>
+                          <span className="shrink-0 text-[9px] text-pits-dim">
+                            {new Date(event.created_at).toLocaleString(
+                              lang === 'es' ? 'es-ES' : 'en-US'
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-              
-              <div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest
-                    ${rec.type === 'recovery' ? 'bg-pits-primary-soft text-pits-error' : 
-                      rec.type === 'upsell' ? 'bg-pits-surface-muted text-pits-primary' : 
-                      rec.type === 'retention' ? 'bg-pits-primary-soft text-pits-primary' : 
-                      'bg-pits-surface-muted text-pits-text'}
-                  `}>
-                    {t(rec.type.charAt(0).toUpperCase() + rec.type.slice(1) as any)}
-                  </div>
-                  <span className={`font-black text-sm italic ${rec.type === 'recovery' ? 'text-pits-error' : 'text-pits-text'}`}>
-                    {rec.impact}
-                  </span>
-                </div>
-                
-                <h4 className="text-pits-text font-black text-base mb-1 uppercase tracking-tight italic">
-                  {rec.title}
-                </h4>
-                <p className="text-pits-dim text-xs font-semibold leading-normal mb-6 min-h-[40px]">
-                  {rec.description}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-pits-edge">
-                <div className="flex items-center">
-                  <div className="w-7 h-7 bg-pits-surface-muted rounded-full flex items-center justify-center mr-2 border border-pits-edge">
-                    <Users size={14} className="text-pits-dim" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-pits-text uppercase leading-none">
-                      {rec.athleteName ? rec.athleteName.split(' ')[0] : t('Bulk Inscription Recovery')}
-                    </span>
-                    <span className="text-[8px] text-pits-dim font-bold uppercase">Athlete ID {rec.athleteId?.slice(0,5) || 'Group'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => handleDismiss(rec.id)}
-                    className="text-[9px] font-bold text-pits-dim uppercase tracking-widest hover:text-pits-text transition-colors"
-                  >
-                    {t('Dismiss')}
-                  </button>
-                  <button 
-                    onClick={() => handleAction(rec)}
-                    className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all active:scale-95 shadow-sm
-                      ${rec.type === 'recovery' || rec.priority === 'urgent'
-                        ? 'bg-pits-error text-pits-text hover:bg-pits-primary-dark' 
-                        : 'bg-pits-panel text-pits-text hover:bg-pits-primary-dark'}
-                    `}
-                  >
-                    {rec.type !== 'inscription' && rec.id !== 'ins-bulk' && (
-                      <MessageCircle size={10} className="mr-0.5" />
-                    )}
-                    {rec.actionLabel}
-                    <ArrowUpRight size={10} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {visibleRecs.length === 0 && !loading && (
-        <div className="bg-pits-surface-elevated p-20 rounded-2xl border border-dashed border-pits-edge text-center flex flex-col items-center">
-           <div className="w-16 h-16 bg-pits-surface-muted rounded-full flex items-center justify-center mb-4">
-             <UserCheck size={32} className="text-pits-dim" />
-           </div>
-           <p className="text-pits-text font-black uppercase italic tracking-wider text-xl">{t('The Box is Perfectly Balanced')}</p>
-           <p className="text-pits-dim text-xs font-bold uppercase mt-2 tracking-widest opacity-60">{t('No high-impact recovery or growth tasks detected.')}</p>
-        </div>
+            </article>
+          ))}
+        </section>
       )}
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: typeof DollarSign;
+  tone?: 'default' | 'danger' | 'success';
+}) {
+  const iconClass =
+    tone === 'danger'
+      ? 'text-pits-error bg-red-50'
+      : tone === 'success'
+        ? 'text-pits-success bg-green-50'
+        : 'text-pits-primary bg-pits-primary-soft';
+  return (
+    <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated p-5 shadow-sm">
+      <div className="mb-4 flex items-start justify-between">
+        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-pits-dim">
+          {label}
+        </p>
+        <span className={`rounded-xl p-2 ${iconClass}`}>
+          <Icon size={17} />
+        </span>
+      </div>
+      <p className="text-3xl font-black italic tracking-tight text-pits-text">{value}</p>
+      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-pits-dim">
+        {detail}
+      </p>
     </div>
   );
 }

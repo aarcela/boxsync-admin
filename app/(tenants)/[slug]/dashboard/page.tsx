@@ -321,15 +321,19 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right space-x-3">
-                      <a 
-                        href={payment.proof_image_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-blue-600 hover:text-pits-dark-text font-black text-[10px] uppercase tracking-tighter transition-all hover:translate-y-px"
-                      >
-                        <ExternalLink size={14} className="mr-1.5" />
-                        {t('Audit Proof')}
-                      </a>
+                      {payment.proof_image_url ? (
+                        <a
+                          href={payment.proof_image_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-blue-600 hover:text-pits-dark-text font-black text-[10px] uppercase tracking-tighter transition-all hover:translate-y-px"
+                        >
+                          <ExternalLink size={14} className="mr-1.5" />
+                          {t('Audit Proof')}
+                        </a>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase text-pits-dim">—</span>
+                      )}
                       <button 
                         onClick={() => setConfirmConfig({
                           isOpen: true,

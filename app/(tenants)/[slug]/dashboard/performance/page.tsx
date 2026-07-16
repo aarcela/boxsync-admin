@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   Heart, Users, BarChart3, TrendingUp, TrendingDown, 
-  AlertTriangle, CheckCircle2, Star, Target, DollarSign,
-  TrendingUp as TrendUpIcon, ArrowRight, Zap, LucideIcon
+  Star, Target, DollarSign, ArrowRight, Zap
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
+import type { TranslationKey } from '@/lib/translations';
 
 // --- DATA TYPES ---
 
@@ -38,8 +38,6 @@ interface CoachPerf {
 interface ClassPerf {
   slot: string;
   occupancy: number;
-  attendance: number;
-  cancellation: number;
   category: 'High' | 'Medium' | 'Low';
 }
 
@@ -50,10 +48,23 @@ interface PlanEfficiency {
   contribution: number;
 }
 
+interface CoachAccumulator {
+  name: string;
+  ratings: number[];
+  wRatings: number[];
+  pwRatings: number[];
+}
+
+interface SlotAccumulator {
+  booked: number;
+  capacity: number;
+  count: number;
+}
+
 // --- MAIN COMPONENT ---
 
 export default function PerformancePage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -64,10 +75,7 @@ export default function PerformancePage() {
   const [classStats, setClassStats] = useState<ClassPerf[]>([]);
   const [revenueStats, setRevenueStats] = useState<PlanEfficiency[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetchPerformanceData();
-  }, []);
+  const [revenueSummary, setRevenueSummary] = useState({ revenuePerAthlete: 0, activeAthletes: 0, rosterRate: 0 });
 
   const fetchPerformanceData = async () => {
     setLoading(true);
@@ -77,18 +85,26 @@ export default function PerformancePage() {
 
       // 1. Fetching for Athlete Health
       const { data: members } = await supabase.from('profiles').select('id, full_name, is_solvent, phone').eq('role', 'member');
-      const { data: recentBookings } = await supabase.from('bookings').select('user_id, created_at, status').gte('created_at', thirtyDaysAgo);
+      const { data: recentBookings } = await supabase
+        .from('bookings')
+        .select('user_id, status, classes!bookings_class_id_fkey!inner(start_time)')
+        .gte('classes.start_time', thirtyDaysAgo)
+        .lte('classes.start_time', now.toISOString());
 
       // 2. Fetching for Coach Quality
       const { data: feedbacks } = await supabase.from('coach_feedback').select('coach_id, rating, created_at, coach:profiles!coach_id(full_name)');
       
       // 3. Fetching for Class Performance
-      const { data: classes } = await supabase.from('classes').select('id, start_time, max_capacity, bookings:bookings(count, status)').gte('start_time', thirtyDaysAgo);
+      const { data: classes } = await supabase.from('classes').select('id, start_time, max_capacity, coach_id, bookings:bookings(status)').gte('start_time', thirtyDaysAgo);
 
       // 4. Fetching for Revenue (assuming payments have plan info or linking)
-      const { data: payments } = await supabase.from('payments').select('amount, user_id, profiles!user_id(plan)').eq('status', 'approved').gte('created_at', thirtyDaysAgo);
+      const { data: payments } = await supabase.from('payments').select('amount, user_id, profiles!user_id(membership_plans(name))').eq('status', 'approved').gte('created_at', thirtyDaysAgo);
 
       // --- PROCESS DATA ---
+      const bookingTime = (booking: NonNullable<typeof recentBookings>[number]) => {
+        const classData = Array.isArray(booking.classes) ? booking.classes[0] : booking.classes;
+        return classData?.start_time ? new Date(classData.start_time).getTime() : 0;
+      };
 
       // --- BLOCK 1: Athlete Health ---
       if (members && recentBookings) {
@@ -96,11 +112,11 @@ export default function PerformancePage() {
         const dayMs = 24 * 60 * 60 * 1000;
 
         const athleteScoring: AthleteRanking[] = members.map(m => {
-          const memberBookings = recentBookings.filter(b => b.user_id === m.id);
-          const lastBooking = [...memberBookings].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          const memberBookings = recentBookings.filter(b => b.user_id === m.id && b.status === 'attended');
+          const lastBooking = [...memberBookings].sort((a, b) => bookingTime(b) - bookingTime(a))[0];
           
-          const daysSinceLast = lastBooking ? Math.floor((nowTs - new Date(lastBooking.created_at).getTime()) / dayMs) : 99;
-          const bookingsLast7d = memberBookings.filter(b => (nowTs - new Date(b.created_at).getTime()) < (7 * dayMs)).length;
+          const daysSinceLast = lastBooking ? Math.floor((nowTs - bookingTime(lastBooking)) / dayMs) : 99;
+          const bookingsLast7d = memberBookings.filter(b => (nowTs - bookingTime(b)) < (7 * dayMs)).length;
 
           let status: 'Healthy' | 'At Risk' | 'Critical' = 'Healthy';
           let score = 10;
@@ -137,7 +153,7 @@ export default function PerformancePage() {
         const weekAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
         const prevWeekStart = weekAgo - (7 * 24 * 60 * 60 * 1000);
 
-        const coachMap: Record<string, any> = {};
+        const coachMap: Record<string, CoachAccumulator> = {};
         feedbacks.forEach(f => {
           const cid = f.coach_id;
           if (!coachMap[cid]) {
@@ -150,10 +166,13 @@ export default function PerformancePage() {
           else if (ts > prevWeekStart) coachMap[cid].pwRatings.push(f.rating);
         });
 
-        const coaches: CoachPerf[] = Object.entries(coachMap).map(([id, c]: [string, any]) => {
-          const avg = c.ratings.length ? c.ratings.reduce((a: any, b: any) => a + b, 0) / c.ratings.length : 0;
-          const wAvg = c.wRatings.length ? c.wRatings.reduce((a: any, b: any) => a + b, 0) / c.wRatings.length : 0;
-          const pwAvg = c.pwRatings.length ? c.pwRatings.reduce((a: any, b: any) => a + b, 0) / c.pwRatings.length : 0;
+        const coaches: CoachPerf[] = Object.entries(coachMap).map(([id, c]) => {
+          const avg = c.ratings.length ? c.ratings.reduce((a, b) => a + b, 0) / c.ratings.length : 0;
+          const wAvg = c.wRatings.length ? c.wRatings.reduce((a, b) => a + b, 0) / c.wRatings.length : 0;
+          const pwAvg = c.pwRatings.length ? c.pwRatings.reduce((a, b) => a + b, 0) / c.pwRatings.length : 0;
+          const coachClasses = classes?.filter(cls => cls.coach_id === id) || [];
+          const coachCapacity = coachClasses.reduce((sum, cls) => sum + (cls.max_capacity || 12), 0);
+          const coachBookings = coachClasses.reduce((sum, cls) => sum + (cls.bookings?.length || 0), 0);
           
           const trendValue = (wAvg > pwAvg + 0.1 ? 'up' : wAvg < pwAvg - 0.1 ? 'down' : 'stable') as 'up' | 'down' | 'stable';
           
@@ -164,7 +183,7 @@ export default function PerformancePage() {
             monthAvg: avg,
             allTimeAvg: avg,
             reviews: c.ratings.length,
-            occupancy: 0,
+            occupancy: coachCapacity > 0 ? Math.round((coachBookings / coachCapacity) * 100) : 0,
             trend: trendValue
           };
         }).filter(c => c.reviews >= 5).sort((a, b) => b.weekAvg - a.weekAvg);
@@ -173,51 +192,77 @@ export default function PerformancePage() {
 
       // --- BLOCK 3: Class Performance ---
       if (classes) {
-        const slotMap: Record<string, any> = {};
+        const slotMap: Record<string, SlotAccumulator> = {};
         classes.forEach(c => {
           const time = new Date(c.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-          if (!slotMap[time]) slotMap[time] = { booked: 0, capacity: 0, attended: 0, count: 0 };
-          const booked = c.bookings?.[0]?.count || 0;
+          if (!slotMap[time]) slotMap[time] = { booked: 0, capacity: 0, count: 0 };
+          const booked = c.bookings?.length || 0;
           slotMap[time].booked += booked;
           slotMap[time].capacity += (c.max_capacity || 12);
           slotMap[time].count++;
         });
 
-        const slots: ClassPerf[] = Object.entries(slotMap).map(([slot, data]: [string, any]) => {
+        const slots: ClassPerf[] = Object.entries(slotMap).map(([slot, data]) => {
           const occupancy = Math.round((data.booked / data.capacity) * 100);
           let category: 'High' | 'Medium' | 'Low' = 'Medium';
           if (occupancy > 75) category = 'High';
           else if (occupancy < 40) category = 'Low';
 
-          return { slot, occupancy, attendance: 90, cancellation: 5, category };
+          return { slot, occupancy, category };
         }).sort((a, b) => a.occupancy - b.occupancy);
         setClassStats(slots);
       }
 
       // --- BLOCK 4: Revenue Efficiency ---
       if (payments) {
-        const planMap: Record<string, any> = {};
+        const planMap: Record<string, { revenue: number; athleteIds: Set<string> }> = {};
         let totalRev = 0;
         payments.forEach(p => {
           const profileData = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
-          const plan = (profileData as any)?.plan || 'Unknown';
-          if (!planMap[plan]) planMap[plan] = { revenue: 0, count: 0 };
-          planMap[plan].revenue += p.amount;
-          planMap[plan].count++;
-          totalRev += p.amount;
+          const membershipPlan = Array.isArray(profileData?.membership_plans)
+            ? profileData.membership_plans[0]
+            : profileData?.membership_plans;
+          const plan = membershipPlan?.name || 'Unknown';
+          if (!planMap[plan]) planMap[plan] = { revenue: 0, athleteIds: new Set<string>() };
+          const amount = Number(p.amount) || 0;
+          planMap[plan].revenue += amount;
+          planMap[plan].athleteIds.add(p.user_id);
+          totalRev += amount;
         });
 
-        const efficiencies: PlanEfficiency[] = Object.entries(planMap).map(([name, data]: [string, any]) => ({
-          name, revenue: data.revenue, athletes: data.count, contribution: Math.round((data.revenue / totalRev) * 100)
+        const efficiencies: PlanEfficiency[] = Object.entries(planMap).map(([name, data]) => ({
+          name,
+          revenue: data.revenue,
+          athletes: data.athleteIds.size,
+          contribution: totalRev > 0 ? Math.round((data.revenue / totalRev) * 100) : 0
         })).sort((a, b) => b.revenue - a.revenue).slice(0, 3);
         setRevenueStats(efficiencies);
+
+        const sevenDaysAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+        const activeAthletes = members?.filter(member =>
+          member.is_solvent
+          && recentBookings?.some(booking =>
+            booking.user_id === member.id
+            && booking.status === 'attended'
+            && bookingTime(booking) >= sevenDaysAgo
+          )
+        ).length || 0;
+        setRevenueSummary({
+          revenuePerAthlete: activeAthletes > 0 ? totalRev / activeAthletes : 0,
+          activeAthletes,
+          rosterRate: members?.length ? Math.round((activeAthletes / members.length) * 100) : 0
+        });
       }
 
       // Dynamic Insights
       const newInsights = [];
-      if (athletesHealth.atRisk + athletesHealth.critical > 5) newInsights.push(t('High number of at-risk athletes'));
-      if (coachStats.some(c => c.trend === 'down')) newInsights.push(t('Coach performance declining this week'));
-      if (classStats.filter(s => s.category === 'Low').length >= 2) newInsights.push(t('2 time slots underperforming'));
+      const atRiskCount = members?.filter(member => {
+        const memberBookings = recentBookings?.filter(booking => booking.user_id === member.id && booking.status === 'attended') || [];
+        const lastBooking = [...memberBookings].sort((a, b) => bookingTime(b) - bookingTime(a))[0];
+        const daysSinceLast = lastBooking ? (now.getTime() - bookingTime(lastBooking)) / (24 * 60 * 60 * 1000) : Infinity;
+        return !member.is_solvent || daysSinceLast >= 7;
+      }).length || 0;
+      if (atRiskCount > 5) newInsights.push(t('High number of at-risk athletes'));
       setInsights(newInsights);
 
     } catch (error) {
@@ -228,14 +273,11 @@ export default function PerformancePage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Healthy': return 'bg-pits-primary-soft text-pits-success border-pits-edge';
-      case 'At Risk': return 'bg-pits-primary-soft text-pits-primary border-pits-edge';
-      case 'Critical': return 'bg-pits-primary-soft text-pits-error border-pits-edge';
-      default: return 'bg-pits-surface-muted text-pits-text';
-    }
-  };
+  useEffect(() => {
+    fetchPerformanceData();
+    // The dashboard intentionally loads once; manual refresh is not exposed here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
      return (
@@ -308,9 +350,9 @@ export default function PerformancePage() {
                  { label: 'At Risk', val: athletesHealth.atRisk, color: 'text-pits-primary', bg: 'bg-pits-primary-soft' },
                  { label: 'Critical', val: athletesHealth.critical, color: 'text-pits-error', bg: 'bg-pits-primary-soft' }
                ].map((c, i) => (
-                 <div key={i} title={t(`${c.label} Definition` as any)} className={`${c.bg} p-4 rounded-2xl flex flex-col items-center border border-transparent hover:border-pits-edge transition-all cursor-help`}>
+                 <div key={i} title={t(`${c.label} Definition` as TranslationKey)} className={`${c.bg} p-4 rounded-2xl flex flex-col items-center border border-transparent hover:border-pits-edge transition-all cursor-help`}>
                     <span className={`text-2xl font-black ${c.color}`}>{c.val}</span>
-                    <span className={`text-[9px] font-black uppercase text-pits-dim tracking-wider mt-1`}>{t(c.label as any)}</span>
+                    <span className={`text-[9px] font-black uppercase text-pits-dim tracking-wider mt-1`}>{t(c.label as TranslationKey)}</span>
                  </div>
                ))}
             </div>
@@ -375,14 +417,14 @@ export default function PerformancePage() {
                      </div>
                      <div className={`flex items-center gap-1 text-[10px] font-black uppercase ${coach.trend === 'up' ? 'text-pits-success' : coach.trend === 'down' ? 'text-pits-error' : 'text-pits-dim'}`}>
                         {coach.trend === 'up' ? <TrendingUp size={14} /> : coach.trend === 'down' ? <TrendingDown size={14} /> : <Zap size={14} />}
-                        {t((coach.trend.charAt(0).toUpperCase() + coach.trend.slice(1)) as any)}
+                        {t((coach.trend.charAt(0).toUpperCase() + coach.trend.slice(1)) as TranslationKey)}
                      </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 border-l border-pits-edge pl-4">
                    <div className="text-right">
-                      <span className="block text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none mb-0.5">{t('Avg Attendance')}</span>
-                      <span className="text-sm font-black text-pits-text">84%</span>
+                      <span className="block text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none mb-0.5">{t('Occupancy Rate')}</span>
+                      <span className="text-sm font-black text-pits-text">{coach.occupancy}%</span>
                    </div>
                    <button 
                      onClick={() => router.push(`/dashboard/feedback?coach=${coach.id}`)}
@@ -425,7 +467,7 @@ export default function PerformancePage() {
                        </span>
                        <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-pits-text uppercase group-hover:text-pits-red transition-colors">{t('Low Performance')}</span>
+                            <span className="text-sm font-black text-pits-text uppercase group-hover:text-pits-red transition-colors">{t('Occupancy Rate')}</span>
                             <span className="text-[9px] font-bold text-pits-error bg-pits-primary-soft px-2 py-0.5 rounded-full">{s.occupancy}% {t('Occupancy Rate')}</span>
                           </div>
                           <span className="text-[9px] font-bold text-pits-dim uppercase tracking-tighter">Action: {t('Adjust schedule')}</span>
@@ -462,18 +504,14 @@ export default function PerformancePage() {
                <div className="p-5 bg-pits-surface-elevated border border-pits-edge rounded-3xl text-pits-text relative overflow-hidden group">
                   <DollarSign size={80} className="absolute -bottom-4 -right-4 opacity-10 group-hover:scale-110 transition-transform" />
                   <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-pits-dim mb-2 truncate">{t('Revenue per Athlete')}</span>
-                  <span className="text-3xl font-black">$42.5</span>
-                  <div className="mt-3 flex items-center gap-1 text-pits-success">
-                     <TrendingUp size={12} />
-                     <span className="text-[10px] font-black">+4% vs LW</span>
-                  </div>
+                  <span className="text-3xl font-black">€{revenueSummary.revenuePerAthlete.toFixed(2)}</span>
                </div>
                <div className="p-5 bg-pits-surface-muted rounded-3xl border border-pits-edge relative overflow-hidden">
                   <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-pits-dim mb-2 truncate">{t('Active Athletes')}</span>
-                  <span className="text-3xl font-black text-pits-text">148</span>
+                  <span className="text-3xl font-black text-pits-text">{revenueSummary.activeAthletes}</span>
                   <div className="mt-3 flex items-center gap-1 text-pits-dim">
                      <Users size={12} />
-                     <span className="text-[10px] font-black">92% Capacity</span>
+                     <span className="text-[10px] font-black">{revenueSummary.rosterRate}% of roster</span>
                   </div>
                </div>
             </div>

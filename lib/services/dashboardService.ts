@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { signPaymentProofUrl } from './financialService';
 
 export interface DashboardProfile {
   id: string;
@@ -53,10 +54,11 @@ export const dashboardService = {
     
     if (error) throw error;
     
-    return (data || []).map(p => ({
+    return Promise.all((data || []).map(async p => ({
       ...p,
+      proof_image_url: p.proof_image_url ? await signPaymentProofUrl(p.proof_image_url) : '',
       profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
-    })) as DashboardPayment[];
+    }))) as Promise<DashboardPayment[]>;
   },
 
   /**
