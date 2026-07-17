@@ -52,4 +52,28 @@ export const tenantService = {
     if (error) throw error;
     return data as Tenant;
   },
+
+  async listTenants(client: SupabaseClient = supabase): Promise<Tenant[]> {
+    const { data, error } = await client
+      .from('tenants')
+      .select('id, slug, name, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []) as Tenant[];
+  },
+
+  async getTenantById(
+    tenantId: string,
+    client: SupabaseClient = supabase
+  ): Promise<Tenant | null> {
+    const { data, error } = await client
+      .from('tenants')
+      .select('id, slug, name, created_at')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as Tenant | null;
+  },
 };

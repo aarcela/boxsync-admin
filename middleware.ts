@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse, type NextRequest } from 'next/server';
-import { isStaffRole } from './lib/auth';
-import { resolveTenantSlug } from './lib/tenant-host';
+import { isPlatformAdmin, isStaffRole } from './lib/auth';
+import { buildHqUrl, isHqHost, resolveTenantSlug } from './lib/tenant-host';
 
 const SKIP_REWRITE_PREFIXES = [
   '/api',
@@ -12,9 +12,17 @@ const SKIP_REWRITE_PREFIXES = [
   '/forgot-password',
   '/reset-password',
   '/welcome',
+  '/super-admin',
 ];
 
+function requiresPlatformAdminAuth(pathname: string): boolean {
+  return (
+    pathname.startsWith('/super-admin') || pathname.startsWith('/api/admin/hq')
+  );
+}
+
 function requiresStaffAuth(pathname: string): boolean {
+  if (requiresPlatformAdminAuth(pathname)) return false;
   return pathname.startsWith('/dashboard') || pathname.startsWith('/api/admin');
 }
 
@@ -34,10 +42,20 @@ function shouldRewrite(slug: string | null, pathname: string): slug is string {
   return !!slug && !SKIP_REWRITE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function denyUnauthenticated(request: NextRequest, pathname: string) {
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const url = request.nextUrl.clone();
+  url.pathname = '/';
+  return NextResponse.redirect(url);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get('host') ?? '';
   const slug = resolveTenantSlug(host);
+  const hq = isHqHost(host);
 
   if (
     pathname.startsWith('/api/admin/cron') ||
@@ -45,6 +63,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/admin/provision')
   ) {
     return NextResponse.next();
+  }
+
+  // Super-admin UI only on HQ host
+  if (pathname.startsWith('/super-admin') && !hq) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
   }
 
   if (!slug && pathname.startsWith('/dashboard')) {
@@ -57,7 +82,10 @@ export async function middleware(request: NextRequest) {
     ? applyTenantRewrite(request, slug, pathname)
     : NextResponse.next({ request });
 
-  if (!requiresStaffAuth(pathname)) {
+  const needsPlatformAuth = requiresPlatformAdminAuth(pathname);
+  const needsStaffAuth = requiresStaffAuth(pathname);
+
+  if (!needsPlatformAuth && !needsStaffAuth) {
     return response;
   }
 
@@ -87,12 +115,28 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return denyUnauthenticated(request, pathname);
+  }
+
+  if (needsPlatformAuth) {
+    if (!isPlatformAdmin(user)) {
+      await supabase.auth.signOut();
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
     }
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+    return response;
+  }
+
+  // Tenant / staff routes: platform admins must use HQ
+  if (isPlatformAdmin(user)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    return NextResponse.redirect(buildHqUrl('/super-admin'));
   }
 
   const { data: profile } = await supabase

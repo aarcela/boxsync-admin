@@ -74,3 +74,15 @@ export function buildTenantDashboardUrl(slug: string, path = '/dashboard'): stri
 
   return `https://${slug}.${ROOT_DOMAIN}${dashboardPath}`;
 }
+
+export function buildHqUrl(path = '/super-admin'): string {
+  const hqPath = path.startsWith('/') ? path : `/${path}`;
+  const isDev = process.env.NODE_ENV === 'development';
+
+  if (isDev) {
+    const port = process.env.PORT ?? '3000';
+    return `http://hq.localhost:${port}${hqPath}`;
+  }
+
+  return `https://hq.${ROOT_DOMAIN}${hqPath}`;
+}

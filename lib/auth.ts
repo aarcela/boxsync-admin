@@ -40,6 +40,16 @@ export function isStaffRole(role: string | null | undefined): role is StaffRole 
   return role === 'admin' || role === 'manager';
 }
 
+/** Platform HQ access — Auth app_metadata.is_admin only (not profiles.role). */
+export function isPlatformAdmin(
+  user: { app_metadata?: Record<string, unknown> } | null | undefined
+): boolean {
+  return user?.app_metadata?.is_admin === true;
+}
+
+export const PLATFORM_ADMIN_ONLY =
+  'Unauthorized: Platform admin access only.' as const;
+
 export const PROFILE_ROLES = ['member', 'coach', 'manager', 'admin'] as const;
 export type ProfileRole = (typeof PROFILE_ROLES)[number];
 
@@ -80,6 +90,11 @@ export function resolveLoginError(
   const staffOnly = t('Unauthorized: Staff access only.');
   if (err.message === staffOnly) {
     return staffOnly;
+  }
+
+  const platformOnly = t('Unauthorized: Platform admin access only.');
+  if (err.message === platformOnly) {
+    return platformOnly;
   }
 
   const missingTenant = t('Missing tenant context.');

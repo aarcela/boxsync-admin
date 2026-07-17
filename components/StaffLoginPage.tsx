@@ -8,9 +8,17 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { AuthLanguageToggle } from '@/components/AuthLanguageToggle';
 import { useOptionalTenant } from '@/components/TenantContext';
-import { isStaffRole, resolveLoginError } from '@/lib/auth';
+import {
+  isPlatformAdmin,
+  isStaffRole,
+  resolveLoginError,
+} from '@/lib/auth';
 import { resolvePostLoginTenantSlug } from '@/lib/resolve-post-login-tenant';
-import { buildTenantDashboardUrl } from '@/lib/tenant-host';
+import {
+  buildHqUrl,
+  buildTenantDashboardUrl,
+  isHqHost,
+} from '@/lib/tenant-host';
 
 export default function StaffLoginPage() {
   const { t } = useLanguage();
@@ -26,6 +34,8 @@ export default function StaffLoginPage() {
     setError('');
 
     const trimmedEmail = email.trim().toLowerCase();
+    const onHq =
+      typeof window !== 'undefined' && isHqHost(window.location.host);
 
     try {
       const {
@@ -38,6 +48,22 @@ export default function StaffLoginPage() {
 
       if (authError) throw authError;
       if (!user) throw new Error('auth_failed');
+
+      if (isPlatformAdmin(user)) {
+        if (onHq || !tenant) {
+          window.location.href = onHq
+            ? '/super-admin'
+            : buildHqUrl('/super-admin');
+          return;
+        }
+        await supabase.auth.signOut();
+        throw new Error(t('Unauthorized: Platform admin access only.'));
+      }
+
+      if (onHq) {
+        await supabase.auth.signOut();
+        throw new Error(t('Unauthorized: Platform admin access only.'));
+      }
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
