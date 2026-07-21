@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import Tooltip from '@/components/Tooltip';
 import { useFinancials } from './hooks/useFinancials';
 import { CurrencyStats, CurrencyType } from '@/lib/types/gym';
+import { currencySymbol } from '@/lib/currency';
 import { TranslationKey } from '@/lib/translations';
 import { useLanguage } from '@/components/LanguageContext';
 
@@ -75,7 +76,8 @@ export default function FinancialsPage() {
     approve,
     reject,
     runExpiry,
-    refresh
+    refresh,
+    currencies,
   } = useFinancials(period, period === 'custom' ? customRange : undefined);
 
   // Daily EUR Cash Reconciliation state
@@ -142,7 +144,11 @@ export default function FinancialsPage() {
   const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
 
   // Business calculations
-  const combinedTotalEUR = stats.EUR.totalRevenue + (exchangeRate > 0 ? stats.VES.totalRevenue / exchangeRate : 0);
+  const refSymbol = currencySymbol(currencies.reference);
+  const localSymbol = currencySymbol(currencies.local);
+  const combinedTotalRef =
+    stats.reference.totalRevenue +
+    (exchangeRate > 0 ? stats.local.totalRevenue / exchangeRate : 0);
 
   const handleConfirmAction = async () => {
     const { action, paymentId, userId } = confirmConfig;
@@ -201,7 +207,7 @@ export default function FinancialsPage() {
                 {t('Official Rate')}
              </div>
              <div className="flex items-center gap-1.5 font-bold text-sm">
-                <span className="text-pits-dim">€1 = </span>
+                <span className="text-pits-dim">{refSymbol}1 = </span>
                 <input 
                   type="number" 
                   step="0.0001"
@@ -209,7 +215,7 @@ export default function FinancialsPage() {
                   onChange={(e) => setExchangeRate(Number(e.target.value))}
                   className="w-20 bg-transparent text-pits-text focus:outline-none focus:text-pits-red font-black"
                 />
-                <span className="text-pits-dim">VES</span>
+                <span className="text-pits-dim">{currencies.local}</span>
              </div>
           </div>
 
@@ -294,11 +300,11 @@ export default function FinancialsPage() {
 
       {/* 2. VITALS BAR (KPIs) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label={t('Collected (EUR)')} value={stats.EUR.totalRevenue} symbol="€" trend="positive" color="success" />
-        <StatCard label={t('Collected (VES)')} value={stats.VES.totalRevenue} symbol="Bs." trend="positive" color="primary" />
-        <StatCard label={t('Consolidated')} value={combinedTotalEUR} symbol="€" trend="neutral" color="muted" info={t('Consolidated EUR base')} />
-        <StatCard label={t('Pending Liquidity')} value={stats.EUR.pendingAmount + (exchangeRate > 0 ? stats.VES.pendingAmount / exchangeRate : 0)} symbol="€" trend="warning" color="warning" />
-        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol="€" trend="danger" color="danger" />
+        <StatCard label={t('Collected (REF)')} value={stats.reference.totalRevenue} symbol={refSymbol} trend="positive" color="success" />
+        <StatCard label={t('Collected (Local)')} value={stats.local.totalRevenue} symbol={localSymbol} trend="positive" color="primary" />
+        <StatCard label={t('Consolidated')} value={combinedTotalRef} symbol={refSymbol} trend="neutral" color="muted" info={t('Consolidated REF base')} />
+        <StatCard label={t('Pending Liquidity')} value={stats.reference.pendingAmount + (exchangeRate > 0 ? stats.local.pendingAmount / exchangeRate : 0)} symbol={refSymbol} trend="warning" color="warning" />
+        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol={refSymbol} trend="danger" color="danger" />
         <StatCard label={t('Active Athletes')} value={stats.activeMembers} symbol="" trend="neutral" color="primary" />
       </div>
 
@@ -310,21 +316,21 @@ export default function FinancialsPage() {
           {/* CURRENCY HUB / COMPARISON */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <CurrencyPanel 
-               title={t('EURO OPERATIONS')} 
-               stats={stats.EUR} 
-               symbol="€" 
+               title={t('REF OPERATIONS')} 
+               stats={stats.reference} 
+               symbol={refSymbol} 
                color="success" 
-               active={activeCurrency === CurrencyType.EUR}
-               onClick={() => setActiveCurrency(CurrencyType.EUR)}
+               active={activeCurrency === currencies.reference}
+               onClick={() => setActiveCurrency(currencies.reference)}
                pendingLabel={t('Pending Liquidity')}
              />
              <CurrencyPanel 
-               title={t('VES BOLIVARES')} 
-               stats={stats.VES} 
-               symbol="Bs." 
+               title={t('LOCAL OPERATIONS')} 
+               stats={stats.local} 
+               symbol={localSymbol} 
                color="primary" 
-               active={activeCurrency === CurrencyType.VES}
-               onClick={() => setActiveCurrency(CurrencyType.VES)}
+               active={activeCurrency === currencies.local}
+               onClick={() => setActiveCurrency(currencies.local)}
                pendingLabel={t('Pending Liquidity')}
              />
           </div>
@@ -354,13 +360,13 @@ export default function FinancialsPage() {
                 </select>
                 <div className="flex bg-pits-surface-muted p-1 rounded-xl">
                    <button 
-                     onClick={() => setActiveCurrency(CurrencyType.EUR)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
-                   >EUR</button>
+                     onClick={() => setActiveCurrency(currencies.reference)}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === currencies.reference ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
+                   >REF</button>
                    <button 
-                     onClick={() => setActiveCurrency(CurrencyType.VES)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
-                   >VES</button>
+                     onClick={() => setActiveCurrency(currencies.local)}
+                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === currencies.local ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
+                   >{currencies.local}</button>
                 </div>
              </div>
           </div>
@@ -401,7 +407,7 @@ export default function FinancialsPage() {
                       <td className="px-6 py-4">
                          <div className="flex items-center gap-1">
                             <span className="text-xs font-black text-pits-text">
-                               {activeCurrency === CurrencyType.EUR ? '€' : 'Bs.'}
+                               {currencySymbol(activeCurrency)}
                                {p.amount.toLocaleString()}
                             </span>
                          </div>
@@ -483,7 +489,7 @@ export default function FinancialsPage() {
                  <div className="space-y-5">
                     <ReconInput 
                       label={t('Opening Cash')} 
-                      symbol="€" 
+                      symbol={refSymbol} 
                       value={reconState.opening} 
                       onChange={(val) => setReconState(prev => ({ ...prev, opening: Number(val) }))} 
                       systemValue={0} 
@@ -492,7 +498,7 @@ export default function FinancialsPage() {
                     />
                     <ReconInput 
                       label={t('Today\'s Inflow')} 
-                      symbol="€" 
+                      symbol={refSymbol} 
                       value={todayEURCashReceived} 
                       isReadOnly={true}
                       systemValue={todayEURCashReceived} 
@@ -500,7 +506,7 @@ export default function FinancialsPage() {
                     />
                     <ReconInput 
                       label={t('Withdrawals')} 
-                      symbol="€" 
+                      symbol={refSymbol} 
                       value={reconState.withdrawals} 
                       onChange={(val) => setReconState(prev => ({ ...prev, withdrawals: Number(val) }))} 
                       systemValue={0} 
@@ -509,7 +515,7 @@ export default function FinancialsPage() {
                     />
                     <ReconInput 
                       label={t('Physical Count')} 
-                      symbol="€" 
+                      symbol={refSymbol} 
                       value={reconState.actual} 
                       onChange={(val) => setReconState(prev => ({ ...prev, actual: Number(val) }))} 
                       systemValue={expectedClosingCash} 

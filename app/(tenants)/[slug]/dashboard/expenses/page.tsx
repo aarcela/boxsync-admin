@@ -21,6 +21,12 @@ import { supabase } from '@/lib/supabase';
 import { expenseService } from '@/lib/services/expenseService';
 import { financialService } from '@/lib/services/financialService';
 import { ExpenseRecord, ExpenseCategory, CurrencyType, PaymentMethod } from '@/lib/types/gym';
+import { useTenant } from '@/components/TenantContext';
+import {
+  currencyOptionLabel,
+  currencySymbol,
+  isLocalCurrency,
+} from '@/lib/currency';
 
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -35,6 +41,7 @@ const expenseStatusKey = (status?: string): TranslationKey => {
 export default function ExpensesPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { currencies } = useTenant();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -43,7 +50,7 @@ export default function ExpensesPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewCurrency, setViewCurrency] = useState<CurrencyType>(CurrencyType.EUR);
+  const [viewCurrency, setViewCurrency] = useState<CurrencyType>(currencies.reference);
   const [statusConfirm, setStatusConfirm] = useState<{ id: string; nextStatus: 'pending' | 'paid' | 'due' } | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
@@ -52,16 +59,31 @@ export default function ExpensesPage() {
     description: '',
     category: 'Other' as ExpenseCategory,
     amount: '',
-    currency: CurrencyType.EUR,
+    currency: currencies.reference,
     expense_date: new Date().toISOString().split('T')[0],
     status: 'pending' as 'pending' | 'paid' | 'due',
     payment_method: ''
   });
 
+  useEffect(() => {
+    setViewCurrency((prev) =>
+      prev === currencies.reference || prev === currencies.local
+        ? prev
+        : currencies.reference
+    );
+    setNewExpense((prev) => ({
+      ...prev,
+      currency:
+        prev.currency === currencies.reference || prev.currency === currencies.local
+          ? prev.currency
+          : currencies.reference,
+    }));
+  }, [currencies.reference, currencies.local]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const rate = await financialService.getOfficialExchangeRate();
+      const rate = await financialService.getOfficialExchangeRate(currencies.reference);
       setExchangeRate(rate);
 
       // Current month range
@@ -82,7 +104,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, toast]);
+  }, [selectedPeriod, toast, currencies.reference, t]);
 
   useEffect(() => {
     fetchData();
@@ -114,7 +136,7 @@ export default function ExpensesPage() {
         description: '',
         category: 'Other' as ExpenseCategory,
         amount: '',
-        currency: CurrencyType.EUR,
+        currency: currencies.reference,
         expense_date: new Date().toISOString().split('T')[0],
         status: 'pending',
         payment_method: ''
@@ -155,15 +177,15 @@ export default function ExpensesPage() {
 
   // Calculations
   const stats = useMemo(() => {
-    let totalEUR = 0;
+    let totalRef = 0;
     const categoryTotals: Record<string, number> = {};
 
     expenses.forEach(ex => {
-      const val = ex.currency === CurrencyType.EUR 
+      const val = !isLocalCurrency(ex.currency, currencies)
         ? ex.amount 
         : ex.amount / ex.exchange_rate_at_time;
       
-      totalEUR += val;
+      totalRef += val;
       categoryTotals[ex.category] = (categoryTotals[ex.category] || 0) + val;
     });
 
@@ -171,11 +193,11 @@ export default function ExpensesPage() {
       .sort(([, a], [, b]) => b - a);
 
     return {
-      totalEUR,
+      totalEUR: totalRef,
       topCategory: sortedCategories[0]?.[0] || 'N/A',
       categoryBreakdown: sortedCategories
     };
-  }, [expenses]);
+  }, [expenses, currencies]);
 
   const filteredExpenses = expenses.filter(ex => 
     ex.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -226,8 +248,8 @@ export default function ExpensesPage() {
         <StatBlock 
           label={t('Total Monthly Burn')} 
           value={stats.totalEUR} 
-          symbol="€" 
-          info={t('Consolidated EUR base')} 
+          symbol={currencySymbol(currencies.reference)} 
+          info={t('Consolidated REF base')} 
           color="primary"
           icon={<ArrowUpRight size={20}/>}
         />
@@ -242,7 +264,7 @@ export default function ExpensesPage() {
         <StatBlock 
           label={t('Exchange Buffer')} 
           value={exchangeRate} 
-          symbol="Bs." 
+          symbol={currencySymbol(currencies.local)} 
           info={t('Live Reference Rate')} 
           color="success"
           icon={<RefreshCw size={18} className={loading ? 'animate-spin' : ''}/>}
@@ -267,13 +289,13 @@ export default function ExpensesPage() {
               </div>
               <div className="flex bg-pits-surface-muted p-1 rounded-xl">
                  <button 
-                   onClick={() => setViewCurrency(CurrencyType.EUR)}
-                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
-                 >{t('EUR DISPLAY')}</button>
+                   onClick={() => setViewCurrency(currencies.reference)}
+                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
+                 >{t('REF DISPLAY')}</button>
                  <button 
-                   onClick={() => setViewCurrency(CurrencyType.VES)}
-                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
-                 >{t('VES DISPLAY')}</button>
+                   onClick={() => setViewCurrency(currencies.local)}
+                   className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
+                 >{t('LOCAL DISPLAY')}</button>
               </div>
             </div>
 
@@ -322,10 +344,10 @@ export default function ExpensesPage() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-[11px] font-black text-pits-text tracking-tighter">
-                          {viewCurrency === CurrencyType.EUR ? '€' : 'Bs.'}
-                          {(viewCurrency === CurrencyType.EUR 
-                            ? (ex.currency === CurrencyType.EUR ? ex.amount : ex.amount / ex.exchange_rate_at_time)
-                            : (ex.currency === CurrencyType.VES ? ex.amount : ex.amount * ex.exchange_rate_at_time)
+                          {currencySymbol(viewCurrency)}
+                          {(viewCurrency === currencies.reference 
+                            ? (!isLocalCurrency(ex.currency, currencies) ? ex.amount : ex.amount / ex.exchange_rate_at_time)
+                            : (isLocalCurrency(ex.currency, currencies) ? ex.amount : ex.amount * ex.exchange_rate_at_time)
                           ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className="text-[8px] text-pits-dim font-bold uppercase">
@@ -366,7 +388,7 @@ export default function ExpensesPage() {
                   <div key={cat} className="space-y-1.5">
                     <div className="flex justify-between items-end">
                       <p className="text-[9px] font-black text-pits-dim uppercase">{cat}</p>
-                      <span className="text-[10px] font-black text-pits-text">€{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                      <span className="text-[10px] font-black text-pits-text">{currencySymbol(currencies.reference)}{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div className="h-1.5 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
                       <div 
@@ -448,8 +470,12 @@ export default function ExpensesPage() {
                         onChange={(e) => setNewExpense({...newExpense, currency: e.target.value as CurrencyType})}
                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                       >
-                        <option value={CurrencyType.EUR}>EUR (€)</option>
-                        <option value={CurrencyType.VES}>VES (Bs.)</option>
+                        <option value={currencies.reference}>
+                          {currencyOptionLabel(currencies.reference, 'reference')}
+                        </option>
+                        <option value={currencies.local}>
+                          {currencyOptionLabel(currencies.local, 'local')}
+                        </option>
                       </select>
                    </div>
                 </div>
@@ -471,7 +497,7 @@ export default function ExpensesPage() {
                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Official Rate')}</label>
                       <div className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-dim cursor-not-allowed flex items-center justify-between">
                          <span>{exchangeRate.toFixed(4)}</span>
-                         <span className="text-[8px] opacity-70">VES/EUR</span>
+                         <span className="text-[8px] opacity-70">{currencies.local}/{currencies.reference}</span>
                       </div>
                       <div className="absolute -bottom-4 right-2 text-[7px] font-black text-pits-success uppercase tracking-widest">{t('Live Reference')}</div>
                    </div>

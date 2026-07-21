@@ -230,8 +230,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-6 space-y-2 px-3">
+        {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
+        <nav className="flex-1 min-h-0 overflow-y-auto py-6 space-y-2 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
             const isMenuOpen =

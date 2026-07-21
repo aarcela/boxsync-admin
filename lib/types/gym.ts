@@ -1,13 +1,14 @@
-export enum CurrencyType {
-  EUR = 'EUR',
-  VES = 'VES',
-}
+import { CurrencyType, type TenantCurrencyConfig } from '../currency';
+
+export { CurrencyType };
+export type { TenantCurrencyConfig };
 
 export interface Tenant {
   id: string;
   slug: string;
   name: string;
   created_at: string;
+  settings?: Record<string, unknown> | null;
 }
 
 export interface PaymentMethod {
@@ -79,8 +80,8 @@ export interface CurrencyStats {
 }
 
 export interface FinancialStats {
-  EUR: CurrencyStats;
-  VES: CurrencyStats;
+  reference: CurrencyStats;
+  local: CurrencyStats;
   activeMembers: number;
   inactiveMembers: number;
   projectedRevenueEUR: number;

@@ -9,7 +9,7 @@ export const tenantService = {
   ): Promise<Tenant | null> {
     const { data, error } = await client
       .from('tenants')
-      .select('id, slug, name, created_at')
+      .select('id, slug, name, created_at, settings')
       .eq('slug', slug.toLowerCase())
       .maybeSingle();
 
@@ -46,7 +46,7 @@ export const tenantService = {
     const { data, error } = await client
       .from('tenants')
       .insert([row])
-      .select('id, slug, name, created_at')
+      .select('id, slug, name, created_at, settings')
       .single();
 
     if (error) throw error;
@@ -56,7 +56,7 @@ export const tenantService = {
   async listTenants(client: SupabaseClient = supabase): Promise<Tenant[]> {
     const { data, error } = await client
       .from('tenants')
-      .select('id, slug, name, created_at')
+      .select('id, slug, name, created_at, settings')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -69,7 +69,7 @@ export const tenantService = {
   ): Promise<Tenant | null> {
     const { data, error } = await client
       .from('tenants')
-      .select('id, slug, name, created_at')
+      .select('id, slug, name, created_at, settings')
       .eq('id', tenantId)
       .maybeSingle();
 

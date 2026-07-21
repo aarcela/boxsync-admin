@@ -9,9 +9,12 @@ import {
   IncomeRecord,
 } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
+import { useTenant } from '@/components/TenantContext';
+import { isLocalCurrency } from '@/lib/currency';
 
 export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
   const { toast } = useToast();
+  const { currencies } = useTenant();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -36,7 +39,7 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
         financialService.getPayments(startDate, endDate),
         incomeService.getIncomes(dateStart, dateEnd),
         expenseService.getExpenses(dateStart, dateEnd),
-        financialService.getOfficialExchangeRate(),
+        financialService.getOfficialExchangeRate(currencies.reference),
         financialService.getPaymentMethods()
       ]);
 
@@ -52,67 +55,64 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, toast]);
+  }, [selectedMonth, toast, currencies.reference]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const stats = useMemo(() => {
-    let incomeEUR = 0;
-    let incomeVES = 0;
-    let outcomeEUR = 0;
-    let outcomeVES = 0;
+    let incomeReference = 0;
+    let incomeLocal = 0;
+    let outcomeReference = 0;
+    let outcomeLocal = 0;
 
-    // Membership payments (approved only)
     payments.filter(p => p.status === 'approved').forEach(p => {
-      const methodObj = paymentMethods.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-      const isVes = methodObj ? methodObj.currency === CurrencyType.VES : p.currency_type === 'VES';
+      const methodObj = paymentMethods.find((m: { id: string; label: string; currency: string }) => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
+      const code = methodObj?.currency || p.currency_type || p.currency || currencies.reference;
 
-      if (isVes) {
-        incomeVES += p.amount;
+      if (isLocalCurrency(code, currencies)) {
+        incomeLocal += p.amount;
       } else {
-        incomeEUR += p.amount;
+        incomeReference += p.amount;
       }
     });
 
-    // Operational incomes (confirmed only)
     incomes.filter(inc => inc.status === 'confirmed').forEach(inc => {
-      if (inc.currency === CurrencyType.VES) {
-        incomeVES += inc.amount;
+      if (isLocalCurrency(inc.currency, currencies)) {
+        incomeLocal += inc.amount;
       } else {
-        incomeEUR += inc.amount;
+        incomeReference += inc.amount;
       }
     });
 
-    // Process Outcomes
     expenses.forEach(e => {
-      if (e.currency === CurrencyType.VES) {
-        outcomeVES += e.amount;
+      if (isLocalCurrency(e.currency, currencies)) {
+        outcomeLocal += e.amount;
       } else {
-        outcomeEUR += e.amount;
+        outcomeReference += e.amount;
       }
     });
 
-    const netEUR = incomeEUR - outcomeEUR;
-    const netVES = incomeVES - outcomeVES;
+    const netReference = incomeReference - outcomeReference;
+    const netLocal = incomeLocal - outcomeLocal;
 
     return {
-      EUR: {
-        income: incomeEUR,
-        outcome: outcomeEUR,
-        net: netEUR,
-        margin: incomeEUR > 0 ? (netEUR / incomeEUR) * 100 : 0
+      reference: {
+        income: incomeReference,
+        outcome: outcomeReference,
+        net: netReference,
+        margin: incomeReference > 0 ? (netReference / incomeReference) * 100 : 0
       },
-      VES: {
-        income: incomeVES,
-        outcome: outcomeVES,
-        net: netVES,
-        margin: incomeVES > 0 ? (netVES / incomeVES) * 100 : 0
+      local: {
+        income: incomeLocal,
+        outcome: outcomeLocal,
+        net: netLocal,
+        margin: incomeLocal > 0 ? (netLocal / incomeLocal) * 100 : 0
       },
       exchangeRate
     };
-  }, [payments, incomes, expenses, exchangeRate, paymentMethods]);
+  }, [payments, incomes, expenses, exchangeRate, paymentMethods, currencies]);
 
   return {
     loading,
@@ -120,6 +120,7 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
     payments,
     incomes,
     expenses,
-    refresh: fetchData
+    refresh: fetchData,
+    currencies,
   };
 }

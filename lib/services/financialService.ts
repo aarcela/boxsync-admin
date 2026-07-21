@@ -56,7 +56,7 @@ export const financialService = {
   async getMemberStats(): Promise<{ active: number; inactive: number; projectedEUR: number; overdueEUR: number }> {
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('is_solvent, membership_plans!profiles_plan_fkey(price_usd)')
+      .select('is_solvent, membership_plans!fk_profiles_membership_plans(price_usd)')
       .eq('role', 'member');
 
     if (error) throw error;
@@ -113,9 +113,13 @@ export const financialService = {
     return response.json();
   },
 
-  async getOfficialExchangeRate(): Promise<number> {
+  async getOfficialExchangeRate(referenceCurrency: 'EUR' | 'USD' | 'VES' = 'EUR'): Promise<number> {
     try {
-      const response = await fetch('https://ve.dolarapi.com/v1/euros/oficial');
+      const path =
+        referenceCurrency === 'USD'
+          ? 'https://ve.dolarapi.com/v1/dolares/oficial'
+          : 'https://ve.dolarapi.com/v1/euros/oficial';
+      const response = await fetch(path);
       const data = await response.json();
       return Number(data.promedio);
     } catch (error) {

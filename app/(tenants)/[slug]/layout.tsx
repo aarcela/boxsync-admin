@@ -1,4 +1,6 @@
-import { notFound } from 'next/navigation';import { TenantProvider } from '@/components/TenantContext';
+import { notFound } from 'next/navigation';
+import { TenantProvider } from '@/components/TenantContext';
+import { parseTenantCurrencyConfig } from '@/lib/currency';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
@@ -18,7 +20,12 @@ export default async function TenantLayout({
 
   return (
     <TenantProvider
-      value={{ tenantId: tenant.id, slug: tenant.slug, name: tenant.name }}
+      value={{
+        tenantId: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        currencies: parseTenantCurrencyConfig(tenant.settings),
+      }}
     >
       {children}
     </TenantProvider>

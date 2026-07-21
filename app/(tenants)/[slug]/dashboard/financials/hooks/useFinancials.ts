@@ -10,6 +10,8 @@ import {
   IncomeRecord,
 } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
+import { useTenant } from '@/components/TenantContext';
+import { isLocalCurrency } from '@/lib/currency';
 
 function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): boolean {
   if (!methodRef) return false;
@@ -22,21 +24,22 @@ function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): 
 
 export function useFinancials(period: string, customRange?: { start: Date; end: Date }) {
   const { toast } = useToast();
+  const { currencies } = useTenant();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
-  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(CurrencyType.EUR);
+  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(currencies.reference);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [runningExpiry, setRunningExpiry] = useState(false);
 
   const [stats, setStats] = useState<FinancialStats>({
-    EUR: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
-    VES: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
+    reference: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
+    local: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
     activeMembers: 0,
     inactiveMembers: 0,
     projectedRevenueEUR: 0,
@@ -44,6 +47,14 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     overdueAmountEUR: 0,
     solvencyRate: 0
   });
+
+  useEffect(() => {
+    setActiveCurrency((prev) =>
+      prev === currencies.reference || prev === currencies.local
+        ? prev
+        : currencies.reference
+    );
+  }, [currencies.reference, currencies.local]);
 
   const fetchFinancials = useCallback(async () => {
     setLoading(true);
@@ -71,7 +82,6 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         startDate = customRange.start.toISOString();
         endDate = customRange.end.toISOString();
       } else {
-        // Fallback to month
         const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
         startDate = start.toISOString();
         endDate = now.toISOString();
@@ -85,7 +95,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         incomeService.getIncomes(incomeStart, incomeEnd),
         financialService.getPaymentMethods(),
         financialService.getMemberStats(),
-        financialService.getOfficialExchangeRate()
+        financialService.getOfficialExchangeRate(currencies.reference)
       ]);
 
       setPayments(paymentsData);
@@ -93,13 +103,13 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       setPaymentMethods(methodsData);
       setExchangeRate(rate);
 
-      const EURStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} };
-      const VESStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} };
+      const referenceStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} };
+      const localStats: CurrencyStats = { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} };
 
       paymentsData.forEach(p => {
         const methodObj = methodsData.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-        const isVes = methodObj ? methodObj.currency === CurrencyType.VES : (p.currency || p.currency_type) === 'VES';
-        const targetStats = isVes ? VESStats : EURStats;
+        const code = methodObj?.currency || p.currency || p.currency_type || currencies.reference;
+        const targetStats = isLocalCurrency(code, currencies) ? localStats : referenceStats;
 
         if (p.status === 'approved') {
           targetStats.totalRevenue += p.amount;
@@ -118,7 +128,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       incomesData
         .filter((inc) => inc.status === 'confirmed')
         .forEach((inc) => {
-          const targetStats = inc.currency === CurrencyType.VES ? VESStats : EURStats;
+          const targetStats = isLocalCurrency(inc.currency, currencies) ? localStats : referenceStats;
           targetStats.totalRevenue += inc.amount;
           if (inc.payment_method) {
             targetStats.methodCounts[inc.payment_method] =
@@ -132,8 +142,8 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       const totalMembers = memberStats.active + memberStats.inactive;
 
       setStats({
-        EUR: EURStats,
-        VES: VESStats,
+        reference: referenceStats,
+        local: localStats,
         activeMembers: memberStats.active,
         inactiveMembers: memberStats.inactive,
         projectedRevenueEUR: memberStats.projectedEUR,
@@ -148,27 +158,26 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     } finally {
       setLoading(false);
     }
-  }, [period, customRange, toast]);
+  }, [period, customRange, toast, currencies]);
 
   useEffect(() => {
     fetchFinancials();
   }, [fetchFinancials]);
 
-  // Derived filtered state
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
       const methodObj = paymentMethods.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
-      const isVes = methodObj ? methodObj.currency === CurrencyType.VES : (p.currency || p.currency_type) === 'VES';
+      const code = methodObj?.currency || p.currency || p.currency_type || currencies.reference;
+      const isLocal = isLocalCurrency(code, currencies);
       
-      const matchesCurrency = activeCurrency === CurrencyType.VES ? isVes : !isVes;
+      const matchesCurrency = activeCurrency === currencies.local ? isLocal : !isLocal;
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
       const matchesSearch = searchTerm === '' || p.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
       
       return matchesCurrency && matchesStatus && matchesSearch;
     });
-  }, [payments, activeCurrency, statusFilter, searchTerm, paymentMethods]);
+  }, [payments, activeCurrency, statusFilter, searchTerm, paymentMethods, currencies]);
 
-  // Actions
   const approve = async (paymentId: string, userId: string) => {
     try {
       await financialService.approvePayment(paymentId, userId);
@@ -223,6 +232,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     approve,
     reject,
     runExpiry,
-    refresh: fetchFinancials
+    refresh: fetchFinancials,
+    currencies,
   };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   TrendingUp,
   TrendingDown,
@@ -24,6 +24,7 @@ import {
 import { useLanguage } from '@/components/LanguageContext';
 import { useAccountability } from './hooks/useAccountability';
 import { CurrencyType } from '@/lib/types/gym';
+import { currencySymbol } from '@/lib/currency';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
@@ -34,10 +35,18 @@ export default function AccountabilityPage() {
   const { t } = useLanguage();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(CurrencyType.EUR);
 
   const periodString = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
-  const { loading, stats, refresh, expenses, payments } = useAccountability(periodString);
+  const { loading, stats, refresh, expenses, payments, currencies } = useAccountability(periodString);
+  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(currencies.reference);
+
+  useEffect(() => {
+    setActiveCurrency((prev) =>
+      prev === currencies.reference || prev === currencies.local
+        ? prev
+        : currencies.reference
+    );
+  }, [currencies.reference, currencies.local]);
 
   const changeMonth = (direction: number) => {
     let newMonth = selectedMonth + direction;
@@ -55,8 +64,11 @@ export default function AccountabilityPage() {
     setSelectedYear(newYear);
   };
 
-  const currentStats = stats[activeCurrency] || { income: 0, outcome: 0, net: 0, margin: 0 };
-  const symbol = activeCurrency === CurrencyType.EUR ? '€' : 'Bs.';
+  const currentStats =
+    activeCurrency === currencies.local
+      ? stats.local
+      : stats.reference;
+  const symbol = currencySymbol(activeCurrency);
 
   // Determine fixed vs variable costs for the active currency
   const activeExpenses = expenses.filter(e => e.currency === activeCurrency);
@@ -119,7 +131,7 @@ export default function AccountabilityPage() {
             </div>
           </div>
           <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Independent accountability tracking for EUR and VES')}
+            {t('Independent accountability tracking for REF and Local')}
           </p>
         </div>
 
@@ -127,20 +139,20 @@ export default function AccountabilityPage() {
           {/* Currency Toggle */}
           <div className="flex bg-pits-surface-muted p-1 rounded-2xl border border-pits-edge">
             <button 
-              onClick={() => setActiveCurrency(CurrencyType.EUR)}
+              onClick={() => setActiveCurrency(currencies.reference)}
               className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
-                activeCurrency === CurrencyType.EUR ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
+                activeCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
-              {t('EURO OPERATIONS')}
+              {t('REF OPERATIONS')}
             </button>
             <button 
-              onClick={() => setActiveCurrency(CurrencyType.VES)}
+              onClick={() => setActiveCurrency(currencies.local)}
               className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
-                activeCurrency === CurrencyType.VES ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
+                activeCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
-              {t('VES BOLIVARES')}
+              {t('LOCAL OPERATIONS')}
             </button>
           </div>
 
@@ -222,7 +234,9 @@ export default function AccountabilityPage() {
               </h3>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm">
                 <span className="text-[10px] font-black text-pits-dim uppercase">{t('Exchange Base')}:</span>
-                <span className="text-[10px] font-black text-pits-text">€1 = {stats.exchangeRate?.toFixed(2) || '---'} VES</span>
+                <span className="text-[10px] font-black text-pits-text">
+                  {currencySymbol(currencies.reference)}1 = {stats.exchangeRate?.toFixed(2) || '---'} {currencies.local}
+                </span>
               </div>
             </div>
 

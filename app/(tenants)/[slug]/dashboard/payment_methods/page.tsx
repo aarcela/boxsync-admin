@@ -16,10 +16,17 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { supabase } from '@/lib/supabase';
 import { paymentMethodService } from '@/lib/services/paymentMethodService';
+import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
 import { PaymentMethod, CurrencyType } from '@/lib/types/gym';
+import {
+  LOCAL_CURRENCY_OPTIONS,
+  REFERENCE_CURRENCY_OPTIONS,
+  currencyOptionLabel,
+  currencySymbol,
+} from '@/lib/currency';
 import { 
   createPaymentMethodAction, 
   updatePaymentMethodAction, 
@@ -30,6 +37,7 @@ import {
 export default function PaymentMethodsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { tenantId: contextTenantId, currencies, setCurrencies } = useTenant();
   const [isPending, startTransition] = useTransition();
 
   // State
@@ -40,14 +48,30 @@ export default function PaymentMethodsPage() {
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [methodToDelete, setMethodToDelete] = useState<string | null>(null);
+  const [savingCurrencies, setSavingCurrencies] = useState(false);
+  const [draftCurrencies, setDraftCurrencies] = useState(currencies);
 
   // Form State
   const [formData, setFormData] = useState({
     label: '',
-    currency: CurrencyType.EUR,
+    currency: currencies.reference,
     details: '',
     is_active: true
   });
+
+  useEffect(() => {
+    setDraftCurrencies(currencies);
+  }, [currencies]);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      currency:
+        prev.currency === currencies.reference || prev.currency === currencies.local
+          ? prev.currency
+          : currencies.reference,
+    }));
+  }, [currencies.reference, currencies.local]);
 
   const fetchMethods = async (activeTenantId: string) => {
     setLoading(true);
@@ -64,28 +88,33 @@ export default function PaymentMethodsPage() {
 
   useEffect(() => {
     const loadContext = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      const id = profile?.tenant_id ?? null;
+      const id = contextTenantId;
       setTenantId(id);
       if (id) await fetchMethods(id);
       else setLoading(false);
     };
 
     loadContext();
-  }, []);
+  }, [contextTenantId]);
+
+  const handleSaveCurrencies = async () => {
+    if (!tenantId) return;
+    if (draftCurrencies.reference === draftCurrencies.local) {
+      toast(t('Reference and local currencies must differ'), 'error');
+      return;
+    }
+    setSavingCurrencies(true);
+    try {
+      const saved = await tenantCurrencyService.updateForTenant(tenantId, draftCurrencies);
+      setCurrencies(saved);
+      toast(t('Currency denominations saved'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(t('Failed to save currency denominations'), 'error');
+    } finally {
+      setSavingCurrencies(false);
+    }
+  };
 
   const handleOpenForm = (method?: PaymentMethod) => {
     if (method) {
@@ -100,7 +129,7 @@ export default function PaymentMethodsPage() {
       setEditingMethod(null);
       setFormData({
         label: '',
-        currency: CurrencyType.EUR,
+        currency: currencies.reference,
         details: '',
         is_active: true
       });
@@ -196,6 +225,74 @@ export default function PaymentMethodsPage() {
         </button>
       </div>
 
+      {/* CURRENCY DENOMINATIONS */}
+      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-tight text-pits-text">
+              {t('Currency denominations')}
+            </h2>
+            <p className="text-[11px] text-pits-dim font-semibold mt-1 uppercase tracking-wide">
+              {t('Set REF hard currency and local denomination for this box')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveCurrencies}
+            disabled={savingCurrencies}
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+          >
+            {savingCurrencies ? t('Processing...') : t('Save currencies')}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Reference (REF)')}</label>
+            <select
+              value={draftCurrencies.reference}
+              onChange={(e) =>
+                setDraftCurrencies((prev) => ({
+                  ...prev,
+                  reference: e.target.value as CurrencyType,
+                }))
+              }
+              className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+            >
+              {REFERENCE_CURRENCY_OPTIONS.map((code) => (
+                <option key={code} value={code}>
+                  {currencyOptionLabel(code, 'reference')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Local denomination')}</label>
+            <select
+              value={draftCurrencies.local}
+              onChange={(e) =>
+                setDraftCurrencies((prev) => ({
+                  ...prev,
+                  local: e.target.value as CurrencyType,
+                }))
+              }
+              className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+            >
+              {LOCAL_CURRENCY_OPTIONS.filter((code) => code !== draftCurrencies.reference).map(
+                (code) => (
+                  <option key={code} value={code}>
+                    {currencyOptionLabel(code, 'local')}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+        </div>
+        <p className="text-[10px] text-pits-dim mt-3 font-medium">
+          {t('Active pair')}: {currencies.reference} ({currencySymbol(currencies.reference)}) /{' '}
+          {currencies.local} ({currencySymbol(currencies.local)})
+        </p>
+      </div>
+
       {/* CONTENT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -242,8 +339,10 @@ export default function PaymentMethodsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${method.currency === CurrencyType.EUR ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
-                          {method.currency}
+                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
+                          {method.currency === currencies.reference
+                            ? `REF · ${method.currency}`
+                            : method.currency}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -316,7 +415,7 @@ export default function PaymentMethodsPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one EUR and one VES method active for operational flexibility.')}</p>
+                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one REF and one local method active for operational flexibility.')}</p>
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
@@ -366,8 +465,12 @@ export default function PaymentMethodsPage() {
                         onChange={(e) => setFormData({...formData, currency: e.target.value as CurrencyType})}
                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                       >
-                        <option value={CurrencyType.EUR}>EUR (€)</option>
-                        <option value={CurrencyType.VES}>VES (Bs.)</option>
+                        <option value={currencies.reference}>
+                          {currencyOptionLabel(currencies.reference, 'reference')}
+                        </option>
+                        <option value={currencies.local}>
+                          {currencyOptionLabel(currencies.local, 'local')}
+                        </option>
                       </select>
                    </div>
                    <div className="space-y-2">
