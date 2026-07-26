@@ -1,15 +1,30 @@
 export const GOOGLE_PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.aaamdev.boxwave&pcampaignid=web_share';
 
-/** Mobile app password-reset deep link (used after the web confirm page). */
-export const MOBILE_RESET_PASSWORD_DEEP_LINK = 'boxwaveapp://reset-password';
-
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
 
 function getPublicSiteOrigin(): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (siteUrl) return siteUrl;
   return `https://${ROOT_DOMAIN}`;
+}
+
+/** Mobile app password-reset deep link (used after the web confirm page). */
+export const MOBILE_RESET_PASSWORD_DEEP_LINK = 'boxwaveapp://reset-password';
+
+/** Mobile athlete join deep link — scan in the app Join screen. */
+export function buildMobileJoinDeepLink(slug: string): string {
+  const normalized = slug.trim().toLowerCase();
+  return `boxwaveapp://join?slug=${encodeURIComponent(normalized)}`;
+}
+
+/**
+ * Public HTTPS join URL (optional landing / universal link target).
+ * The mobile app also parses this payload from a QR scan.
+ */
+export function buildPublicJoinUrl(slug: string): string {
+  const normalized = slug.trim().toLowerCase();
+  return `${getPublicSiteOrigin()}/join/${encodeURIComponent(normalized)}`;
 }
 
 /**

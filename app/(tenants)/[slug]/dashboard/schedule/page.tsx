@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert } from 'lucide-react';
-import CreateClassModal from '@/components/CreateClassModal';
+import CreateClassModal, { ClassFormPrefill, ClassModalMode } from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
+import { classTypeService } from '@/lib/services/classTypeService';
+import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
+import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 
 type ViewTab = 'list' | 'calendar';
 
@@ -30,8 +34,12 @@ export default function SchedulePage() {
   } = useSchedule();
 
   const { toast } = useToast();
+  const { tenantId } = useTenant();
+  const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ClassModalMode>('create');
+  const [modalPrefill, setModalPrefill] = useState<ClassFormPrefill | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
   const [modalInitialTime, setModalInitialTime] = useState<string | undefined>();
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
@@ -42,6 +50,16 @@ export default function SchedulePage() {
     classType: string;
     bookingCount: number;
   }>({ isOpen: false, classId: '', classType: '', bookingCount: 0 });
+
+  const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    void classTypeService
+      .getClassTypes(tenantId, true)
+      .then(setClassTypes)
+      .catch((err) => console.error(err));
+  }, [tenantId]);
 
   const handleDeleteConfirm = async () => {
     const { classId } = deleteConfirm;
@@ -56,13 +74,45 @@ export default function SchedulePage() {
   };
 
   const openCreateModal = (date?: string, time?: string) => {
+    setModalMode('create');
+    setModalPrefill(null);
     setModalInitialDate(date);
     setModalInitialTime(time);
     setIsModalOpen(true);
   };
 
+  const sessionToPrefill = (session: ClassSession): ClassFormPrefill => ({
+    id: session.id,
+    start_time: session.start_time,
+    end_time: session.end_time,
+    class_type: session.class_type,
+    max_capacity: session.max_capacity,
+    coach_id: session.coach_id ?? null,
+  });
+
+  const openEditModal = (session: ClassSession) => {
+    setModalMode('edit');
+    setModalPrefill(sessionToPrefill(session));
+    setModalInitialDate(undefined);
+    setModalInitialTime(undefined);
+    setIsModalOpen(true);
+  };
+
+  const openDuplicateModal = (session: ClassSession) => {
+    setModalMode('duplicate');
+    setModalPrefill({
+      ...sessionToPrefill(session),
+      id: undefined,
+    });
+    setModalInitialDate(undefined);
+    setModalInitialTime(undefined);
+    setIsModalOpen(true);
+  };
+
   const handleModalClose = () => {
     setIsModalOpen(false);
+    setModalMode('create');
+    setModalPrefill(null);
     setModalInitialDate(undefined);
     setModalInitialTime(undefined);
   };
@@ -202,12 +252,10 @@ export default function SchedulePage() {
 
                     <div className="space-y-1.5">
                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-pits-dark-text shadow-sm
-                            ${session.class_type === 'CrossFit' ? 'bg-pits-red' : 
-                              session.class_type === 'Halterofilia' ? 'bg-blue-600' :
-                              session.class_type === 'Gymnastic' ? 'bg-purple-600' :
-                              session.class_type === 'Open Box' ? 'bg-gray-600' : 'bg-orange-500'}
-                          `}>
+                          <span
+                            className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white shadow-sm"
+                            style={classTypeBadgeStyle(colorByName[session.class_type])}
+                          >
                             {session.class_type}
                           </span>
                           <span className="text-xs font-black text-pits-text flex items-center bg-pits-surface-muted border border-pits-edge px-2 py-0.5 rounded italic">
@@ -282,12 +330,22 @@ export default function SchedulePage() {
                       {t('DETAILS')}
                     </button>
                     
-                    {/* Placeholder for Edit/Duplicate Actions */}
+                    {/* Edit / Duplicate / Delete */}
                     <div className="flex items-center border-l border-pits-edge ml-2 pl-2 gap-1">
-                      <button className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors" title="Edit (Coming Soon)">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(session)}
+                        className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors"
+                        title={t('Edit Class')}
+                      >
                         <Edit3 size={16} />
                       </button>
-                      <button className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors" title="Duplicate (Coming Soon)">
+                      <button
+                        type="button"
+                        onClick={() => openDuplicateModal(session)}
+                        className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors"
+                        title={t('Duplicate Class')}
+                      >
                         <Copy size={16} />
                       </button>
                       <button 
@@ -319,6 +377,8 @@ export default function SchedulePage() {
         onSuccess={handleScheduleSuccess}
         initialDate={modalInitialDate}
         initialTime={modalInitialTime}
+        mode={modalMode}
+        prefill={modalPrefill}
       />
 
       {isDetailsModalOpen && selectedClassId && (

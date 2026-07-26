@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { classTypeService } from '@/lib/services/classTypeService';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { tenantService } from '@/lib/services/tenantService';
 import { DEFAULT_UNLIMITED_MEMBERSHIP_PLAN } from '@/lib/types/gym';
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
         tenant.id,
         DEFAULT_UNLIMITED_MEMBERSHIP_PLAN
       );
+      await classTypeService.seedDefaultsForTenant(supabaseAdmin, tenant.id);
     } catch (planError) {
       await supabaseAdmin.from('tenants').delete().eq('id', tenant.id);
       throw planError;

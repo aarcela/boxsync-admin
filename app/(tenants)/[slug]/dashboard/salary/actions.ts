@@ -3,7 +3,6 @@
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { CLASS_TYPES } from '@/lib/constants/classTypes';
 import { coachSalaryService } from '@/lib/services/coachSalaryService';
 
 const ADMIN_ONLY = 'Only admins can manage coach salaries.';
@@ -67,7 +66,24 @@ function parseTierForm(formData: FormData) {
     throw new Error('Invalid tier data');
   }
 
-  const rates = CLASS_TYPES.map((classType) => {
+  let typeNames: string[] = [];
+  const rawNames = formData.get('class_type_names');
+  if (typeof rawNames === 'string' && rawNames.trim()) {
+    try {
+      const parsed = JSON.parse(rawNames);
+      if (Array.isArray(parsed)) {
+        typeNames = parsed.filter((n): n is string => typeof n === 'string' && n.trim().length > 0);
+      }
+    } catch {
+      throw new Error('Invalid class type data');
+    }
+  }
+
+  if (typeNames.length === 0) {
+    throw new Error('No class types configured');
+  }
+
+  const rates = typeNames.map((classType) => {
     const raw = formData.get(`rate_${classType}`) as string;
     const rate_usd = Number(raw);
     if (Number.isNaN(rate_usd) || rate_usd < 0) {

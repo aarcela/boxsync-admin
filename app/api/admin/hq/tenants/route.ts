@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePlatformAdminApi } from '@/lib/require-platform-admin-api';
+import { classTypeService } from '@/lib/services/classTypeService';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         tenant.id,
         DEFAULT_UNLIMITED_MEMBERSHIP_PLAN
       );
+      await classTypeService.seedDefaultsForTenant(supabaseAdmin, tenant.id);
     } catch (planError) {
       await supabaseAdmin.from('tenants').delete().eq('id', tenant.id);
       throw planError;

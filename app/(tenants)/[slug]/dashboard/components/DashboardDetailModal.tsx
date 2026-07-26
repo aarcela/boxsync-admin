@@ -75,7 +75,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
                 <div key={cls.id} className="p-4 rounded-xl border border-pits-edge bg-pits-surface-muted/30 hover:border-blue-500/30 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter text-pits-dark-text ${cls.class_type === 'CrossFit' ? 'bg-pits-primary' : 'bg-blue-600 text-white'}`}>
+                       <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter text-white bg-pits-primary">
                          {cls.class_type}
                        </span>
                        <p className="text-sm font-black text-pits-text italic">

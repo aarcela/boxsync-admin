@@ -136,6 +136,36 @@ export const translations = {
 
     'Box Management': 'Box Management',
     'Payment Methods': 'Payment Methods',
+    'Class Types': 'Class Types',
+    'Manage class categories used in schedule, booking and payroll':
+      'Manage class categories used in schedule, booking and payroll',
+    'Add Class Type': 'Add Class Type',
+    'Edit Class Type': 'Edit Class Type',
+    'Failed to load class types': 'Failed to load class types',
+    'Class type updated': 'Class type updated',
+    'Class type created': 'Class type created',
+    'Class type deleted': 'Class type deleted',
+    'Delete Class Type': 'Delete Class Type',
+    'Delete this class type? Types used by classes cannot be deleted.':
+      'Delete this class type? Types used by classes cannot be deleted.',
+    'Search class types...': 'Search class types...',
+    'No class types found': 'No class types found',
+    'Open Box plan type': 'Open Box plan type',
+    'Standard class type': 'Standard class type',
+    'Duration': 'Duration',
+    'Duration (min)': 'Duration (min)',
+    'min': 'min',
+    'Sort order': 'Sort order',
+    'Color': 'Color',
+    'Open Box type (plan restriction)': 'Open Box type (plan restriction)',
+    'Active types appear when creating classes and on the schedule.':
+      'Active types appear when creating classes and on the schedule.',
+    'Open Box types are used for open-box-only membership plans.':
+      'Open Box types are used for open-box-only membership plans.',
+    'Renaming a type updates existing classes and salary rates.':
+      'Renaming a type updates existing classes and salary rates.',
+    'How it works': 'How it works',
+    'Create': 'Create',
     'Personal Records': 'Personal Records',
     'PR Catalog': 'PR Catalog',
     'Manage movements athletes can track as personal records':
@@ -297,9 +327,18 @@ export const translations = {
     'App access QR': 'App access QR',
     'Scan or share this QR code so athletes can download and access the app.':
       'Scan or share this QR code so athletes can download and access the app.',
+    'Athlete join QR': 'Athlete join QR',
+    'Athletes scan this QR in the WODUS app to register at your gym.':
+      'Athletes scan this QR in the WODUS app to register at your gym.',
+    'Gym code': 'Gym code',
+    'Copy gym code': 'Copy gym code',
+    'Gym code copied': 'Gym code copied',
+    'Copy join link': 'Copy join link',
+    'Join link copied': 'Join link copied',
     'Download QR code': 'Download QR code',
     'Downloading...': 'Downloading...',
     'Failed to download QR code': 'Failed to download QR code',
+    'Failed to generate QR code': 'Failed to generate QR code',
     English: 'English',
     Spanish: 'Spanish',
 
@@ -513,6 +552,13 @@ export const translations = {
     'Click a slot to schedule · Use checkboxes to multi-select':
       'Click a slot to schedule · Use checkboxes to multi-select',
     'Class date': 'Class date',
+    'Start date': 'Start date',
+    'Start time': 'Start time',
+    'End date': 'End date',
+    'End time': 'End time',
+    'End must be after start': 'End must be after start',
+    'Edit Class': 'Edit Class',
+    'Duplicate Class': 'Duplicate Class',
     'Delete selected classes?': 'Delete selected classes?',
 
     // Attendance Page
@@ -1230,6 +1276,36 @@ export const translations = {
 
     'Box Management': 'Gestión del Box',
     'Payment Methods': 'Métodos de Pago',
+    'Class Types': 'Tipos de Clase',
+    'Manage class categories used in schedule, booking and payroll':
+      'Gestiona las categorías de clase usadas en horario, reservas y nómina',
+    'Add Class Type': 'Agregar Tipo de Clase',
+    'Edit Class Type': 'Editar Tipo de Clase',
+    'Failed to load class types': 'Error al cargar tipos de clase',
+    'Class type updated': 'Tipo de clase actualizado',
+    'Class type created': 'Tipo de clase creado',
+    'Class type deleted': 'Tipo de clase eliminado',
+    'Delete Class Type': 'Eliminar Tipo de Clase',
+    'Delete this class type? Types used by classes cannot be deleted.':
+      '¿Eliminar este tipo de clase? Los tipos usados por clases no se pueden eliminar.',
+    'Search class types...': 'Buscar tipos de clase...',
+    'No class types found': 'No se encontraron tipos de clase',
+    'Open Box plan type': 'Tipo Open Box',
+    'Standard class type': 'Tipo de clase estándar',
+    'Duration': 'Duración',
+    'Duration (min)': 'Duración (min)',
+    'min': 'min',
+    'Sort order': 'Orden',
+    'Color': 'Color',
+    'Open Box type (plan restriction)': 'Tipo Open Box (restricción de plan)',
+    'Active types appear when creating classes and on the schedule.':
+      'Los tipos activos aparecen al crear clases y en el horario.',
+    'Open Box types are used for open-box-only membership plans.':
+      'Los tipos Open Box se usan para planes solo Open Box.',
+    'Renaming a type updates existing classes and salary rates.':
+      'Renombrar un tipo actualiza las clases existentes y las tarifas de nómina.',
+    'How it works': 'Cómo funciona',
+    'Create': 'Crear',
     'Personal Records': 'Records Personales',
     'PR Catalog': 'Catálogo PR',
     'Manage movements athletes can track as personal records':
@@ -1391,9 +1467,18 @@ export const translations = {
     'App access QR': 'QR de acceso a la app',
     'Scan or share this QR code so athletes can download and access the app.':
       'Escanea o comparte este código QR para que los atletas descarguen y accedan a la app.',
+    'Athlete join QR': 'QR de registro de atletas',
+    'Athletes scan this QR in the WODUS app to register at your gym.':
+      'Los atletas escanean este QR en la app WODUS para registrarse en tu box.',
+    'Gym code': 'Código del box',
+    'Copy gym code': 'Copiar código',
+    'Gym code copied': 'Código copiado',
+    'Copy join link': 'Copiar enlace',
+    'Join link copied': 'Enlace copiado',
     'Download QR code': 'Descargar código QR',
     'Downloading...': 'Descargando...',
     'Failed to download QR code': 'No se pudo descargar el código QR',
+    'Failed to generate QR code': 'No se pudo generar el código QR',
     English: 'Inglés',
     Spanish: 'Español',
 
@@ -1607,6 +1692,13 @@ export const translations = {
     'Click a slot to schedule · Use checkboxes to multi-select':
       'Haz clic en un horario para programar · Usa casillas para multiselección',
     'Class date': 'Fecha de la clase',
+    'Start date': 'Fecha de inicio',
+    'Start time': 'Hora de inicio',
+    'End date': 'Fecha de fin',
+    'End time': 'Hora de fin',
+    'End must be after start': 'El fin debe ser posterior al inicio',
+    'Edit Class': 'Editar clase',
+    'Duplicate Class': 'Duplicar clase',
     'Delete selected classes?': '¿Eliminar las clases seleccionadas?',
 
     // Attendance Page

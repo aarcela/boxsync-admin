@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-type TenantScopedTable = 'payment_methods' | 'membership_plans';
+type TenantScopedTable = 'payment_methods' | 'membership_plans' | 'class_types';
 
 export async function ensureRowTenantId<T extends { id: string; tenant_id?: string | null }>(
   client: SupabaseClient,

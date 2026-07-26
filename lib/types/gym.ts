@@ -21,6 +21,20 @@ export interface PaymentMethod {
   created_at: string;
 }
 
+export interface ClassTypeRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  color_hex: string;
+  default_duration_min: number;
+  is_open_box: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export type ClassTypeInput = Omit<ClassTypeRow, 'id' | 'created_at' | 'tenant_id'>;
+
 export type PlanLimitType = 'weekly' | 'period' | 'none';
 
 export interface MembershipPlan {
@@ -186,6 +200,7 @@ export type ClassSession = {
   max_capacity: number;
   class_type: string;
   is_cancelled: boolean;
+  coach_id?: string | null;
   coach: { full_name: string } | null;
   bookings: { count: number }[];
   waitlist?: { count: number }[];

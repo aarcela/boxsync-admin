@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { classService } from '@/lib/services/classService';
-import { CLASS_TYPES } from '@/lib/constants/classTypes';
-import { ClassSession } from '@/lib/types/gym';
+import { classTypeService } from '@/lib/services/classTypeService';
+import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
+import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 import {
   getCaracasDate,
   getCaracasTimeLabel,
@@ -31,21 +32,6 @@ interface ScheduleWeekCalendarProps {
   onCreateSlot: (date: string, time: string) => void;
   refreshKey?: number;
   onClassesChanged?: () => void;
-}
-
-function getClassTypeStyles(type: string): string {
-  switch (type) {
-    case 'CrossFit':
-      return 'bg-pits-red/90 border-pits-red text-white';
-    case 'Halterofilia':
-      return 'bg-blue-600/90 border-blue-500 text-white';
-    case 'Gymnastic':
-      return 'bg-purple-600/90 border-purple-500 text-white';
-    case 'Open Box':
-      return 'bg-gray-600/90 border-gray-500 text-white';
-    default:
-      return 'bg-orange-500/90 border-orange-400 text-white';
-  }
 }
 
 function getCaracasHourMinute(iso: string): { hour: number; minute: number } {
@@ -78,14 +64,19 @@ export default function ScheduleWeekCalendar({
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCoach, setBulkCoach] = useState('');
   const [bulkType, setBulkType] = useState('');
   const [bulkCapacity, setBulkCapacity] = useState('');
   const [bulkDate, setBulkDate] = useState('');
   const [bulkTime, setBulkTime] = useState('');
+  const [bulkEndDate, setBulkEndDate] = useState('');
+  const [bulkEndTime, setBulkEndTime] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
 
   const weekDays = useMemo(() => getCaracasWeekDays(anchorDate), [anchorDate]);
   const weekRange = useMemo(() => getCaracasWeekRange(anchorDate), [anchorDate]);
@@ -123,9 +114,13 @@ export default function ScheduleWeekCalendar({
     if (singleSelected) {
       setBulkDate(getCaracasDateFromIso(singleSelected.start_time));
       setBulkTime(getCaracasTimeLabel(singleSelected.start_time));
+      setBulkEndDate(getCaracasDateFromIso(singleSelected.end_time));
+      setBulkEndTime(getCaracasTimeLabel(singleSelected.end_time));
     } else {
       setBulkDate('');
       setBulkTime('');
+      setBulkEndDate('');
+      setBulkEndTime('');
     }
   }, [singleSelected]);
 
@@ -147,13 +142,33 @@ export default function ScheduleWeekCalendar({
   }, [loadWeek, refreshKey]);
 
   useEffect(() => {
-    supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('role', ['coach', 'manager', 'admin'])
-      .then(({ data }) => {
-        if (data) setCoaches(data);
-      });
+    const loadLookups = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      const [{ data: coachRows }, types] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('role', ['coach', 'manager', 'admin']),
+        profile?.tenant_id
+          ? classTypeService.getClassTypes(profile.tenant_id, true)
+          : Promise.resolve([] as ClassTypeRow[]),
+      ]);
+
+      if (coachRows) setCoaches(coachRows);
+      setClassTypes(types);
+    };
+
+    void loadLookups();
   }, []);
 
   const shiftWeek = (weeks: number) => {
@@ -189,14 +204,30 @@ export default function ScheduleWeekCalendar({
     if (bulkType) updates.class_type = bulkType;
     if (bulkCapacity) updates.max_capacity = parseInt(bulkCapacity, 10);
 
-    if (selectedIds.size === 1 && singleSelected && bulkDate && bulkTime) {
+    if (
+      selectedIds.size === 1 &&
+      singleSelected &&
+      bulkDate &&
+      bulkTime &&
+      bulkEndDate &&
+      bulkEndTime
+    ) {
       const originalDate = getCaracasDateFromIso(singleSelected.start_time);
       const originalTime = getCaracasTimeLabel(singleSelected.start_time);
-      if (bulkDate !== originalDate || bulkTime !== originalTime) {
-        const durationMin = getDurationMinutes(singleSelected.start_time, singleSelected.end_time);
+      const originalEndDate = getCaracasDateFromIso(singleSelected.end_time);
+      const originalEndTime = getCaracasTimeLabel(singleSelected.end_time);
+      const startChanged = bulkDate !== originalDate || bulkTime !== originalTime;
+      const endChanged = bulkEndDate !== originalEndDate || bulkEndTime !== originalEndTime;
+
+      if (startChanged || endChanged) {
         const newStart = new Date(`${bulkDate}T${bulkTime}:00-04:00`);
+        const newEnd = new Date(`${bulkEndDate}T${bulkEndTime}:00-04:00`);
+        if (newEnd <= newStart) {
+          toast(t('End must be after start'), 'error');
+          return;
+        }
         updates.start_time = newStart.toISOString();
-        updates.end_time = new Date(newStart.getTime() + durationMin * 60000).toISOString();
+        updates.end_time = newEnd.toISOString();
       }
     }
 
@@ -249,6 +280,8 @@ export default function ScheduleWeekCalendar({
     setBulkCapacity('');
     setBulkDate('');
     setBulkTime('');
+    setBulkEndDate('');
+    setBulkEndTime('');
   };
 
   const someSelected = selectedIds.size > 0;
@@ -317,9 +350,9 @@ export default function ScheduleWeekCalendar({
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-black uppercase text-pits-ink outline-none"
           >
             <option value="">{t('Type')}</option>
-            {CLASS_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
+            {classTypes.map((row) => (
+              <option key={row.id} value={row.name}>
+                {row.name}
               </option>
             ))}
           </select>
@@ -338,7 +371,7 @@ export default function ScheduleWeekCalendar({
             onChange={(e) => setBulkDate(e.target.value)}
             disabled={!singleSelected}
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
-            aria-label={t('Class date')}
+            aria-label={t('Start date')}
           />
           <input
             type="time"
@@ -346,7 +379,24 @@ export default function ScheduleWeekCalendar({
             onChange={(e) => setBulkTime(e.target.value)}
             disabled={!singleSelected}
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
-            aria-label={t('Class Time')}
+            aria-label={t('Start time')}
+          />
+          <input
+            type="date"
+            value={bulkEndDate}
+            onChange={(e) => setBulkEndDate(e.target.value)}
+            disabled={!singleSelected}
+            min={bulkDate || undefined}
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            aria-label={t('End date')}
+          />
+          <input
+            type="time"
+            value={bulkEndTime}
+            onChange={(e) => setBulkEndTime(e.target.value)}
+            disabled={!singleSelected}
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            aria-label={t('End time')}
           />
           <button
             type="button"
@@ -455,8 +505,12 @@ export default function ScheduleWeekCalendar({
                       return (
                         <div
                           key={cls.id}
-                          className={`absolute left-1 right-1 rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 ${getClassTypeStyles(cls.class_type)} ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
-                          style={{ top: top + 2, height }}
+                          className={`absolute left-1 right-1 rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 text-white ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
+                          style={{
+                            ...classTypeBadgeStyle(colorByName[cls.class_type]),
+                            top: top + 2,
+                            height,
+                          }}
                           title={`${cls.class_type} · ${getCaracasTimeLabel(cls.start_time)}`}
                         >
                           <input

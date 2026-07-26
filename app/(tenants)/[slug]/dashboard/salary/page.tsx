@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
 import {
   Plus,
   Trash2,
@@ -17,9 +17,9 @@ import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
-import { CLASS_TYPES } from '@/lib/constants/classTypes';
+import { classTypeService } from '@/lib/services/classTypeService';
 import { coachSalaryService } from '@/lib/services/coachSalaryService';
-import { CoachSalaryTier, CoachWithSalaryTier } from '@/lib/types/gym';
+import { ClassTypeRow, CoachSalaryTier, CoachWithSalaryTier } from '@/lib/types/gym';
 import {
   createSalaryTierAction,
   updateSalaryTierAction,
@@ -28,8 +28,8 @@ import {
   assignCoachSalaryTierAction,
 } from './actions';
 
-function emptyRates(): Record<string, string> {
-  return CLASS_TYPES.reduce(
+function emptyRates(typeNames: string[]): Record<string, string> {
+  return typeNames.reduce(
     (acc, type) => {
       acc[type] = '0';
       return acc;
@@ -46,6 +46,7 @@ export default function SalaryPage() {
   const [loading, setLoading] = useState(true);
   const [tiers, setTiers] = useState<CoachSalaryTier[]>([]);
   const [coaches, setCoaches] = useState<CoachWithSalaryTier[]>([]);
+  const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [callerRole, setCallerRole] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -54,13 +55,16 @@ export default function SalaryPage() {
   const [tierToDelete, setTierToDelete] = useState<string | null>(null);
 
   const isAdmin = callerRole === 'admin';
+  const classTypeNames = useMemo(() => classTypes.map((row) => row.name), [classTypes]);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     is_active: true,
-    rates: emptyRates(),
+    rates: {} as Record<string, string>,
   });
+
+  const buildEmptyRates = useCallback(() => emptyRates(classTypeNames), [classTypeNames]);
 
   useEffect(() => {
     const loadContext = async () => {
@@ -86,12 +90,14 @@ export default function SalaryPage() {
     if (!tenantId || !isAdmin) return;
     setLoading(true);
     try {
-      const [tierData, coachData] = await Promise.all([
+      const [tierData, coachData, typeData] = await Promise.all([
         coachSalaryService.getTiersWithRates(tenantId),
         coachSalaryService.getCoachesWithTiers(tenantId),
+        classTypeService.getClassTypes(tenantId),
       ]);
       setTiers(tierData);
       setCoaches(coachData);
+      setClassTypes(typeData);
     } catch (err) {
       console.error(err);
       toast(t('Failed to load salary configuration'), 'error');
@@ -120,7 +126,7 @@ export default function SalaryPage() {
 
     if (tier) {
       setEditingTier(tier);
-      const rates = emptyRates();
+      const rates = buildEmptyRates();
       tier.rates?.forEach((r) => {
         rates[r.class_type] = String(r.rate_usd);
       });
@@ -136,7 +142,7 @@ export default function SalaryPage() {
         name: '',
         description: '',
         is_active: true,
-        rates: emptyRates(),
+        rates: buildEmptyRates(),
       });
     }
     setIsFormOpen(true);
@@ -152,7 +158,8 @@ export default function SalaryPage() {
         form.append('name', formData.name);
         form.append('description', formData.description);
         form.append('is_active', String(formData.is_active));
-        CLASS_TYPES.forEach((classType) => {
+        form.append('class_type_names', JSON.stringify(classTypeNames));
+        classTypeNames.forEach((classType) => {
           form.append(`rate_${classType}`, formData.rates[classType] || '0');
         });
 
@@ -588,7 +595,7 @@ export default function SalaryPage() {
                     {t('Rate per Class (USD)')}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
-                    {CLASS_TYPES.map((classType) => (
+                    {classTypeNames.map((classType) => (
                       <div key={classType} className="space-y-1">
                         <label className="text-[8px] font-black text-pits-dim uppercase ml-1">
                           {classType}
@@ -598,7 +605,7 @@ export default function SalaryPage() {
                           min="0"
                           step="0.01"
                           required
-                          value={formData.rates[classType]}
+                          value={formData.rates[classType] ?? '0'}
                           onChange={(e) =>
                             setFormData({
                               ...formData,

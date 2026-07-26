@@ -61,9 +61,8 @@ type NavItem = NavLinkItem | NavParentItem;
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth >= 1024
-  );
+  // Always start closed so SSR + first client paint match (avoid hydration mismatch).
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
   const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -71,6 +70,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userFullName, setUserFullName] = useState<string | null>(null);
   const [runningExpiry, setRunningExpiry] = useState(false);
   const [confirmExpiryOpen, setConfirmExpiryOpen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsSidebarOpen(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   const runExpiry = async () => {
     setRunningExpiry(true);
@@ -134,6 +141,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
           { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
           { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags },
+          { name: t('Class Types'), href: '/dashboard/class_types', icon: Tags },
           { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy },
         ],
       },

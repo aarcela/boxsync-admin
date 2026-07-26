@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Calendar, Clock, CheckCircle, XCircle, MinusCircle, 
   Users, ChevronLeft, ChevronRight, CheckCheck, Ban, Search, UserPlus, UserMinus
@@ -10,14 +10,18 @@ import Tooltip from '@/components/Tooltip';
 import AddToClassModal from '@/components/AddToClassModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import { TranslationKey } from '@/lib/translations';
-import { BookingStatus } from '@/lib/types/gym';
+import { classTypeService } from '@/lib/services/classTypeService';
+import { BookingStatus, ClassTypeRow } from '@/lib/types/gym';
+import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 
 const bookingStatusKey = (status: BookingStatus): TranslationKey =>
   status as TranslationKey;
 
 export default function AttendancePage() {
   const { t } = useLanguage();
+  const { tenantId } = useTenant();
   const {
     date,
     setDate,
@@ -41,6 +45,16 @@ export default function AttendancePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addingAthlete, setAddingAthlete] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
+  const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    void classTypeService
+      .getClassTypes(tenantId, true)
+      .then(setClassTypes)
+      .catch((err) => console.error(err));
+  }, [tenantId]);
 
   const selectedClass = classes.find(c => c.id === selectedClassId);
   const bookingCount = selectedClass?.bookings[0]?.count ?? roster.length;
@@ -147,9 +161,10 @@ export default function AttendancePage() {
                     `}
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-pits-dark-text
-                        ${cls.class_type === 'CrossFit' ? 'bg-pits-red' : 'bg-blue-600'}
-                      `}>
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white"
+                        style={classTypeBadgeStyle(colorByName[cls.class_type])}
+                      >
                         {cls.class_type}
                       </span>
                       <div className="flex flex-col items-end">
