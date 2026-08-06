@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { prMovementService } from '@/lib/services/prMovementService';
 import {
@@ -452,7 +453,7 @@ export default function WodEditorPage() {
                   disabled={isLocked}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('WOD title placeholder')}
-                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all placeholder:font-normal disabled:cursor-not-allowed"
                 />
                 <div className="text-right mt-1.5">
                   <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-pits-error' : 'text-pits-dim'}`}>
@@ -492,7 +493,7 @@ export default function WodEditorPage() {
 
             {/* Technique Section */}
             <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm relative group overflow-visible">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-3">
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-pits-primary-soft text-pits-primary rounded-lg flex items-center justify-center mr-3">
                     <Zap size={16} />
@@ -501,6 +502,13 @@ export default function WodEditorPage() {
                     {t('2. Focus (Technique)')}
                   </label>
                 </div>
+                <Link
+                  href="/dashboard/personal_records"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-pits-primary hover:text-pits-red transition-colors shrink-0"
+                >
+                  {t('Personal Records')}
+                  <MoveRight size={14} />
+                </Link>
               </div>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-pits-dim" size={18} />
@@ -519,7 +527,7 @@ export default function WodEditorPage() {
                   }}
                   onBlur={() => setTimeout(() => setTechniqueDropdownOpen(false), 200)}
                   placeholder={t('Skill focus placeholder')}
-                  className="w-full pl-11 pr-4 py-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all disabled:cursor-not-allowed"
+                  className="w-full pl-11 pr-4 py-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all placeholder:font-normal disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -592,23 +600,26 @@ export default function WodEditorPage() {
                   onChange={(e) => setStimulus(e.target.value)}
                   rows={3}
                   placeholder={t('Stimulus placeholder')}
-                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-red outline-none resize-none transition-all placeholder:text-pits-dim disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-red outline-none resize-none transition-all placeholder:text-pits-dim placeholder:font-normal disabled:cursor-not-allowed"
                 />
               </div>
               <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
-                <div className="flex items-center mb-3">
+                <div className="flex items-center mb-1">
                   <div className="w-8 h-8 bg-pits-surface-muted text-pits-text rounded-lg flex items-center justify-center mr-3">
                     <Scale size={16} />
                   </div>
                   <label className="text-xs font-black text-pits-text uppercase tracking-widest">{t('Scaling & Notes')}</label>
                 </div>
+                <p className="text-[11px] font-medium text-pits-dim mb-3 ml-11">
+                  {t('Notes are only visible to coaches')}
+                </p>
                 <textarea 
                   value={scaling}
                   disabled={isLocked}
                   onChange={(e) => setScaling(e.target.value)}
                   rows={3}
                   placeholder={t('Scaling placeholder')}
-                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-edge0 outline-none resize-none transition-all placeholder:text-pits-dim disabled:cursor-not-allowed"
+                  className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold focus:bg-pits-surface-elevated focus:border-pits-edge0 outline-none resize-none transition-all placeholder:text-pits-dim placeholder:font-normal disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -658,10 +669,6 @@ export default function WodEditorPage() {
                        <p className="text-xs font-bold uppercase tracking-widest">{t('Workout is empty')}</p>
                     </div>
                   )}
-                </div>
-
-                <div className="p-4 border-t border-pits-edge bg-pits-surface-muted text-center">
-                   <p className="text-[10px] text-pits-dim font-bold uppercase tracking-widest">{t('Athlete Mobile View')}</p>
                 </div>
               </div>
             </div>
@@ -768,7 +775,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-gray-400 outline-none resize-none transition-all placeholder:text-pits-dim font-mono disabled:cursor-not-allowed"
+        className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-bold text-pits-text focus:bg-pits-surface-elevated focus:border-gray-400 outline-none resize-none transition-all placeholder:text-pits-dim placeholder:font-normal font-mono disabled:cursor-not-allowed"
       />
     </div>
   );

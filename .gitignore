@@ -52,3 +52,6 @@ scripts/
 
 *.sql
 !supabase/migrations/20260716141000_consolidate_tenant_audit_fixes.sql
+
+*.txt
+*.toml

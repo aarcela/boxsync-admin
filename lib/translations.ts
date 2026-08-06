@@ -1136,6 +1136,7 @@ export const translations = {
     '3. Build (Strength / Skill)': '3. Build (Strength / Skill)',
     '4. Perform (The Metcon)': '4. Perform (The Metcon)',
     'Scaling & Notes': 'Scaling & Notes',
+    'Notes are only visible to coaches': 'Notes are only visible to coaches',
   },
   es: {
     // Auth / Login
@@ -2281,6 +2282,7 @@ export const translations = {
     '3. Build (Strength / Skill)': '3. Desarrollo (Fuerza / Habilidad)',
     '4. Perform (The Metcon)': '4. Rendimiento (Metcon)',
     'Scaling & Notes': 'Escalado y notas',
+    'Notes are only visible to coaches': 'Las notas solo son visibles para coaches',
   }
 }
 
