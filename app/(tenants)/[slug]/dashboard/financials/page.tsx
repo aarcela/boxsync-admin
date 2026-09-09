@@ -80,7 +80,7 @@ export default function FinancialsPage() {
     currencies,
   } = useFinancials(period, period === 'custom' ? customRange : undefined);
 
-  // Daily EUR Cash Reconciliation state
+  // Daily REF (reference currency) Cash Reconciliation state
   const [reconState, setReconState] = useState({
     opening: 0,
     received: 0,
@@ -99,12 +99,12 @@ export default function FinancialsPage() {
     return label.includes('cash') || label.includes('efectivo');
   };
 
-  const todayEURCashReceived =
+  const todayRefCashReceived =
     payments
       .filter(
         (p) =>
           p.status === 'approved' &&
-          (p.currency || p.currency_type) === 'EUR' &&
+          (p.currency || p.currency_type) === currencies.reference &&
           toDateInputValue(new Date(p.created_at)) === todayStr &&
           isCashRef(p.method)
       )
@@ -113,20 +113,20 @@ export default function FinancialsPage() {
       .filter(
         (inc) =>
           inc.status === 'confirmed' &&
-          inc.currency === 'EUR' &&
+          inc.currency === currencies.reference &&
           inc.income_date === todayStr &&
           isCashRef(inc.payment_method)
       )
       .reduce((sum, inc) => sum + inc.amount, 0);
 
-  const expectedClosingCash = (Number(reconState.opening) + todayEURCashReceived) - Number(reconState.withdrawals);
+  const expectedClosingCash = (Number(reconState.opening) + todayRefCashReceived) - Number(reconState.withdrawals);
   const reconDifference = Number(reconState.actual || 0) - expectedClosingCash;
 
   const handleAudit = () => {
     if (reconDifference === 0) {
       toast(t('Vault reconciled perfectly.'), 'success');
     } else {
-      const msg = `${reconDifference > 0 ? '+' : ''}${reconDifference.toFixed(2)} EUR`;
+      const msg = `${reconDifference > 0 ? '+' : ''}${reconDifference.toFixed(2)} ${currencies.reference}`;
       toast(t('Reconciliation mismatch: {{amount}}', { amount: msg }), reconDifference < 0 ? 'error' : 'warning');
     }
   };
@@ -138,6 +138,7 @@ export default function FinancialsPage() {
     userId: string;
     athleteName: string;
   }>({ isOpen: false, action: 'approve', paymentId: '', userId: '', athleteName: '' });
+  const [rejectReason, setRejectReason] = useState('');
 
   // Paged state (local to UI)
   const paginatedPayments = filteredPayments.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -152,10 +153,12 @@ export default function FinancialsPage() {
 
   const handleConfirmAction = async () => {
     const { action, paymentId, userId } = confirmConfig;
+    const reason = rejectReason;
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+    setRejectReason('');
 
     if (action === 'approve') await approve(paymentId, userId);
-    else if (action === 'reject') await reject(paymentId);
+    else if (action === 'reject') await reject(paymentId, userId, reason);
     else if (action === 'expiry') await runExpiry();
   };
 
@@ -168,7 +171,7 @@ export default function FinancialsPage() {
         p.profiles?.full_name || 'Anonymous',
         p.method || 'N/A',
         p.amount,
-        p.currency || p.currency_type || 'EUR',
+        p.currency || p.currency_type || currencies.reference,
         p.status
       ].map(f => `"${f}"`).join(','))
     ].join('\n');
@@ -304,7 +307,7 @@ export default function FinancialsPage() {
         <StatCard label={t('Collected (Local)')} value={stats.local.totalRevenue} symbol={localSymbol} trend="positive" color="primary" />
         <StatCard label={t('Consolidated')} value={combinedTotalRef} symbol={refSymbol} trend="neutral" color="muted" info={t('Consolidated REF base')} />
         <StatCard label={t('Pending Liquidity')} value={stats.reference.pendingAmount + (exchangeRate > 0 ? stats.local.pendingAmount / exchangeRate : 0)} symbol={refSymbol} trend="warning" color="warning" />
-        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountEUR} symbol={refSymbol} trend="danger" color="danger" />
+        <StatCard label={t('Overdue leakage')} value={stats.overdueAmountREF} symbol={refSymbol} trend="danger" color="danger" />
         <StatCard label={t('Active Athletes')} value={stats.activeMembers} symbol="" trend="neutral" color="primary" />
       </div>
 
@@ -499,9 +502,9 @@ export default function FinancialsPage() {
                     <ReconInput 
                       label={t('Today\'s Inflow')} 
                       symbol={refSymbol} 
-                      value={todayEURCashReceived} 
+                      value={todayRefCashReceived}
                       isReadOnly={true}
-                      systemValue={todayEURCashReceived} 
+                      systemValue={todayRefCashReceived}
                       t={t} 
                     />
                     <ReconInput 
@@ -593,8 +596,25 @@ export default function FinancialsPage() {
         confirmLabel={confirmConfig.action === 'expiry' ? t('EXECUTE') : confirmConfig.action === 'reject' ? t('REJECT') : t('VERIFY')}
         variant={confirmConfig.action === 'expiry' ? 'warning' : confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
-        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
-      />
+        onCancel={() => {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+          setRejectReason('');
+        }}
+      >
+        {confirmConfig.action === 'reject' && (
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+              {t('Reason (optional, shown to the athlete)')}
+            </label>
+            <textarea
+              rows={2}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-2.5 text-xs font-medium text-pits-text outline-none focus:ring-2 focus:ring-pits-red resize-none"
+            />
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

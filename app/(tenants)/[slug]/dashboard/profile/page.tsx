@@ -26,6 +26,8 @@ import {
   resolvePasswordResetError,
 } from '@/lib/auth';
 import { buildMobileJoinDeepLink } from '@/lib/constants/app-links';
+import { tenantSupportService } from '@/lib/services/tenantSupportService';
+import { normalizeWhatsAppRecipient } from '@/lib/whatsapp';
 import type { TranslationKey } from '@/lib/translations';
 
 const APP_ACCESS_QR_PATH = '/assets/qr-access.png';
@@ -47,6 +49,14 @@ function getInitials(name: string | null | undefined): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+function toSupportWhatsAppUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const digits = normalizeWhatsAppRecipient(trimmed);
+  return digits ? `https://wa.me/${digits}` : '';
+}
+
 function roleLabel(role: string, t: (key: TranslationKey) => string): string {
   if (role === 'admin') return t('Admin');
   if (role === 'manager') return t('Manager');
@@ -56,10 +66,13 @@ function roleLabel(role: string, t: (key: TranslationKey) => string): string {
 export default function ProfilePage() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { slug, name: tenantName } = useTenant();
+  const { slug, name: tenantName, tenantId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<StaffProfile | null>(null);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [userId, setUserId] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -175,6 +188,7 @@ export default function ProfilePage() {
         if (!user) throw new Error('session_missing');
 
         setEmail(user.email ?? '');
+        setUserId(user.id);
 
         const { data, error } = await supabase
           .from('profiles')
@@ -186,6 +200,16 @@ export default function ProfilePage() {
         if (!isStaffRole(data?.role)) throw new Error('staff_only');
 
         setProfile(data as StaffProfile);
+
+        let phoneValue = data.phone || '';
+        if (!phoneValue) {
+          try {
+            phoneValue = await tenantSupportService.getForTenant(tenantId);
+          } catch {
+            phoneValue = '';
+          }
+        }
+        setPhone(phoneValue);
       } catch (error) {
         console.error(error);
         toast(t('Failed to load profile'), 'error');
@@ -195,7 +219,33 @@ export default function ProfilePage() {
     };
 
     loadProfile();
-  }, [t, toast]);
+  }, [t, toast, tenantId]);
+
+  const handleSavePhone = async () => {
+    if (!userId) return;
+    setPhoneSaving(true);
+    try {
+      const trimmed = phone.trim();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ phone: trimmed || null })
+        .eq('id', userId);
+      if (error) throw error;
+
+      await tenantSupportService.updateForTenant(
+        tenantId,
+        toSupportWhatsAppUrl(trimmed)
+      );
+
+      setProfile((prev) => (prev ? { ...prev, phone: trimmed || null } : prev));
+      toast(t('Phone saved'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(t('Failed to save phone'), 'error');
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,15 +346,35 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge sm:col-span-2">
             <Phone size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Phone')}
               </dt>
-              <dd className="text-sm font-bold text-pits-ink mt-0.5">
-                {profile.phone || '—'}
-              </dd>
+              <p className="text-[11px] text-pits-ink-muted mt-0.5">
+                {t('Shown to athletes in the app as your box support contact')}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={phoneSaving}
+                  placeholder="+58 412 000 0000"
+                  className="flex-1 p-3 bg-pits-surface border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSavePhone()}
+                  disabled={phoneSaving}
+                  className={`px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-xs shrink-0 transition-all
+                    ${phoneSaving ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-dark-text hover:brightness-95'}
+                  `}
+                >
+                  {phoneSaving ? t('Updating...') : t('Save Changes')}
+                </button>
+              </div>
             </div>
           </div>
 

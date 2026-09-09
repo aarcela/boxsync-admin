@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 import { Profile, AthletePlan } from '../types/gym';
-import { buildPlanChangeFields } from '../plan-period';
+import { buildMembershipActivationFields, buildPlanChangeFields } from '../plan-period';
 import { financialService } from './financialService';
 import { membershipPlanService } from './membershipPlanService';
 import { renewDateToIso } from '../renew-date';
@@ -42,14 +42,29 @@ export const athleteService = {
 
   /**
    * Toggles the solvency (active access) status of an athlete.
+   * Restoring access also rolls the renew date forward so auto-expiry
+   * does not immediately flip them inactive again.
    */
-  async updateSolvency(id: string, is_solvent: boolean): Promise<void> {
-    const { error } = await supabase
+  async updateSolvency(
+    id: string,
+    is_solvent: boolean
+  ): Promise<{ is_solvent: boolean; plan_period_start?: string | null }> {
+    const update = is_solvent
+      ? await buildMembershipActivationFields(supabase, id)
+      : { is_solvent: false };
+
+    const { data, error } = await supabase
       .from('profiles')
-      .update({ is_solvent })
-      .eq('id', id);
+      .update(update)
+      .eq('id', id)
+      .select('is_solvent, plan_period_start')
+      .single();
 
     if (error) throw error;
+    if (data?.is_solvent !== is_solvent) {
+      throw new Error('Solvency was not updated');
+    }
+    return data;
   },
 
   /**

@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface ConfirmDialogProps {
   variant?: 'danger' | 'warning' | 'default';
   onConfirm: () => void;
   onCancel: () => void;
+  children?: ReactNode;
 }
 
 const VARIANT_STYLES = {
@@ -37,6 +39,7 @@ export default function ConfirmDialog({
   variant = 'default',
   onConfirm,
   onCancel,
+  children,
 }: ConfirmDialogProps) {
   if (!isOpen) return null;
 
@@ -61,6 +64,7 @@ export default function ConfirmDialog({
           <p className="text-sm text-pits-dim font-medium leading-relaxed">
             {message}
           </p>
+          {children && <div className="mt-4 text-left">{children}</div>}
         </div>
         <div className="flex gap-3 p-4 bg-pits-surface-muted border-t border-pits-edge">
           <button

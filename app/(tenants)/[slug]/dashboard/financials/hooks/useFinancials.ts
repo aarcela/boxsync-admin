@@ -42,9 +42,9 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     local: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
     activeMembers: 0,
     inactiveMembers: 0,
-    projectedRevenueEUR: 0,
+    projectedRevenueREF: 0,
     projectedRevenueVES: 0,
-    overdueAmountEUR: 0,
+    overdueAmountREF: 0,
     solvencyRate: 0
   });
 
@@ -95,7 +95,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         incomeService.getIncomes(incomeStart, incomeEnd),
         financialService.getPaymentMethods(),
         financialService.getMemberStats(),
-        financialService.getOfficialExchangeRate(currencies.reference)
+        financialService.getReferenceExchangeRate(currencies.reference)
       ]);
 
       setPayments(paymentsData);
@@ -146,9 +146,9 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         local: localStats,
         activeMembers: memberStats.active,
         inactiveMembers: memberStats.inactive,
-        projectedRevenueEUR: memberStats.projectedEUR,
+        projectedRevenueREF: memberStats.projectedREF,
         projectedRevenueVES: 0,
-        overdueAmountEUR: memberStats.overdueEUR,
+        overdueAmountREF: memberStats.overdueREF,
         solvencyRate: totalMembers > 0 ? Math.round((memberStats.active / totalMembers) * 100) : 0
       });
 
@@ -188,9 +188,9 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     }
   };
 
-  const reject = async (paymentId: string) => {
+  const reject = async (paymentId: string, userId?: string, reason?: string) => {
     try {
-      await financialService.rejectPayment(paymentId);
+      await financialService.rejectPayment(paymentId, userId, reason);
       toast('Payment rejected. Ledger updated.', 'warning');
       await fetchFinancials();
     } catch {

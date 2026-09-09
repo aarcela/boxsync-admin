@@ -1,6 +1,12 @@
 import { supabase } from '../supabase';
-import { buildPaymentApprovedProfileUpdate } from '../plan-period';
+import { buildPaymentApprovedProfileUpdate, getMemberPeriodBalance } from '../plan-period';
 import { PaymentMethod, PaymentRecord } from '@/lib/types/gym';
+import {
+  CurrencyType,
+  ExchangeRateSource,
+  exchangeRateEndpoint,
+  parseTenantExchangeRateConfig,
+} from '@/lib/currency';
 
 const PAYMENT_PROOFS_BUCKET = 'payment-proofs';
 const SIGNED_URL_TTL_SECONDS = 60 * 10;
@@ -53,7 +59,7 @@ export const financialService = {
     }))) as Promise<PaymentRecord[]>;
   },
 
-  async getMemberStats(): Promise<{ active: number; inactive: number; projectedEUR: number; overdueEUR: number }> {
+  async getMemberStats(): Promise<{ active: number; inactive: number; projectedREF: number; overdueREF: number }> {
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('is_solvent, membership_plans!fk_profiles_membership_plans(price_usd)')
@@ -63,22 +69,57 @@ export const financialService = {
 
     let active = 0;
     let inactive = 0;
-    let projectedEUR = 0;
-    let overdueEUR = 0;
+    let projectedREF = 0;
+    let overdueREF = 0;
 
     profiles?.forEach(p => {
       const plan = Array.isArray(p.membership_plans) ? p.membership_plans[0] : p.membership_plans;
       const price = Number(plan?.price_usd) || 0;
-      projectedEUR += price;
+      projectedREF += price;
       if (p.is_solvent) {
         active++;
       } else {
         inactive++;
-        overdueEUR += price;
+        overdueREF += price;
       }
     });
 
-    return { active, inactive, projectedEUR, overdueEUR };
+    return { active, inactive, projectedREF, overdueREF };
+  },
+
+  /** Returns the member's outstanding balance for their currently open plan period. */
+  async getMemberPeriodBalance(userId: string) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, plan_period_start')
+      .eq('id', userId)
+      .single();
+    if (profileError) throw profileError;
+
+    if (!profile?.plan) return { due: 0, paid: 0, remaining: 0 };
+
+    const { data: plan, error: planError } = await supabase
+      .from('membership_plans')
+      .select('price_usd')
+      .eq('id', profile.plan)
+      .maybeSingle();
+    if (planError) throw planError;
+
+    const planPriceRef = Number(plan?.price_usd) || 0;
+    return getMemberPeriodBalance(supabase, userId, planPriceRef, profile.plan_period_start ?? null);
+  },
+
+  async notifyPaymentStatus(userId: string, status: 'approved' | 'rejected', reason?: string | null) {
+    try {
+      await fetch('/api/admin/notifications/payment-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status, reason }),
+      });
+    } catch (error) {
+      // Push delivery is best-effort — never let it fail the approve/reject flow.
+      console.error('Failed to send payment status push notification:', error);
+    }
   },
 
   async approvePayment(paymentId: string, userId: string): Promise<void> {
@@ -86,26 +127,34 @@ export const financialService = {
       .from('payments')
       .update({ status: 'approved' })
       .eq('id', paymentId);
-    
+
     if (payError) throw payError;
 
     const profileUpdate = await buildPaymentApprovedProfileUpdate(supabase, userId);
 
-    const { error: profError } = await supabase
-      .from('profiles')
-      .update(profileUpdate)
-      .eq('id', userId);
+    // null means the period's due amount hasn't been fully covered yet by the
+    // sum of approved payments — leave solvency/period untouched (partial payment).
+    if (profileUpdate) {
+      const { error: profError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', userId);
 
-    if (profError) throw profError;
+      if (profError) throw profError;
+    }
+
+    await this.notifyPaymentStatus(userId, 'approved');
   },
 
-  async rejectPayment(paymentId: string): Promise<void> {
+  async rejectPayment(paymentId: string, userId?: string, reason?: string): Promise<void> {
     const { error } = await supabase
       .from('payments')
-      .update({ status: 'rejected' })
+      .update({ status: 'rejected', rejection_reason: reason ?? null })
       .eq('id', paymentId);
-    
+
     if (error) throw error;
+
+    if (userId) await this.notifyPaymentStatus(userId, 'rejected', reason);
   },
 
   async runExpiryCheck(): Promise<{ message: string }> {
@@ -113,19 +162,33 @@ export const financialService = {
     return response.json();
   },
 
-  async getOfficialExchangeRate(referenceCurrency: 'EUR' | 'USD' | 'VES' = 'EUR'): Promise<number> {
+  async getReferenceExchangeRate(
+    referenceCurrency: CurrencyType | 'EUR' | 'USD' | 'VES' = CurrencyType.USD,
+    source: ExchangeRateSource = 'bcv'
+  ): Promise<number> {
     try {
-      const path =
-        referenceCurrency === 'USD'
-          ? 'https://ve.dolarapi.com/v1/dolares/oficial'
-          : 'https://ve.dolarapi.com/v1/euros/oficial';
+      const path = exchangeRateEndpoint(referenceCurrency as CurrencyType, source);
       const response = await fetch(path);
       const data = await response.json();
       return Number(data.promedio);
     } catch (error) {
-      console.error('Failed to fetch official rate:', error);
+      console.error('Failed to fetch reference rate:', error);
       return 0;
     }
+  },
+
+  /** Applies the tenant's configured base source (BCV/paralelo) + margin % on top of the fetched rate. */
+  async getEffectiveExchangeRate(tenantId: string, referenceCurrency: CurrencyType | 'EUR' | 'USD' | 'VES'): Promise<number> {
+    const { data: tenant, error } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .maybeSingle();
+    if (error) throw error;
+
+    const config = parseTenantExchangeRateConfig(tenant?.settings);
+    const baseRate = await this.getReferenceExchangeRate(referenceCurrency, config.baseSource);
+    return baseRate * (1 + config.marginPercent / 100);
   },
 
   async getLastPaymentDates(userIds: string[]): Promise<Record<string, string>> {

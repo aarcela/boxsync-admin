@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Tooltip from '@/components/Tooltip';
@@ -64,6 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Always start closed so SSR + first client paint match (avoid hydration mismatch).
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
+  const { name: boxName } = useTenant();
   const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -368,6 +370,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ES
               </button>
             </div>
+
+            {boxName && (
+              <span className="font-black text-sm sm:text-base uppercase tracking-tight text-pits-shell-ink truncate max-w-[32vw] sm:max-w-xs">
+                {boxName}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">

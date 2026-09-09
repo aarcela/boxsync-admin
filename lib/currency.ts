@@ -10,8 +10,20 @@ export type TenantCurrencyConfig = {
 };
 
 export const DEFAULT_TENANT_CURRENCIES: TenantCurrencyConfig = {
-  reference: CurrencyType.EUR,
+  reference: CurrencyType.USD,
   local: CurrencyType.VES,
+};
+
+export type ExchangeRateSource = 'bcv' | 'paralelo';
+
+export type TenantExchangeRateConfig = {
+  baseSource: ExchangeRateSource;
+  marginPercent: number;
+};
+
+export const DEFAULT_EXCHANGE_RATE_CONFIG: TenantExchangeRateConfig = {
+  baseSource: 'bcv',
+  marginPercent: 0,
 };
 
 export const CURRENCY_SYMBOLS: Record<CurrencyType, string> = {
@@ -91,9 +103,25 @@ export function isLocalCurrency(
   return code === config.local;
 }
 
-export function exchangeRateEndpoint(reference: CurrencyType): string {
-  if (reference === CurrencyType.USD) {
-    return 'https://ve.dolarapi.com/v1/dolares/oficial';
-  }
-  return 'https://ve.dolarapi.com/v1/euros/oficial';
+export function exchangeRateEndpoint(
+  reference: CurrencyType,
+  source: ExchangeRateSource = 'bcv'
+): string {
+  const currencySegment = reference === CurrencyType.USD ? 'dolares' : 'euros';
+  const sourceSegment = source === 'paralelo' ? 'paralelo' : 'oficial';
+  return `https://ve.dolarapi.com/v1/${currencySegment}/${sourceSegment}`;
+}
+
+export function parseTenantExchangeRateConfig(settings: unknown): TenantExchangeRateConfig {
+  const raw =
+    settings && typeof settings === 'object'
+      ? (settings as Record<string, unknown>).exchangeRate
+      : null;
+
+  const config = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null;
+  const baseSource: ExchangeRateSource = config?.baseSource === 'paralelo' ? 'paralelo' : 'bcv';
+  const marginPercent =
+    typeof config?.marginPercent === 'number' ? config.marginPercent : DEFAULT_EXCHANGE_RATE_CONFIG.marginPercent;
+
+  return { baseSource, marginPercent };
 }

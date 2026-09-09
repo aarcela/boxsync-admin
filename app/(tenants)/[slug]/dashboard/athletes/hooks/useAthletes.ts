@@ -88,7 +88,16 @@ export function useAthletes() {
         setUnpaidCount(prev => Math.max(0, prev - 1));
       }
 
-      await athleteService.updateSolvency(id, !currentStatus);
+      const updated = await athleteService.updateSolvency(id, !currentStatus);
+      setProfiles(prev => prev.map(p =>
+        p.id === id
+          ? {
+              ...p,
+              is_solvent: updated.is_solvent,
+              plan_period_start: updated.plan_period_start ?? p.plan_period_start,
+            }
+          : p
+      ));
       toast(
         !currentStatus ? 'Athlete access restored' : 'Athlete access revoked',
         !currentStatus ? 'success' : 'warning'

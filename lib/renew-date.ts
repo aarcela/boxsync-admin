@@ -49,3 +49,36 @@ export function getRenewDateInputValue(profile: {
 export function renewDateToIso(dateStr: string): string {
   return getCaracasDayRange(dateStr.slice(0, 10)).startUtc;
 }
+
+function addCalendarMonths(dateStr: string, months: number): string {
+  const [yearStr, monthStr, dayStr] = dateStr.slice(0, 10).split('-');
+  let year = Number(yearStr);
+  let month = Number(monthStr) + months;
+  const day = Number(dayStr);
+
+  while (month > 12) {
+    month -= 12;
+    year += 1;
+  }
+  while (month < 1) {
+    month += 12;
+    year -= 1;
+  }
+
+  const lastDayOfMonth = new Date(year, month, 0).getDate();
+  const safeDay = Math.min(day, lastDayOfMonth);
+  return `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+}
+
+/** Next monthly renew day (YYYY-MM-DD Caracas). Keeps billing day; always in the future. */
+export function nextMonthlyRenewDate(currentIso?: string | null): string {
+  const today = getCaracasDate();
+  if (!currentIso) return addCalendarMonths(today, 1);
+
+  let cursor = getCaracasDateFromIso(currentIso);
+  if (cursor > today) return cursor;
+  while (cursor <= today) {
+    cursor = addCalendarMonths(cursor, 1);
+  }
+  return cursor;
+}

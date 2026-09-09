@@ -166,7 +166,16 @@ export default function AthleteDetailPage() {
     const next = !profile.is_solvent;
     setProfile({ ...profile, is_solvent: next });
     try {
-      await athleteService.updateSolvency(profile.id, next);
+      const updated = await athleteService.updateSolvency(profile.id, next);
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              is_solvent: updated.is_solvent,
+              plan_period_start: updated.plan_period_start ?? current.plan_period_start,
+            }
+          : current
+      );
       toast(
         next ? t('Athlete access restored') : t('Athlete access revoked'),
         next ? 'success' : 'warning'

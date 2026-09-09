@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/admin/cron/expire", "schedule": "0 4 * * *" },
+    { "path": "/api/admin/cron/expiry-reminders", "schedule": "0 12 * * *" },
+    { "path": "/api/admin/cron/notifications", "schedule": "*/5 * * * *" }
+  ]
+}

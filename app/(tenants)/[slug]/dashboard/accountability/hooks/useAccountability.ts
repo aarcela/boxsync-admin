@@ -39,7 +39,7 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
         financialService.getPayments(startDate, endDate),
         incomeService.getIncomes(dateStart, dateEnd),
         expenseService.getExpenses(dateStart, dateEnd),
-        financialService.getOfficialExchangeRate(currencies.reference),
+        financialService.getReferenceExchangeRate(currencies.reference),
         financialService.getPaymentMethods()
       ]);
 

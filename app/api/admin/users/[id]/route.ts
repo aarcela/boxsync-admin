@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
-import { buildPlanChangeFields } from '@/lib/plan-period';
+import { buildMembershipActivationFields, buildPlanChangeFields } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { renewDateToIso } from '@/lib/renew-date';
 
@@ -264,9 +264,22 @@ export async function PUT(
       profileUpdateData.inscription_paid = inscription_paid;
     }
 
-    // Only update is_solvent if provided (boolean)
+    // Booking access is is_solvent. Restoring it also rolls the renew date
+    // unless the editor sent an explicit plan_period_start.
     if (typeof is_solvent === 'boolean') {
-      profileUpdateData.is_solvent = is_solvent;
+      if (is_solvent) {
+        const activation = await buildMembershipActivationFields(
+          supabaseAdmin,
+          id,
+          tenantId ?? undefined
+        );
+        profileUpdateData.is_solvent = true;
+        if (plan_period_start === undefined) {
+          profileUpdateData.plan_period_start = activation.plan_period_start;
+        }
+      } else {
+        profileUpdateData.is_solvent = false;
+      }
     }
 
     if (plan_period_start !== undefined) {

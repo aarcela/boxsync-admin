@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
-import { supabase } from '@/lib/supabase';
-import { buildPaymentApprovedProfileUpdate } from '@/lib/plan-period';
-import { 
-  CheckCircle, XCircle, ExternalLink, RefreshCw, 
+import { financialService } from '@/lib/services/financialService';
+import {
+  CheckCircle, XCircle, ExternalLink, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
   Calendar, Clock
@@ -17,11 +16,14 @@ type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 
 export default function DashboardPage() {
   const { stats, loading, refresh, removePaymentLocally } = useDashboardData();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { currencies } = useTenant();
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -56,45 +58,22 @@ export default function DashboardPage() {
   // ACTION: APPROVE PAYMENT
   const handleApprove = async (id: string, userId: string) => {
     try {
-      const { error: payError } = await supabase
-        .from('payments')
-        .update({ status: 'approved' })
-        .eq('id', id);
-      
-      if (payError) throw payError;
-
-      const profileUpdate = await buildPaymentApprovedProfileUpdate(supabase, userId);
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(profileUpdate)
-        .eq('id', userId);
-
-      if (profileError) throw profileError;
-
+      await financialService.approvePayment(id, userId);
       removePaymentLocally(id);
       refresh();
       toast(t('Payment approved successfully'), 'success');
-
     } catch {
       toast(t('Error approving payment. Please try again.'), 'error');
     }
   };
 
   // ACTION: REJECT PAYMENT
-  const handleReject = async (id: string) => {
+  const handleReject = async (id: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('payments')
-        .update({ status: 'rejected' })
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await financialService.rejectPayment(id, userId);
       removePaymentLocally(id);
       refresh();
       toast(t('Payment rejected'), 'warning');
-
     } catch {
       toast(t('Error rejecting payment. Please try again.'), 'error');
     }
@@ -106,14 +85,13 @@ export default function DashboardPage() {
     if (action === 'approve') {
       await handleApprove(paymentId, userId);
     } else {
-      await handleReject(paymentId);
+      await handleReject(paymentId, userId);
     }
   };
 
   // Format currency for display
   const formatCurrency = (amount: number) => {
-    // Default to EUR for overview display
-    return `€${amount.toLocaleString()}`;
+    return `${currencySymbol(currencies.reference)}${amount.toLocaleString()}`;
   };
 
   return (

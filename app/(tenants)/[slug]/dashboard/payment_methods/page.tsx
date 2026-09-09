@@ -20,7 +20,15 @@ import { useTenant } from '@/components/TenantContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { paymentMethodService } from '@/lib/services/paymentMethodService';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
-import { PaymentMethod, CurrencyType } from '@/lib/types/gym';
+import { tenantExchangeRateService } from '@/lib/services/tenantExchangeRateService';
+import { tenantSupportService } from '@/lib/services/tenantSupportService';
+import { PaymentMethod, PaymentMethodType, PaymentMethodFields, CurrencyType } from '@/lib/types/gym';
+import type { TenantExchangeRateConfig } from '@/lib/currency';
+import {
+  PAYMENT_METHOD_FIELD_DEFS,
+  PAYMENT_METHOD_TYPE_LABELS,
+  PAYMENT_METHOD_TYPES,
+} from '@/lib/payment-method-fields';
 import {
   LOCAL_CURRENCY_OPTIONS,
   REFERENCE_CURRENCY_OPTIONS,
@@ -50,11 +58,24 @@ export default function PaymentMethodsPage() {
   const [methodToDelete, setMethodToDelete] = useState<string | null>(null);
   const [savingCurrencies, setSavingCurrencies] = useState(false);
   const [draftCurrencies, setDraftCurrencies] = useState(currencies);
+  const [rateConfig, setRateConfig] = useState<TenantExchangeRateConfig>({ baseSource: 'bcv', marginPercent: 0 });
+  const [savingRateConfig, setSavingRateConfig] = useState(false);
+  const [supportWhatsApp, setSupportWhatsApp] = useState('');
+  const [savingSupport, setSavingSupport] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    label: string;
+    currency: CurrencyType;
+    method_type: PaymentMethodType;
+    fields: PaymentMethodFields;
+    details: string;
+    is_active: boolean;
+  }>({
     label: '',
     currency: currencies.reference,
+    method_type: 'otro',
+    fields: {},
     details: '',
     is_active: true
   });
@@ -90,12 +111,55 @@ export default function PaymentMethodsPage() {
     const loadContext = async () => {
       const id = contextTenantId;
       setTenantId(id);
-      if (id) await fetchMethods(id);
-      else setLoading(false);
+      if (id) {
+        await fetchMethods(id);
+        try {
+          const [rate, support] = await Promise.all([
+            tenantExchangeRateService.getForTenant(id),
+            tenantSupportService.getForTenant(id),
+          ]);
+          setRateConfig(rate);
+          setSupportWhatsApp(support);
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        setLoading(false);
+      }
     };
 
     loadContext();
   }, [contextTenantId]);
+
+  const handleSaveRateConfig = async () => {
+    if (!tenantId) return;
+    setSavingRateConfig(true);
+    try {
+      const saved = await tenantExchangeRateService.updateForTenant(tenantId, rateConfig);
+      setRateConfig(saved);
+      toast(t('Exchange rate settings saved'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(t('Failed to save exchange rate settings'), 'error');
+    } finally {
+      setSavingRateConfig(false);
+    }
+  };
+
+  const handleSaveSupport = async () => {
+    if (!tenantId) return;
+    setSavingSupport(true);
+    try {
+      const saved = await tenantSupportService.updateForTenant(tenantId, supportWhatsApp);
+      setSupportWhatsApp(saved);
+      toast(t('Support WhatsApp saved'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(t('Failed to save support WhatsApp'), 'error');
+    } finally {
+      setSavingSupport(false);
+    }
+  };
 
   const handleSaveCurrencies = async () => {
     if (!tenantId) return;
@@ -122,6 +186,8 @@ export default function PaymentMethodsPage() {
       setFormData({
         label: method.label,
         currency: method.currency,
+        method_type: method.method_type || 'otro',
+        fields: method.fields || {},
         details: method.details || '',
         is_active: method.is_active
       });
@@ -130,6 +196,8 @@ export default function PaymentMethodsPage() {
       setFormData({
         label: '',
         currency: currencies.reference,
+        method_type: 'otro',
+        fields: {},
         details: '',
         is_active: true
       });
@@ -146,8 +214,14 @@ export default function PaymentMethodsPage() {
         const form = new FormData();
         form.append('label', formData.label);
         form.append('currency', formData.currency);
+        form.append('method_type', formData.method_type);
         form.append('details', formData.details);
         form.append('is_active', String(formData.is_active));
+        if (formData.method_type !== 'otro') {
+          for (const def of PAYMENT_METHOD_FIELD_DEFS[formData.method_type]) {
+            form.append(`field_${def.key}`, formData.fields[def.key] || '');
+          }
+        }
 
         if (editingMethod) {
           await updatePaymentMethodAction(editingMethod.id, form);
@@ -192,10 +266,25 @@ export default function PaymentMethodsPage() {
     });
   };
 
-  const filteredMethods = methods.filter(m => 
-    m.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.details?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMethods = methods.filter(m => {
+    const term = searchTerm.toLowerCase();
+    return (
+      m.label.toLowerCase().includes(term) ||
+      m.details?.toLowerCase().includes(term) ||
+      Object.values(m.fields || {}).some((v) => v.toLowerCase().includes(term))
+    );
+  });
+
+  function methodSummary(method: PaymentMethod): string {
+    if (method.method_type && method.method_type !== 'otro') {
+      const defs = PAYMENT_METHOD_FIELD_DEFS[method.method_type];
+      const parts = defs
+        .map((def) => method.fields?.[def.key])
+        .filter((v): v is string => !!v);
+      return parts.length ? parts.join(' · ') : t('No details provided');
+    }
+    return method.details || t('No details provided');
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
@@ -293,6 +382,84 @@ export default function PaymentMethodsPage() {
         </p>
       </div>
 
+      {/* EXCHANGE RATE SOURCE */}
+      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-tight text-pits-text">
+              {t('Exchange rate source')}
+            </h2>
+            <p className="text-[11px] text-pits-dim font-semibold mt-1 uppercase tracking-wide">
+              {t('Choose the base rate and an optional margin applied on top')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveRateConfig}
+            disabled={savingRateConfig}
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+          >
+            {savingRateConfig ? t('Processing...') : t('Save rate settings')}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Base source')}</label>
+            <select
+              value={rateConfig.baseSource}
+              onChange={(e) =>
+                setRateConfig((prev) => ({ ...prev, baseSource: e.target.value as 'bcv' | 'paralelo' }))
+              }
+              className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+            >
+              <option value="bcv">{t('BCV (Official)')}</option>
+              <option value="paralelo">{t('Paralelo')}</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Margin %')}</label>
+            <input
+              type="number"
+              step="0.1"
+              value={rateConfig.marginPercent}
+              onChange={(e) =>
+                setRateConfig((prev) => ({ ...prev, marginPercent: Number(e.target.value) || 0 }))
+              }
+              className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SUPPORT WHATSAPP */}
+      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-tight text-pits-text">
+              {t('Support WhatsApp')}
+            </h2>
+            <p className="text-[11px] text-pits-dim font-semibold mt-1 uppercase tracking-wide">
+              {t('Shown to athletes in the app as your box support contact')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveSupport}
+            disabled={savingSupport}
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+          >
+            {savingSupport ? t('Processing...') : t('Save WhatsApp')}
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="https://wa.me/58XXXXXXXXXX"
+          value={supportWhatsApp}
+          onChange={(e) => setSupportWhatsApp(e.target.value)}
+          className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+        />
+      </div>
+
       {/* CONTENT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -333,8 +500,13 @@ export default function PaymentMethodsPage() {
                             <CreditCard size={16} />
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-pits-text uppercase tracking-tight">{method.label}</div>
-                            <div className="text-[10px] text-pits-dim font-medium truncate max-w-[200px]">{method.details || t('No details provided')}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-pits-text uppercase tracking-tight">{method.label}</span>
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                                {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-pits-dim font-medium truncate max-w-[200px]">{methodSummary(method)}</div>
                           </div>
                         </div>
                       </td>
@@ -457,6 +629,22 @@ export default function PaymentMethodsPage() {
                    />
                 </div>
 
+                <div className="space-y-2">
+                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method Type')}</label>
+                   <select
+                     value={formData.method_type}
+                     onChange={(e) => {
+                       const method_type = e.target.value as PaymentMethodType;
+                       setFormData((prev) => ({ ...prev, method_type, fields: {} }));
+                     }}
+                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+                   >
+                     {PAYMENT_METHOD_TYPES.map((type) => (
+                       <option key={type} value={type}>{t(PAYMENT_METHOD_TYPE_LABELS[type])}</option>
+                     ))}
+                   </select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
@@ -486,16 +674,35 @@ export default function PaymentMethodsPage() {
                    </div>
                 </div>
 
-                <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Details / Instructions')}</label>
-                   <textarea 
-                     rows={3}
-                     placeholder={t('Account number, bank name, etc.')}
-                     value={formData.details}
-                     onChange={(e) => setFormData({...formData, details: e.target.value})}
-                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim resize-none"
-                   />
-                </div>
+                {formData.method_type === 'otro' ? (
+                  <div className="space-y-2">
+                     <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Details / Instructions')}</label>
+                     <textarea
+                       rows={3}
+                       placeholder={t('Account number, bank name, etc.')}
+                       value={formData.details}
+                       onChange={(e) => setFormData({...formData, details: e.target.value})}
+                       className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim resize-none"
+                     />
+                  </div>
+                ) : (
+                  PAYMENT_METHOD_FIELD_DEFS[formData.method_type].map((def) => (
+                    <div key={def.key} className="space-y-2">
+                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t(def.label)}</label>
+                       <input
+                         type="text"
+                         value={formData.fields[def.key] || ''}
+                         onChange={(e) =>
+                           setFormData((prev) => ({
+                             ...prev,
+                             fields: { ...prev.fields, [def.key]: e.target.value },
+                           }))
+                         }
+                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim"
+                       />
+                    </div>
+                  ))
+                )}
 
                 <div className="pt-4 flex gap-3">
                   <button 

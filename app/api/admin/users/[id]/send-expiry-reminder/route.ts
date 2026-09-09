@@ -42,7 +42,7 @@ export async function POST(
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, full_name, phone, role, tenant_id, plan, plan_period_start, is_solvent')
+      .select('id, full_name, phone, role, tenant_id, plan, plan_period_start, created_at, is_solvent')
       .eq('id', id)
       .single();
 
@@ -93,19 +93,12 @@ export async function POST(
       }
     }
 
-    if (!expiryDate) {
-      const { data: lastPayment } = await supabaseAdmin
-        .from('payments')
-        .select('created_at')
-        .eq('user_id', id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    if (!expiryDate && profile.plan_period_start) {
+      expiryDate = new Date(profile.plan_period_start);
+    }
 
-      if (lastPayment?.created_at) {
-        expiryDate = addDays(new Date(lastPayment.created_at), MONTHLY_VALIDITY_DAYS);
-      }
+    if (!expiryDate && profile.created_at) {
+      expiryDate = addDays(new Date(profile.created_at), MONTHLY_VALIDITY_DAYS);
     }
 
     const today = startOfDay(new Date());

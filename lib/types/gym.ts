@@ -11,10 +11,18 @@ export interface Tenant {
   settings?: Record<string, unknown> | null;
 }
 
+export type PaymentMethodType = 'pago_movil' | 'zelle' | 'binance' | 'efectivo' | 'otro';
+
+/** Structured field keys per method_type — see PAYMENT_METHOD_FIELD_DEFS in payment-method-fields.ts */
+export type PaymentMethodFields = Record<string, string>;
+
 export interface PaymentMethod {
   id: string;
   label: string;
   currency: CurrencyType;
+  method_type: PaymentMethodType;
+  fields: PaymentMethodFields;
+  /** Legacy free-text details — still used when method_type === 'otro'. */
   details: string | null;
   is_active: boolean;
   tenant_id?: string;
@@ -73,13 +81,19 @@ export interface PaymentRecord {
   id: string;
   amount: number;
   method: string;
+  payment_method_id?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   proof_image_url: string;
+  rejection_reason?: string | null;
   created_at: string;
   user_id: string;
   currency: string;
   /** Legacy compatibility for older API payloads. */
   currency_type?: string;
+  exchange_rate_at_time?: number | null;
+  exchange_rate_source?: string | null;
+  reference_currency_amount?: number | null;
+  plan_period_start?: string | null;
   profiles: {
     full_name: string | null;
   } | null;
@@ -98,9 +112,9 @@ export interface FinancialStats {
   local: CurrencyStats;
   activeMembers: number;
   inactiveMembers: number;
-  projectedRevenueEUR: number;
+  projectedRevenueREF: number;
   projectedRevenueVES: number;
-  overdueAmountEUR: number;
+  overdueAmountREF: number;
   solvencyRate: number;
 }
 
@@ -258,13 +272,13 @@ export interface IncomeRecord {
 }
 
 export interface ProfitabilityStats {
-  totalRevenueEUR: number;
-  totalExpensesEUR: number;
-  netProfitEUR: number;
+  totalRevenueREF: number;
+  totalExpensesREF: number;
+  netProfitREF: number;
   profitMargin: number;
-  breakEvenEUR: number;
-  fixedCostsEUR: number;
-  variableCostsEUR: number;
+  breakEvenREF: number;
+  fixedCostsREF: number;
+  variableCostsREF: number;
 }
 
 export interface CoachSalaryTier {

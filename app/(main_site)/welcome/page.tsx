@@ -7,7 +7,7 @@ import { useLanguage } from '@/components/LanguageContext';
 import { AuthPageShell } from '@/components/AuthPageShell';
 import { useAuthHashSession } from '@/hooks/useAuthHashSession';
 import { MIN_RESET_PASSWORD_LENGTH, resolvePasswordResetError } from '@/lib/auth';
-import { GOOGLE_PLAY_URL } from '@/lib/constants/app-links';
+import { GOOGLE_PLAY_URL, APP_STORE_URL } from '@/lib/constants/app-links';
 
 export default function WelcomePage() {
   const { t } = useLanguage();
@@ -72,9 +72,14 @@ export default function WelcomePage() {
           >
             {t('Get on Google Play')}
           </a>
-          <p className="text-xs font-bold text-pits-ink-muted uppercase tracking-wider">
-            {t('iOS app coming soon.')}
-          </p>
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full py-4 rounded-lg items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20 transition-all"
+          >
+            {t('Get on the App Store')}
+          </a>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

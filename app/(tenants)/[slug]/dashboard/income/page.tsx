@@ -90,7 +90,7 @@ export default function IncomePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const rate = await financialService.getOfficialExchangeRate(currencies.reference);
+      const rate = await financialService.getReferenceExchangeRate(currencies.reference);
       setExchangeRate(rate);
 
       const year = parseInt(selectedPeriod.split('-')[0]);
@@ -186,7 +186,7 @@ export default function IncomePage() {
     const sortedCategories = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a);
 
     return {
-      totalEUR: totalRef,
+      totalREF: totalRef,
       topCategory: sortedCategories[0]?.[0] || 'N/A',
       categoryBreakdown: sortedCategories,
     };
@@ -245,7 +245,7 @@ export default function IncomePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatBlock
           label={t('Total Monthly Revenue')}
-          value={stats.totalEUR}
+          value={stats.totalREF}
           symbol={currencySymbol(currencies.reference)}
           info={t('Confirmed income REF base')}
           color="success"
@@ -411,7 +411,7 @@ export default function IncomePage() {
                     <div className="h-1.5 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
                       <div
                         className="h-full rounded-full bg-pits-primary transition-all duration-1000"
-                        style={{ width: `${stats.totalEUR > 0 ? (total / stats.totalEUR) * 100 : 0}%` }}
+                        style={{ width: `${stats.totalREF > 0 ? (total / stats.totalREF) * 100 : 0}%` }}
                       />
                     </div>
                   </div>
@@ -433,11 +433,11 @@ export default function IncomePage() {
               <InsightRow
                 label={t('Revenue Health')}
                 text={
-                  stats.totalEUR > 0
+                  stats.totalREF > 0
                     ? t('Active operational revenue stream.')
                     : t('No confirmed income this period.')
                 }
-                variant={stats.totalEUR > 0 ? 'success' : 'info'}
+                variant={stats.totalREF > 0 ? 'success' : 'info'}
                />
               <InsightRow
                 label={t('Top Source')}

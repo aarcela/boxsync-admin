@@ -83,7 +83,7 @@ export default function ExpensesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const rate = await financialService.getOfficialExchangeRate(currencies.reference);
+      const rate = await financialService.getReferenceExchangeRate(currencies.reference);
       setExchangeRate(rate);
 
       // Current month range
@@ -193,7 +193,7 @@ export default function ExpensesPage() {
       .sort(([, a], [, b]) => b - a);
 
     return {
-      totalEUR: totalRef,
+      totalREF: totalRef,
       topCategory: sortedCategories[0]?.[0] || 'N/A',
       categoryBreakdown: sortedCategories
     };
@@ -247,7 +247,7 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatBlock 
           label={t('Total Monthly Burn')} 
-          value={stats.totalEUR} 
+          value={stats.totalREF} 
           symbol={currencySymbol(currencies.reference)} 
           info={t('Consolidated REF base')} 
           color="primary"
@@ -393,7 +393,7 @@ export default function ExpensesPage() {
                     <div className="h-1.5 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
                       <div 
                         className="h-full rounded-full bg-pits-primary transition-all duration-1000" 
-                        style={{ width: `${stats.totalEUR > 0 ? (total / stats.totalEUR) * 100 : 0}%` }} 
+                        style={{ width: `${stats.totalREF > 0 ? (total / stats.totalREF) * 100 : 0}%` }} 
                       />
                     </div>
                   </div>
@@ -412,8 +412,8 @@ export default function ExpensesPage() {
             <div className="space-y-3">
               <InsightRow 
                 label={t('Efficiency Warning')} 
-                text={stats.totalEUR > 5000 ? t('Burn rate trending above average.') : t('Stable operational overhead.')}
-                variant={stats.totalEUR > 5000 ? 'warning' : 'success'}
+                text={stats.totalREF > 5000 ? t('Burn rate trending above average.') : t('Stable operational overhead.')}
+                variant={stats.totalREF > 5000 ? 'warning' : 'success'}
               />
               <InsightRow 
                 label={t('Top Risk')} 

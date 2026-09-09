@@ -1,5 +1,5 @@
 import type { Language } from './translations';
-import { GOOGLE_PLAY_URL } from './constants/app-links';
+import { GOOGLE_PLAY_URL, APP_STORE_URL } from './constants/app-links';
 
 const WHATSAPP_API_VERSION = process.env.WHATSAPP_API_VERSION ?? 'v21.0';
 
@@ -20,10 +20,9 @@ export function buildWelcomeMessage(params: {
       '',
       '¡Bienvenido/a a WODUS! Tu cuenta ya está lista.',
       '',
-      'Descarga nuestra app en Google Play para reservar clases, ver el WOD y mantenerte conectado con el box:',
-      `📱 ${GOOGLE_PLAY_URL}`,
-      '',
-      'App iOS próximamente.',
+      'Descarga nuestra app para reservar clases, ver el WOD y mantenerte conectado con el box:',
+      `📱 Android: ${GOOGLE_PLAY_URL}`,
+      `🍎 iPhone: ${APP_STORE_URL}`,
       '',
       `Inicia sesión con tu correo: ${params.email}`,
       '',
@@ -36,10 +35,9 @@ export function buildWelcomeMessage(params: {
     '',
     'Welcome to WODUS! Your account is ready.',
     '',
-    'Download our app on Google Play to book classes, view the WOD, and stay connected with the box:',
-    `📱 ${GOOGLE_PLAY_URL}`,
-    '',
-    'iOS app coming soon.',
+    'Download our app to book classes, view the WOD, and stay connected with the box:',
+    `📱 Android: ${GOOGLE_PLAY_URL}`,
+    `🍎 iPhone: ${APP_STORE_URL}`,
     '',
     `Log in with your email: ${params.email}`,
     '',
