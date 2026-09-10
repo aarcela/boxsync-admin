@@ -220,15 +220,18 @@ export type ClassSession = {
   waitlist?: { count: number }[];
 }
 
-export type ExpenseCategory = 
-  | 'Staff' 
-  | 'Rent' 
-  | 'Utilities' 
-  | 'Maintenance' 
-  | 'Services' 
-  | 'Marketing' 
-  | 'Taxes' 
-  | 'Other';
+export const EXPENSE_CATEGORIES = [
+  'Staff',
+  'Rent',
+  'Utilities',
+  'Maintenance',
+  'Services',
+  'Marketing',
+  'Taxes',
+  'Other',
+] as const;
+
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export interface ExpenseRecord {
   id: string;

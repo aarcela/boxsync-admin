@@ -18,9 +18,9 @@ import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { TranslationKey } from '@/lib/translations';
 import { supabase } from '@/lib/supabase';
-import { expenseService } from '@/lib/services/expenseService';
+import { expenseService, parseExpenseCategory } from '@/lib/services/expenseService';
 import { financialService } from '@/lib/services/financialService';
-import { ExpenseRecord, ExpenseCategory, CurrencyType, PaymentMethod } from '@/lib/types/gym';
+import { ExpenseRecord, ExpenseCategory, EXPENSE_CATEGORIES, CurrencyType, PaymentMethod } from '@/lib/types/gym';
 import { useTenant } from '@/components/TenantContext';
 import {
   currencyOptionLabel,
@@ -29,9 +29,10 @@ import {
 } from '@/lib/currency';
 
 
-const CATEGORIES: ExpenseCategory[] = [
-  'Staff', 'Rent', 'Utilities', 'Maintenance', 'Services', 'Marketing', 'Taxes', 'Other'
-];
+const expenseCategoryKey = (category: string): TranslationKey | null =>
+  (EXPENSE_CATEGORIES as readonly string[]).includes(category)
+    ? (category as TranslationKey)
+    : null;
 
 const expenseStatusKey = (status?: string): TranslationKey => {
   if (status === 'paid' || status === 'due') return status;
@@ -42,6 +43,10 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const { currencies } = useTenant();
+  const categoryLabel = (category: string) => {
+    const key = expenseCategoryKey(category);
+    return key ? t(key) : category;
+  };
 
   // State
   const [loading, setLoading] = useState(true);
@@ -118,9 +123,15 @@ export default function ExpensesPage() {
       const amountNum = parseFloat(newExpense.amount);
       const { data: { user } } = await supabase.auth.getUser();
 
+      const category = parseExpenseCategory(newExpense.category);
+      if (!category) {
+        toast(t('Authorization failed: Could not record expense'), 'error');
+        return;
+      }
+
       await expenseService.addExpense({
         description: newExpense.description,
-        category: newExpense.category,
+        category,
         amount: amountNum,
         currency: newExpense.currency,
         exchange_rate_at_time: exchangeRate,
@@ -201,7 +212,7 @@ export default function ExpensesPage() {
 
   const filteredExpenses = expenses.filter(ex => 
     ex.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ex.category.toLowerCase().includes(searchTerm.toLowerCase())
+    categoryLabel(ex.category).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -255,7 +266,7 @@ export default function ExpensesPage() {
         />
         <StatBlock 
           label={t('Top Expenditure')} 
-          value={stats.topCategory} 
+          value={categoryLabel(stats.topCategory)} 
           symbol="" 
           info={t('Highest cost category')} 
           color="muted"
@@ -325,7 +336,7 @@ export default function ExpensesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-pits-surface-muted text-pits-dim rounded text-[9px] font-black uppercase border border-pits-edge">
-                        {ex.category}
+                        {categoryLabel(ex.category)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -387,7 +398,7 @@ export default function ExpensesPage() {
                 {stats.categoryBreakdown.map(([cat, total]) => (
                   <div key={cat} className="space-y-1.5">
                     <div className="flex justify-between items-end">
-                      <p className="text-[9px] font-black text-pits-dim uppercase">{cat}</p>
+                      <p className="text-[9px] font-black text-pits-dim uppercase">{categoryLabel(cat)}</p>
                       <span className="text-[10px] font-black text-pits-text">{currencySymbol(currencies.reference)}{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div className="h-1.5 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
@@ -457,11 +468,14 @@ export default function ExpensesPage() {
                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Sector')}</label>
                       <select 
                         value={newExpense.category}
-                        onChange={(e) => setNewExpense({...newExpense, category: e.target.value as ExpenseCategory})}
+                        onChange={(e) => {
+                          const category = parseExpenseCategory(e.target.value);
+                          if (category) setNewExpense({...newExpense, category});
+                        }}
                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                       >
-                        {CATEGORIES.map(c => (
-                          <option key={c} value={c}>{t(c)}</option>
+                        {EXPENSE_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>{t(category)}</option>
                         ))}
                       </select>
                    </div>
