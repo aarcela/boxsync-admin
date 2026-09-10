@@ -460,7 +460,9 @@ export default function ExpensesPage() {
                         onChange={(e) => setNewExpense({...newExpense, category: e.target.value as ExpenseCategory})}
                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                       >
-                        {CATEGORIES.map(c => <option key={c} value={t(c)}>{t(c)}</option>)}
+                        {CATEGORIES.map(c => (
+                          <option key={c} value={c}>{t(c)}</option>
+                        ))}
                       </select>
                    </div>
                    <div className="space-y-2">
