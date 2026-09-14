@@ -158,7 +158,7 @@ export async function middleware(request: NextRequest) {
   if (slug && profile?.tenant_id) {
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('slug')
+      .select('slug, is_active')
       .eq('id', profile.tenant_id)
       .maybeSingle();
 
@@ -166,6 +166,16 @@ export async function middleware(request: NextRequest) {
       await supabase.auth.signOut();
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+
+    if (tenant && tenant.is_active === false) {
+      await supabase.auth.signOut();
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Tenant is inactive' }, { status: 403 });
       }
       const url = request.nextUrl.clone();
       url.pathname = '/';

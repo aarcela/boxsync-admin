@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { 
   TrendingUp,
   TrendingDown,
@@ -117,30 +117,27 @@ export default function AccountabilityPage() {
     : 0;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-12">
+    <div className="space-y-8 max-w-7xl mx-auto px-1 sm:px-0 pb-[max(7rem,calc(3rem+env(safe-area-inset-bottom)))] sm:pb-16">
       
       {/* 1. COMMAND HEADER */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-pits-text tracking-tighter uppercase">
               {t('Accountability')}
             </h1>
-            <div className="bg-pits-primary px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
-               {t('Strategic balance and financial sustainability')}
-            </div>
+            <StatusBadge tone="info">{t('Monthly P&L')}</StatusBadge>
           </div>
           <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Independent accountability tracking for REF and Local')}
+            {t('Strategic balance and financial sustainability')}
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-          {/* Currency Toggle */}
-          <div className="flex bg-pits-surface-muted p-1 rounded-2xl border border-pits-edge">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto min-w-0">
+          <div className="flex w-full sm:w-auto bg-pits-surface-muted p-1 rounded-2xl border border-pits-edge">
             <button 
               onClick={() => setActiveCurrency(currencies.reference)}
-              className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[10px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
                 activeCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -148,7 +145,7 @@ export default function AccountabilityPage() {
             </button>
             <button 
               onClick={() => setActiveCurrency(currencies.local)}
-              className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[10px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
                 activeCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -156,7 +153,7 @@ export default function AccountabilityPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-pits-surface-elevated border border-pits-edge rounded-2xl p-1 shadow-sm">
+          <div className="flex items-center justify-center gap-2 bg-pits-surface-elevated border border-pits-edge rounded-2xl p-1 shadow-sm w-full sm:w-auto">
             <button 
               onClick={() => changeMonth(-1)}
               className="p-2 hover:bg-pits-surface-muted text-pits-dim hover:text-pits-red transition-all rounded-xl"
@@ -187,7 +184,7 @@ export default function AccountabilityPage() {
       </div>
 
       {/* 2. THE BALANCE BOARD (KPIs) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <BalanceCard 
           label={t('Incomes')} 
           value={currentStats.income} 
@@ -228,35 +225,32 @@ export default function AccountabilityPage() {
         {/* LEFT: P&L LEDGER (8 COLS) */}
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px]">
-            <div className="px-6 py-5 border-b border-pits-edge flex items-center justify-between bg-pits-surface-elevated">
-              <h3 className="text-sm font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
-                <Scale size={18} className="text-pits-red" /> {t('Monthly P&L')} - {activeCurrency}
+            <div className="px-4 sm:px-6 py-5 border-b border-pits-edge flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-pits-surface-elevated">
+              <h3 className="text-sm font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
+                <Scale size={18} className="text-pits-red shrink-0" /> {t('Monthly P&L')} · {activeCurrency}
               </h3>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm">
-                <span className="text-[10px] font-black text-pits-dim uppercase">{t('Exchange Base')}:</span>
-                <span className="text-[10px] font-black text-pits-text">
+              <span className="inline-flex items-center gap-1.5 max-w-full shrink-0 px-2.5 py-1 rounded-lg border border-pits-edge bg-pits-surface-muted text-[9px] sm:text-[10px] font-black uppercase tracking-wide">
+                <span className="text-pits-dim">{t('Exchange Base')}</span>
+                <span className="text-pits-text truncate">
                   {currencySymbol(currencies.reference)}1 = {stats.exchangeRate?.toFixed(2) || '---'} {currencies.local}
                 </span>
-              </div>
+              </span>
             </div>
 
-            <div className="px-8">
+            <div className="px-4 sm:px-8 pb-6 sm:pb-8">
 
               {/* PUNTO DE EQUILIBRIO — income vs outcome in one view */}
               <div className="mt-6 pt-6 border-t border-pits-edge">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
-                    <Target size={14} className="text-pits-red" /> {t('Break-even Point')}
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-6">
+                  <h4 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
+                    <Target size={14} className="text-pits-red shrink-0" /> {t('Break-even Point')}
                   </h4>
-                  <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide ${
-                    breakEvenGap <= 0 ? 'bg-pits-primary-soft text-pits-success border border-pits-edge'
-                    : 'bg-pits-primary-soft text-pits-error border border-pits-edge'
-                  }`}>
+                  <StatusBadge tone={breakEvenGap <= 0 ? 'success' : 'error'}>
                     {breakEvenGap <= 0 ? t('Achieved check') : t('Not achieved')}
-                  </span>
+                  </StatusBadge>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                   {/* Circular gauge */}
                   <div className="relative w-24 h-24 flex-shrink-0">
                     <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
@@ -297,25 +291,25 @@ export default function AccountabilityPage() {
               </div>
 
               {/* CONSOLIDATED SUMMARY BAR */}
-              <div className={`mt-10 p-6 rounded-[32px] text-pits-text relative overflow-hidden shadow-sm border ${currentStats.net >= 0 ? 'bg-pits-surface-elevated border-pits-edge' : 'bg-pits-primary-soft border-pits-error'}`}>
-                 <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <Zap size={100} className="text-pits-text" />
+              <div className={`mt-8 sm:mt-10 p-5 sm:p-6 rounded-2xl sm:rounded-[32px] text-pits-text relative overflow-hidden shadow-sm border ${currentStats.net >= 0 ? 'bg-pits-surface-elevated border-pits-edge' : 'bg-pits-primary-soft border-pits-error'}`}>
+                 <div className="absolute top-0 right-0 p-6 opacity-5">
+                    <Zap size={72} className="text-pits-text" />
                  </div>
-                 <div className="relative z-10 flex justify-between items-center gap-6">
-                    <div className="flex items-center gap-4">
-                       <div className={`p-3 rounded-2xl shadow-sm ring-4 ${currentStats.net >= 0 ? 'bg-pits-primary text-pits-dark-text ring-pits-primary/20' : 'bg-pits-error text-pits-text ring-pits-error/20'}`}>
-                          <Wallet size={24} />
+                 <div className="relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                       <div className={`p-2.5 rounded-xl shadow-sm ring-4 shrink-0 ${currentStats.net >= 0 ? 'bg-pits-primary text-pits-dark-text ring-pits-primary/20' : 'bg-pits-error text-pits-text ring-pits-error/20'}`}>
+                          <Wallet size={18} />
                        </div>
-                       <div>
-                          <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Sustainability Report')}</p>
-                          <h4 className="text-2xl font-black tracking-tighter uppercase">{t('Net Balance')}</h4>
+                       <div className="min-w-0">
+                          <p className="text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Sustainability Report')}</p>
+                          <h4 className="text-sm sm:text-lg font-black tracking-tighter uppercase">{t('Net Balance')}</h4>
                        </div>
                     </div>
                     
-                    <div className="text-right">
-                       <p className="text-[10px] font-black text-pits-dim uppercase mb-1">{t('Total')} {activeCurrency}</p>
-                       <p className={`text-3xl font-black tracking-tighter ${currentStats.net >= 0 ? 'text-pits-success' : 'text-pits-error'}`}>
-                         {symbol}{currentStats.net.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    <div className="sm:text-right min-w-0">
+                       <p className="text-[9px] font-black text-pits-dim uppercase mb-0.5">{t('Total')} {activeCurrency}</p>
+                       <p className={`text-xl sm:text-2xl font-black tracking-tighter break-all ${currentStats.net >= 0 ? 'text-pits-success' : 'text-pits-error'}`}>
+                         {symbol}{formatMoney(currentStats.net)}
                        </p>
                     </div>
                  </div>
@@ -375,31 +369,27 @@ export default function AccountabilityPage() {
       </div>
 
       {/* 3. NEW KPI SECTIONS */}
-      <div className="space-y-6">
+      <div className="space-y-8">
 
         {/* ROW A: % Gasto sobre ingresos + Burn Rate */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* % Gasto sobre ingresos */}
           <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
-                <Percent size={16} className="text-pits-red" /> {t('% Spending vs Income')}
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-6">
+              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
+                <Percent size={16} className="text-pits-red shrink-0" /> {t('% Spending vs Income')}
               </h3>
-              <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide ${
-                spendingRatio > 100 ? 'bg-pits-primary-soft text-pits-error border border-pits-edge'
-                : spendingRatio > 80 ? 'bg-pits-primary-soft text-pits-primary border border-pits-edge'
-                : 'bg-pits-primary-soft text-pits-success border border-pits-edge'
-              }`}>
+              <StatusBadge tone={spendingRatio > 100 ? 'error' : spendingRatio > 80 ? 'warning' : 'success'}>
                 {spendingRatio > 100 ? t('Over Budget') : spendingRatio > 80 ? t('Warning') : t('Healthy')}
-              </span>
+              </StatusBadge>
             </div>
 
-            <div className="flex items-end gap-2 mb-4">
-              <span className="text-5xl font-black text-pits-text tracking-tighter">
+            <div className="flex items-end gap-1 mb-4 min-w-0">
+              <span className="text-3xl sm:text-4xl font-black text-pits-text tracking-tighter leading-none break-all">
                 {spendingRatio.toFixed(1)}
               </span>
-              <span className="text-2xl font-black text-pits-dim mb-1">%</span>
+              <span className="text-lg sm:text-xl font-black text-pits-dim mb-0.5">%</span>
             </div>
 
             <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-3">
@@ -435,20 +425,20 @@ export default function AccountabilityPage() {
 
           {/* Burn Rate Mensual */}
           <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
-                <Flame size={16} className="text-pits-primary" /> {t('Monthly Burn Rate')}
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-6">
+              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
+                <Flame size={16} className="text-pits-primary shrink-0" /> {t('Monthly Burn Rate')}
               </h3>
-              <span className="text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide bg-pits-primary-soft text-pits-primary border border-pits-edge">
-                {symbol}{dailyBurnRate.toFixed(2)}{t('per_day')}
-              </span>
+              <StatusBadge tone="warning">
+                {symbol}{dailyBurnRate.toFixed(0)} {t('per_day')}
+              </StatusBadge>
             </div>
 
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-5xl font-black text-pits-text tracking-tighter">
-                {symbol}{dailyBurnRate.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div className="flex items-end gap-1 mb-1 min-w-0">
+              <span className="text-3xl sm:text-4xl font-black text-pits-text tracking-tighter leading-none break-all">
+                {symbol}{formatMoney(dailyBurnRate)}
               </span>
-              <span className="text-sm font-black text-pits-dim mb-1">{t('per_day')}</span>
+              <span className="text-xs sm:text-sm font-black text-pits-dim mb-0.5 shrink-0">{t('per_day')}</span>
             </div>
             <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-4">
               {t('Average daily spend · {{days}} days in month', { days: daysInMonth })}
@@ -537,20 +527,20 @@ export default function AccountabilityPage() {
 
         {/* ROW C: Gasto por Atleta — full width */}
         <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
-                <Users size={16} className="text-sky-500" /> {t('Cost per athlete')}
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-6">
+              <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
+                <Users size={16} className="text-pits-primary shrink-0" /> {t('Cost per athlete')}
               </h3>
-              <span className="text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wide bg-sky-50 text-sky-600 border border-sky-100">
+              <StatusBadge tone="info">
                 {t('{{count}} athletes', { count: uniquePayingAthletes })}
-              </span>
+              </StatusBadge>
             </div>
 
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-5xl font-black text-pits-text tracking-tighter">
-                {symbol}{costPerAthlete.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div className="flex items-end gap-1 mb-1 min-w-0">
+              <span className="text-3xl sm:text-4xl font-black text-pits-text tracking-tighter leading-none break-all">
+                {symbol}{formatMoney(costPerAthlete)}
               </span>
-              <span className="text-sm font-black text-pits-dim mb-1">{t('per_athlete')}</span>
+              <span className="text-xs sm:text-sm font-black text-pits-dim mb-0.5 shrink-0">{t('per_athlete')}</span>
             </div>
             <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-4">
               {t('Operating cost per active athlete this month')}
@@ -565,9 +555,9 @@ export default function AccountabilityPage() {
                 <span className="text-[9px] font-black text-pits-dim uppercase">Total gastos</span>
                 <span className="text-xs font-black text-pits-error">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
               </div>
-              <div className="flex justify-between items-center bg-sky-50 rounded-xl p-3 border border-sky-100">
-                <span className="text-[9px] font-black text-sky-600 uppercase">{t('Revenue per athlete')}</span>
-                <span className="text-xs font-black text-sky-700">
+              <div className="flex justify-between items-center bg-pits-primary-soft rounded-xl p-3 border border-pits-edge">
+                <span className="text-[9px] font-black text-pits-primary uppercase">{t('Revenue per athlete')}</span>
+                <span className="text-xs font-black text-pits-text">
                   {symbol}{(uniquePayingAthletes > 0 ? currentStats.income / uniquePayingAthletes : 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </span>
               </div>
@@ -591,32 +581,52 @@ export default function AccountabilityPage() {
 
 // --- CORE UI COMPONENTS ---
 
-function BalanceCard({ label, value, symbol, type, info, color, highlight }: any) {
-  const colors: Record<string, string> = {
-    red: 'text-pits-error bg-pits-primary-soft border-pits-edge',
-    emerald: 'text-pits-success bg-pits-primary-soft border-pits-edge',
-    slate: 'text-pits-dim bg-pits-surface-muted border-pits-edge',
-    purple: 'text-pits-primary bg-pits-primary-soft border-pits-edge',
+function formatMoney(value: number) {
+  const digits = Math.abs(value) >= 1000 ? 0 : 2;
+  return value.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function StatusBadge({ tone, children }: { tone: 'success' | 'warning' | 'error' | 'info'; children: ReactNode }) {
+  const tones: Record<string, string> = {
+    success: 'bg-pits-success/15 text-pits-success border-pits-success/25',
+    warning: 'bg-pits-primary-soft text-pits-primary border-pits-edge',
+    error: 'bg-pits-error/10 text-pits-error border-pits-error/20',
+    info: 'bg-pits-primary-soft text-pits-red border-pits-edge',
   };
 
   return (
-    <div className={`p-6 rounded-[32px] border shadow-sm transition-all hover:shadow-md relative overflow-hidden group ${highlight ? 'bg-pits-surface-muted border-pits-edge ring-2 ring-pits-red/5' : 'bg-pits-surface-elevated border-pits-edge'}`}>
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest leading-tight">{label}</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-sm font-black text-pits-dim">{symbol}</span>
-            <h2 className="text-2xl font-black text-pits-text tracking-tighter">
-              {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </h2>
-          </div>
-        </div>
-        <div className={`p-3 rounded-2xl border ${colors[color]}`}>
-          {type === 'plus' ? <TrendingUp size={18} /> : type === 'minus' ? <TrendingDown size={18} /> : <Zap size={18} />}
+    <span className={`inline-flex items-center justify-center text-center shrink-0 px-2 py-1 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+function BalanceCard({ label, value, symbol, type, info, color, highlight }: any) {
+  const colors: Record<string, string> = {
+    success: 'text-pits-success bg-pits-success/10 border-pits-success/20',
+    primary: 'text-pits-error bg-pits-error/10 border-pits-error/20',
+    emerald: 'text-pits-success bg-pits-success/10 border-pits-success/20',
+    red: 'text-pits-error bg-pits-error/10 border-pits-error/20',
+    purple: 'text-pits-primary bg-pits-primary-soft border-pits-edge',
+    slate: 'text-pits-dim bg-pits-surface-muted border-pits-edge',
+  };
+
+  return (
+    <div className={`p-3 sm:p-5 rounded-2xl sm:rounded-[28px] border shadow-sm transition-all hover:shadow-md relative overflow-hidden group min-w-0 ${highlight ? 'bg-pits-surface-muted border-pits-edge ring-2 ring-pits-red/5' : 'bg-pits-surface-elevated border-pits-edge'}`}>
+      <div className="flex justify-between items-start gap-2 mb-4">
+        <p className="text-[9px] sm:text-[10px] font-black text-pits-dim uppercase tracking-widest leading-tight min-w-0">{label}</p>
+        <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border shrink-0 ${colors[color] ?? colors.slate}`}>
+          {type === 'plus' ? <TrendingUp size={14} /> : type === 'minus' ? <TrendingDown size={14} /> : <Zap size={14} />}
         </div>
       </div>
-      <p className="text-[8px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1">
-        <Info size={10} /> {info}
+      <div className="flex items-baseline gap-0.5 min-w-0">
+        <span className="text-[10px] sm:text-xs font-black text-pits-dim shrink-0">{symbol}</span>
+        <h2 className="text-sm sm:text-xl font-black text-pits-text tracking-tighter leading-none break-all">
+          {formatMoney(value)}
+        </h2>
+      </div>
+      <p className="text-[8px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1 mt-3">
+        <Info size={10} className="shrink-0" /> <span className="truncate">{info}</span>
       </p>
     </div>
   );
@@ -624,8 +634,10 @@ function BalanceCard({ label, value, symbol, type, info, color, highlight }: any
 
 function SustainabilityMetric({ label, value, total, symbol, color, t }: any) {
   const barColors: Record<string, string> = {
+    muted: 'bg-pits-dim',
     slate: 'bg-pits-dim',
     amber: 'bg-pits-primary',
+    success: 'bg-pits-success',
     emerald: 'bg-pits-success',
   };
   

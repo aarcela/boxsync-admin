@@ -222,21 +222,22 @@ export default function IncomePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-4 w-full lg:w-auto">
-          <div className="flex items-center bg-pits-surface-elevated border border-pits-edge rounded-2xl px-4 py-2 shadow-sm transition-all hover:border-pits-red group">
-            <Calendar size={16} className="text-pits-dim group-hover:text-pits-red mr-2" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto min-w-0">
+          <div className="flex items-center min-w-0 bg-pits-surface-elevated border border-pits-edge rounded-2xl px-4 py-2 shadow-sm transition-all hover:border-pits-red group">
+            <Calendar size={16} className="text-pits-dim group-hover:text-pits-red mr-2 shrink-0" />
             <input
               type="month"
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="bg-transparent border-none text-[12px] font-black uppercase text-pits-text outline-none cursor-pointer"
+              className="min-w-0 flex-1 bg-transparent border-none text-[12px] font-black uppercase text-pits-text outline-none cursor-pointer"
             />
           </div>
           <button
+            type="button"
             onClick={() => setIsFormOpen(true)}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className="w-full sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase whitespace-nowrap shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
           >
-            <Plus size={18} />
+            <Plus size={18} className="shrink-0" />
             {t('Add Income')}
           </button>
         </div>
@@ -454,10 +455,10 @@ export default function IncomePage() {
       </div>
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-pits-black/60 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
-          <div className="relative bg-pits-surface-elevated rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-pits-edge">
-            <div className="p-8">
+          <div className="relative bg-pits-surface-elevated rounded-t-[32px] sm:rounded-[40px] w-full max-w-md max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl border border-pits-edge pb-[env(safe-area-inset-bottom)]">
+            <div className="overflow-y-auto overscroll-contain p-5 sm:p-8">
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">{t('Record Income')}</h2>
@@ -585,13 +586,13 @@ export default function IncomePage() {
                   <button
                     type="button"
                     onClick={() => setIsFormOpen(false)}
-                    className="flex-1 py-4 bg-pits-surface-muted text-pits-dim rounded-2xl text-[11px] font-black uppercase hover:bg-pits-surface-muted transition-all border border-pits-edge/50"
+                    className="flex-1 min-w-0 py-4 bg-pits-surface-muted text-pits-dim rounded-2xl text-[11px] font-black uppercase hover:bg-pits-surface-muted transition-all border border-pits-edge/50"
                   >
                     {t('Cancel')}
                   </button>
                   <button
                     type="submit"
-                    className="flex-[2] py-4 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="flex-[1.4] min-w-0 py-4 px-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[10px] sm:text-[11px] font-black uppercase leading-tight shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     {t('Authorize Income Entry')}
                   </button>

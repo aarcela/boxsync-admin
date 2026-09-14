@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         icon: DollarSign,
         subItems: financialSubItems,
       },
-      { name: t('Athletes'), href: '/dashboard/athletes', icon: Users },
+      { name: t('Roster'), href: '/dashboard/athletes', icon: Users },
       {
         name: t('Box Management'),
         icon: Dumbbell,

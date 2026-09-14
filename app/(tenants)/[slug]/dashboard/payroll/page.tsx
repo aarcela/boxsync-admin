@@ -35,7 +35,62 @@ import {
   getCaracasDateSpan,
   getCaracasDateFromIso,
   getCaracasTimeLabel,
+  getCaracasMinutesSince,
 } from '@/lib/utils/date';
+
+const START_HOUR = 5;
+const END_HOUR = 21;
+const SLOT_HEIGHT = 56;
+const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+
+const dateFieldClass =
+  'relative min-w-0 w-full h-full bg-transparent border-none text-xs font-black uppercase text-pits-text outline-none cursor-pointer appearance-none [color-scheme:light] [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0 [&::-webkit-datetime-edit-text]:p-0 [&::-webkit-date-and-time-value]:min-h-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
+
+const navBtnClass =
+  'h-10 w-10 flex items-center justify-center bg-pits-surface-muted border border-pits-edge rounded-xl hover:bg-pits-edge transition-colors';
+
+function DateField({
+  type,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  type: 'date' | 'month';
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+}) {
+  return (
+    <div className="relative flex items-center h-10 w-[14rem] overflow-hidden bg-pits-surface-muted border border-pits-edge rounded-xl px-3">
+      <Calendar size={16} className="text-pits-dim mr-2 shrink-0 pointer-events-none" />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
+        className={dateFieldClass}
+      />
+    </div>
+  );
+}
+
+function formatCaracasDay(dateStr: string, opts: Intl.DateTimeFormatOptions) {
+  return new Date(`${dateStr}T12:00:00-04:00`).toLocaleDateString('en-US', {
+    timeZone: 'America/Caracas',
+    ...opts,
+  });
+}
+
+function mondayIndex(dateStr: string): number {
+  const wd = formatCaracasDay(dateStr, { weekday: 'short' });
+  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  return map[wd] ?? 0;
+}
+
+function classDurationMinutes(startIso: string, endIso: string): number {
+  const diff = new Date(endIso).getTime() - new Date(startIso).getTime();
+  return Math.max(30, Math.round(diff / 60000));
+}
 
 type FilterMode = 'day' | 'week' | 'month' | 'custom';
 type ViewTab = 'calendar' | 'list';
@@ -97,8 +152,11 @@ export default function PayrollPage() {
           return getCaracasWeekRange(anchorDate);
         case 'month':
           return getCaracasMonthRange(monthValue);
-        case 'custom':
-          return getCaracasCustomRange(customStart, customEnd);
+        case 'custom': {
+          const start = customStart <= customEnd ? customStart : customEnd;
+          const end = customStart <= customEnd ? customEnd : customStart;
+          return getCaracasCustomRange(start, end);
+        }
       }
     } catch {
       return getCaracasWeekRange(anchorDate);
@@ -112,7 +170,9 @@ export default function PayrollPage() {
       const { startDate, endDate } = getCaracasMonthRange(monthValue);
       return getCaracasDateSpan(startDate, endDate);
     }
-    return getCaracasDateSpan(customStart, customEnd);
+    const start = customStart <= customEnd ? customStart : customEnd;
+    const end = customStart <= customEnd ? customEnd : customStart;
+    return getCaracasDateSpan(start, end);
   }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
 
   useEffect(() => {
@@ -238,10 +298,66 @@ export default function PayrollPage() {
 
   const shiftWeek = (weeks: number) => shiftAnchor(weeks * 7);
 
-  const periodLabel = useMemo(
-    () => getPayrollPeriodLabel(filterMode, anchorDate, monthValue, customStart, customEnd),
-    [filterMode, anchorDate, monthValue, customStart, customEnd]
+  const shiftMonth = (delta: number) => {
+    const [yearStr, monthStr] = monthValue.split('-');
+    const next = new Date(Number(yearStr), Number(monthStr) - 1 + delta, 1);
+    setMonthValue(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const periodLabel = useMemo(() => {
+    const customFrom = customStart <= customEnd ? customStart : customEnd;
+    const customTo = customStart <= customEnd ? customEnd : customStart;
+    return getPayrollPeriodLabel(filterMode, anchorDate, monthValue, customFrom, customTo);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
+
+  const displayPeriodLabel = useMemo(() => {
+    const fmt = (d: string) => formatCaracasDay(d, { month: 'short', day: 'numeric' });
+    switch (filterMode) {
+      case 'day':
+        return formatCaracasDay(anchorDate, { weekday: 'short', month: 'short', day: 'numeric' });
+      case 'week': {
+        const { startDate, endDate } = getCaracasWeekRange(anchorDate);
+        return `${t('Week of')} ${fmt(startDate)} – ${fmt(endDate)}`;
+      }
+      case 'month':
+        return formatCaracasDay(`${monthValue}-01`, { month: 'long', year: 'numeric' });
+      case 'custom': {
+        const start = customStart <= customEnd ? customStart : customEnd;
+        const end = customStart <= customEnd ? customEnd : customStart;
+        return `${fmt(start)} – ${fmt(end)}`;
+      }
+    }
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, t]);
+
+  const classesByDay = useMemo(() => {
+    const map = new Map<string, PayrollClass[]>();
+    for (const day of calendarDays) map.set(day, []);
+    for (const cls of classes) {
+      const day = getCaracasDateFromIso(cls.start_time);
+      map.get(day)?.push(cls);
+    }
+    return map;
+  }, [classes, calendarDays]);
+
+  const weekdayHeaders = useMemo(
+    () =>
+      getCaracasWeekDays(calendarDays[0] ?? anchorDate).map((day) =>
+        formatCaracasDay(day, { weekday: 'short' })
+      ),
+    [calendarDays, anchorDate]
   );
+
+  const monthCells = useMemo(() => {
+    if (calendarDays.length <= 7) return [];
+    const leading = mondayIndex(calendarDays[0]);
+    const cells: (string | null)[] = [...Array(leading).fill(null), ...calendarDays];
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [calendarDays]);
+
+  const showHourCalendar = calendarDays.length <= 7;
+  const today = getCaracasDate();
+  const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const coachReports = useMemo(
     () => buildCoachPayrollReports(classes, periodLabel),
@@ -357,6 +473,33 @@ export default function PayrollPage() {
     }
   };
 
+  const renderCalendarClass = (cls: PayrollClass, compact: boolean) => (
+    <div
+      className={`flex items-start gap-1.5 rounded-lg border overflow-hidden h-full ${compact ? 'px-1.5 py-1' : 'px-3 py-3'} ${blockStyles(cls.payrollStatus!)} ${selectedIds.has(cls.id) ? 'ring-2 ring-pits-primary z-10' : ''}`}
+    >
+      <input
+        type="checkbox"
+        checked={selectedIds.has(cls.id)}
+        onChange={() => toggleSelected(cls.id)}
+        className={`${compact ? 'mt-0.5 w-3.5 h-3.5' : 'mt-0.5 w-4 h-4'} shrink-0 accent-pits-primary cursor-pointer`}
+        aria-label={t('Select class')}
+      />
+      <button
+        type="button"
+        onClick={() => setSelectedClass(cls)}
+        className="flex-1 min-w-0 text-left overflow-hidden hover:opacity-90 transition-opacity"
+      >
+        <p className={`${compact ? 'text-[10px] leading-tight' : 'text-[11px] leading-snug'} font-black uppercase truncate`}>
+          {cls.class_type}
+        </p>
+        <p className={`${compact ? 'text-[9px] mt-0.5' : 'text-[10px] mt-1'} font-bold truncate`}>
+          {getCaracasTimeLabel(cls.start_time)}
+          {cls.coach?.full_name ? ` · ${cls.coach.full_name}` : ''}
+        </p>
+      </button>
+    </div>
+  );
+
   const renderStatusSelect = (cls: PayrollClass, compact = false) => (
     <select
       value={cls.payrollStatus}
@@ -375,7 +518,7 @@ export default function PayrollPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-ink tracking-tighter uppercase">
+            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
               {t('Payroll')}
             </h1>
             <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
@@ -424,7 +567,7 @@ export default function PayrollPage() {
                 <button
                   key={mode}
                   onClick={() => setFilterMode(mode)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  className={`h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                     filterMode === mode
                       ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                       : 'bg-pits-surface-muted text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -445,26 +588,24 @@ export default function PayrollPage() {
               {(filterMode === 'day' || filterMode === 'week') && (
                 <>
                   <button
+                    type="button"
                     onClick={() => (filterMode === 'day' ? shiftAnchor(-1) : shiftWeek(-1))}
-                    className="p-2 bg-pits-surface-muted border border-pits-edge rounded-lg hover:bg-pits-edge"
+                    className={navBtnClass}
+                    aria-label={filterMode === 'day' ? t('Previous day') : t('Previous week')}
                   >
                     <ChevronLeft size={18} />
                   </button>
-                  <div className="relative">
-                    <Calendar
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim"
-                      size={16}
-                    />
-                    <input
-                      type="date"
-                      value={anchorDate}
-                      onChange={(e) => setAnchorDate(e.target.value)}
-                      className="pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-xs font-bold text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
-                    />
-                  </div>
+                  <DateField
+                    type="date"
+                    value={anchorDate}
+                    onChange={setAnchorDate}
+                    ariaLabel={filterMode === 'day' ? t('Day') : t('Week')}
+                  />
                   <button
+                    type="button"
                     onClick={() => (filterMode === 'day' ? shiftAnchor(1) : shiftWeek(1))}
-                    className="p-2 bg-pits-surface-muted border border-pits-edge rounded-lg hover:bg-pits-edge"
+                    className={navBtnClass}
+                    aria-label={filterMode === 'day' ? t('Next day') : t('Next week')}
                   >
                     <ChevronRight size={18} />
                   </button>
@@ -472,36 +613,58 @@ export default function PayrollPage() {
               )}
 
               {filterMode === 'month' && (
-                <input
-                  type="month"
-                  value={monthValue}
-                  onChange={(e) => setMonthValue(e.target.value)}
-                  className="px-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-xs font-bold text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
-                />
+                <>
+                  <button
+                    type="button"
+                    onClick={() => shiftMonth(-1)}
+                    className={navBtnClass}
+                    aria-label={t('Previous month')}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <DateField
+                    type="month"
+                    value={monthValue}
+                    onChange={setMonthValue}
+                    ariaLabel={t('Month')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => shiftMonth(1)}
+                    className={navBtnClass}
+                    aria-label={t('Next month')}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </>
               )}
 
               {filterMode === 'custom' && (
                 <>
-                  <input
+                  <DateField
                     type="date"
                     value={customStart}
-                    onChange={(e) => setCustomStart(e.target.value)}
-                    className="px-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-xs font-bold text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
+                    onChange={setCustomStart}
+                    ariaLabel={t('Start date')}
                   />
-                  <span className="text-pits-dim font-bold text-xs">—</span>
-                  <input
+                  <span className="text-pits-dim font-black text-xs">—</span>
+                  <DateField
                     type="date"
                     value={customEnd}
-                    onChange={(e) => setCustomEnd(e.target.value)}
-                    className="px-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-xs font-bold text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
+                    onChange={setCustomEnd}
+                    ariaLabel={t('End date')}
                   />
                 </>
               )}
 
+              <span className="text-xs font-black text-pits-dim uppercase tracking-widest">
+                {displayPeriodLabel}
+              </span>
+
               <select
                 value={coachFilter}
                 onChange={(e) => setCoachFilter(e.target.value)}
-                className="ml-auto px-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-black uppercase text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
+                className="h-10 sm:ml-auto px-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-black uppercase text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
               >
                 <option value="all">{t('All Coaches')}</option>
                 {coaches.map((c) => (
@@ -585,7 +748,7 @@ export default function PayrollPage() {
             {viewTab === 'calendar' && (
             <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-pits-edge">
-                <h2 className="text-sm font-black text-pits-ink uppercase tracking-tighter flex items-center gap-2">
+                <h2 className="text-sm font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
                   <Calendar size={16} className="text-pits-red" />
                   {t('Class Calendar')}
                 </h2>
@@ -595,71 +758,139 @@ export default function PayrollPage() {
                 <div className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">
                   {t('Initializing Data Stream...')}
                 </div>
-              ) : (
-                <div
-                  className="p-4 grid gap-4 w-full"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.min(calendarDays.length, 7)}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {calendarDays.map((day) => {
-                    const dayClasses = classes
-                      .filter((c) => getCaracasDateFromIso(c.start_time) === day)
-                      .sort(
-                        (a, b) =>
-                          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-                      );
-                    return (
-                      <div
-                        key={day}
-                        className="min-h-[120px] p-3 border border-pits-edge/50 rounded-xl bg-pits-surface-muted/30"
-                      >
-                        <p className="text-[10px] font-black text-pits-dim uppercase mb-3 border-b border-pits-edge/50 pb-2">
-                          {new Date(`${day}T12:00:00-04:00`).toLocaleDateString('en-US', {
-                            timeZone: 'America/Caracas',
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                        {dayClasses.length === 0 ? (
-                          <p className="text-[10px] text-pits-dim font-bold uppercase py-3">
-                            —
+              ) : showHourCalendar ? (
+                <div className="overflow-x-auto">
+                  <div className={calendarDays.length >= 5 ? 'min-w-[720px]' : 'min-w-0'}>
+                    <div
+                      className="grid border-b border-pits-edge"
+                      style={{
+                        gridTemplateColumns: `56px repeat(${calendarDays.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      <div className="border-r border-pits-edge bg-pits-surface-muted/40" />
+                      {calendarDays.map((day) => (
+                        <div
+                          key={day}
+                          className={`px-2 py-3 text-center border-r border-pits-edge last:border-r-0 ${
+                            day === today ? 'bg-pits-primary-soft' : 'bg-pits-surface-muted/40'
+                          }`}
+                        >
+                          <p className="text-[10px] font-black text-pits-dim uppercase">
+                            {formatCaracasDay(day, { weekday: 'short' })}
                           </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {dayClasses.map((cls) => (
-                              <div
-                                key={cls.id}
-                                className={`flex items-start gap-2.5 px-3 py-3 rounded-xl border ${blockStyles(cls.payrollStatus!)} ${selectedIds.has(cls.id) ? 'ring-2 ring-pits-primary' : ''}`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedIds.has(cls.id)}
-                                  onChange={() => toggleSelected(cls.id)}
-                                  className="mt-0.5 shrink-0 w-4 h-4 accent-pits-primary cursor-pointer"
-                                  aria-label={t('Select class')}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedClass(cls)}
-                                  className="flex-1 min-w-0 text-left hover:opacity-90 transition-opacity"
-                                >
-                                  <p className="text-[11px] font-black uppercase truncate leading-snug">
-                                    {cls.class_type}
-                                  </p>
-                                  <p className="text-[10px] font-bold truncate mt-1 leading-snug">
-                                    {getCaracasTimeLabel(cls.start_time)}
-                                    {cls.coach?.full_name ? ` · ${cls.coach.full_name}` : ''}
-                                  </p>
-                                </button>
-                              </div>
-                            ))}
+                          <p className="text-sm font-black text-pits-text">
+                            {formatCaracasDay(day, { day: 'numeric' })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: `56px repeat(${calendarDays.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      <div className="relative border-r border-pits-edge" style={{ height: gridHeight }}>
+                        {HOURS.map((hour) => (
+                          <div
+                            key={hour}
+                            className="absolute left-0 right-0 pr-2 text-right text-[10px] font-bold text-pits-dim -translate-y-1/2"
+                            style={{ top: (hour - START_HOUR) * SLOT_HEIGHT }}
+                          >
+                            {String(hour).padStart(2, '0')}:00
                           </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
+
+                      {calendarDays.map((day) => {
+                        const dayClasses = classesByDay.get(day) ?? [];
+                        return (
+                          <div
+                            key={day}
+                            className={`relative border-r border-pits-edge last:border-r-0 ${
+                              day === today ? 'bg-pits-primary-soft/20' : 'bg-pits-surface-muted/10'
+                            }`}
+                            style={{ height: gridHeight }}
+                          >
+                            {HOURS.map((hour) => (
+                              <div
+                                key={hour}
+                                className="absolute left-0 right-0 border-b border-pits-edge/50"
+                                style={{
+                                  top: (hour - START_HOUR) * SLOT_HEIGHT,
+                                  height: SLOT_HEIGHT,
+                                }}
+                              />
+                            ))}
+
+                            {dayClasses.map((cls) => {
+                              const minutes = getCaracasMinutesSince(cls.start_time, START_HOUR);
+                              const durationMin = classDurationMinutes(cls.start_time, cls.end_time);
+                              if (minutes >= (END_HOUR - START_HOUR + 1) * 60) return null;
+                              if (minutes + durationMin <= 0) return null;
+                              const top = Math.max(0, (minutes / 60) * SLOT_HEIGHT);
+                              const height = Math.max((durationMin / 60) * SLOT_HEIGHT - 4, 28);
+                              return (
+                                <div
+                                  key={cls.id}
+                                  className="absolute left-1 right-1 overflow-hidden"
+                                  style={{ top: top + 2, height }}
+                                >
+                                  {renderCalendarClass(cls, true)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <div className="min-w-[720px] p-4">
+                    <div className="grid grid-cols-7 border border-pits-edge rounded-xl overflow-hidden">
+                      {weekdayHeaders.map((label) => (
+                        <div
+                          key={label}
+                          className="px-2 py-3 text-center bg-pits-surface-muted/40 border-b border-r border-pits-edge last:border-r-0"
+                        >
+                          <p className="text-[10px] font-black text-pits-dim uppercase">{label}</p>
+                        </div>
+                      ))}
+                      {monthCells.map((day, idx) => {
+                        if (!day) {
+                          return (
+                            <div
+                              key={`empty-${idx}`}
+                              className="min-h-[110px] bg-pits-surface-muted/10 border-b border-r border-pits-edge last:border-r-0"
+                            />
+                          );
+                        }
+                        const dayClasses = (classesByDay.get(day) ?? []).sort(
+                          (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+                        );
+                        return (
+                          <div
+                            key={day}
+                            className={`min-h-[110px] p-2 border-b border-r border-pits-edge ${
+                              day === today ? 'bg-pits-primary-soft/30' : 'bg-pits-surface-muted/10'
+                            }`}
+                          >
+                            <p className="text-[10px] font-black text-pits-dim uppercase mb-2">
+                              {formatCaracasDay(day, { day: 'numeric' })}
+                            </p>
+                            <div className="space-y-1.5">
+                              {dayClasses.map((cls) => (
+                                <div key={cls.id}>{renderCalendarClass(cls, true)}</div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -668,7 +899,7 @@ export default function PayrollPage() {
             {viewTab === 'list' && (
             <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-pits-edge">
-                  <h2 className="text-sm font-black text-pits-ink uppercase tracking-tighter flex items-center gap-2">
+                  <h2 className="text-sm font-black text-pits-text uppercase tracking-tighter flex items-center gap-2">
                     <Clock size={16} className="text-pits-red" />
                     {t('Class List')}
                   </h2>

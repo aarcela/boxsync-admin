@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -9,7 +9,6 @@ import {
   DollarSign,
   MessageCircle,
   RefreshCw,
-  ShieldCheck,
   TrendingUp,
   UserCheck,
   Users,
@@ -21,6 +20,7 @@ import {
   InterventionStatus,
   InterventionEvent,
   RescueIntervention,
+  RescuePriority,
   RescueSignalType,
   revenueRescueService,
 } from '@/lib/services/revenueRescueService';
@@ -32,6 +32,7 @@ type StaffMember = {
 };
 
 type ViewFilter = 'actionable' | 'contacted' | 'snoozed' | 'resolved' | 'all';
+type BadgeTone = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2 };
 
@@ -44,12 +45,18 @@ const SIGNAL_LABELS: Record<RescueSignalType, string> = {
   registration: 'Registration',
 };
 
-const STATUS_STYLES: Record<InterventionStatus, string> = {
-  open: 'bg-amber-50 text-amber-700 border-amber-200',
-  contacted: 'bg-blue-50 text-blue-700 border-blue-200',
-  snoozed: 'bg-gray-100 text-gray-600 border-gray-200',
-  resolved: 'bg-green-50 text-green-700 border-green-200',
-  escalated: 'bg-red-50 text-red-700 border-red-200',
+const STATUS_TONE: Record<InterventionStatus, BadgeTone> = {
+  open: 'warning',
+  contacted: 'info',
+  snoozed: 'neutral',
+  resolved: 'success',
+  escalated: 'error',
+};
+
+const PRIORITY_TONE: Record<RescuePriority, BadgeTone> = {
+  urgent: 'error',
+  high: 'warning',
+  medium: 'neutral',
 };
 
 export default function FinancialInsightsPage() {
@@ -299,18 +306,15 @@ export default function FinancialInsightsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16 sm:pb-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <ShieldCheck size={18} className="text-pits-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-primary">
-              Coach-owned retention
-            </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+              {copy.title}
+            </h1>
+            <StatusBadge tone="info">Retention</StatusBadge>
           </div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
-            {copy.title}
-          </h1>
           <p className="mt-1 max-w-2xl text-sm font-medium text-pits-dim">
             {copy.subtitle}
           </p>
@@ -319,14 +323,14 @@ export default function FinancialInsightsPage() {
           type="button"
           disabled={loading}
           onClick={() => void loadData()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-pits-primary hover:text-pits-dark-text disabled:opacity-50"
+          className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[8px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
         >
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           {copy.refresh}
         </button>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
           label={copy.atRisk}
           value={`$${summary.openRevenueAtRisk.toLocaleString()}`}
@@ -356,19 +360,26 @@ export default function FinancialInsightsPage() {
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-pits-edge bg-pits-surface-elevated p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-0.5">
           {viewTabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setView(tab.key)}
-              className={`whitespace-nowrap rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
                 view === tab.key
-                  ? 'bg-pits-panel text-white'
-                  : 'text-pits-dim hover:bg-pits-surface-muted hover:text-pits-text'
+                  ? 'text-pits-primary'
+                  : 'text-pits-dim hover:text-pits-text'
               }`}
             >
-              {tab.label} <span className="ml-1 opacity-70">{tab.count}</span>
+              {tab.label}
+              <span
+                className={`inline-flex min-w-5 items-center justify-center px-1.5 py-0.5 text-[9px] leading-none ${
+                  view === tab.key ? 'text-pits-primary' : 'text-pits-dim'
+                }`}
+              >
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
@@ -411,31 +422,23 @@ export default function FinancialInsightsPage() {
                   : 'border-pits-edge'
               }`}
             >
-              <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-pits-primary-soft px-2 py-1 text-[8px] font-black uppercase tracking-widest text-pits-primary">
-                      {SIGNAL_LABELS[item.signal_type]}
-                    </span>
-                    <span
-                      className={`rounded-md border px-2 py-1 text-[8px] font-black uppercase tracking-widest ${STATUS_STYLES[item.status]}`}
-                    >
-                      {item.status}
-                    </span>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                      {item.priority}
-                    </span>
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge tone="info">{SIGNAL_LABELS[item.signal_type]}</StatusBadge>
+                    <StatusBadge tone={STATUS_TONE[item.status]}>{item.status}</StatusBadge>
+                    <StatusBadge tone={PRIORITY_TONE[item.priority]}>{item.priority}</StatusBadge>
                   </div>
                   <h2 className="truncate text-lg font-black uppercase italic tracking-tight text-pits-text">
                     {item.member?.full_name || 'Member'}
                   </h2>
                   <p className="text-sm font-bold text-pits-dim">{item.title}</p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-2xl font-black italic text-pits-text">
+                <div className="shrink-0 sm:text-right">
+                  <p className="text-xl sm:text-2xl font-black italic text-pits-text break-all leading-none">
                     ${Number(item.monthly_value).toLocaleString()}
                   </p>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                  <p className="mt-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
                     MRR at risk
                   </p>
                 </div>
@@ -502,18 +505,18 @@ export default function FinancialInsightsPage() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-pits-edge pt-4">
-                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-pits-dim">
+                    <div className="flex flex-wrap items-center gap-2 text-[9px] font-bold uppercase text-pits-dim">
                       {item.assignee?.full_name && (
-                        <span>{item.assignee.full_name}</span>
+                        <StatusBadge tone="neutral">{item.assignee.full_name}</StatusBadge>
                       )}
                       {item.due_at && (
-                        <span className="inline-flex items-center gap-1">
+                        <StatusBadge tone="warning">
                           <Clock size={11} />
                           {copy.due}{' '}
                           {new Date(item.due_at).toLocaleDateString(
                             lang === 'es' ? 'es-ES' : 'en-US'
                           )}
-                        </span>
+                        </StatusBadge>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -540,7 +543,7 @@ export default function FinancialInsightsPage() {
                             revenueRescueService.escalate(item.id)
                           )
                         }
-                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-error hover:bg-red-50"
+                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-error hover:bg-pits-error/10"
                       >
                         {copy.escalate}
                       </button>
@@ -570,7 +573,7 @@ export default function FinancialInsightsPage() {
 
               {item.status === 'resolved' && (
                 <>
-                  <div className="mt-4 flex items-center justify-between rounded-xl bg-green-50 p-3 text-green-800">
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-pits-success/20 bg-pits-success/10 p-3 text-pits-success">
                     <div>
                       <p className="text-[8px] font-black uppercase tracking-widest">
                         {item.outcome_type || item.resolution_reason}
@@ -638,6 +641,30 @@ export default function FinancialInsightsPage() {
   );
 }
 
+function StatusBadge({
+  tone,
+  children,
+}: {
+  tone: BadgeTone;
+  children: ReactNode;
+}) {
+  const tones: Record<BadgeTone, string> = {
+    success: 'bg-pits-success/15 text-pits-success border-pits-success/25',
+    warning: 'bg-pits-primary-soft text-pits-primary border-pits-edge',
+    error: 'bg-pits-error/10 text-pits-error border-pits-error/20',
+    info: 'bg-pits-primary-soft text-pits-red border-pits-edge',
+    neutral: 'bg-pits-surface-muted text-pits-dim border-pits-edge',
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center gap-1 shrink-0 px-2 py-1 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -653,22 +680,24 @@ function MetricCard({
 }) {
   const iconClass =
     tone === 'danger'
-      ? 'text-pits-error bg-red-50'
+      ? 'text-pits-error bg-pits-error/10 border-pits-error/20'
       : tone === 'success'
-        ? 'text-pits-success bg-green-50'
-        : 'text-pits-primary bg-pits-primary-soft';
+        ? 'text-pits-success bg-pits-success/10 border-pits-success/20'
+        : 'text-pits-primary bg-pits-primary-soft border-pits-edge';
   return (
-    <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated p-5 shadow-sm">
-      <div className="mb-4 flex items-start justify-between">
-        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-pits-dim">
+    <div className="min-w-0 rounded-2xl border border-pits-edge bg-pits-surface-elevated p-3 sm:p-5 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <p className="min-w-0 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.16em] text-pits-dim leading-tight">
           {label}
         </p>
-        <span className={`rounded-xl p-2 ${iconClass}`}>
-          <Icon size={17} />
+        <span className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 border shrink-0 ${iconClass}`}>
+          <Icon size={15} />
         </span>
       </div>
-      <p className="text-3xl font-black italic tracking-tight text-pits-text">{value}</p>
-      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-pits-dim">
+      <p className="text-lg sm:text-3xl font-black italic tracking-tight text-pits-text break-all leading-none">
+        {value}
+      </p>
+      <p className="mt-2 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-pits-dim truncate">
         {detail}
       </p>
     </div>

@@ -1,7 +1,9 @@
 import { CurrencyType, type TenantCurrencyConfig } from '../currency';
+import type { PlatformPlanId } from '../platform-plans';
 
 export { CurrencyType };
 export type { TenantCurrencyConfig };
+export type { PlatformPlanId };
 
 export interface Tenant {
   id: string;
@@ -9,7 +11,189 @@ export interface Tenant {
   name: string;
   created_at: string;
   settings?: Record<string, unknown> | null;
+  platform_plan?: PlatformPlanId;
+  platform_plan_started_at?: string | null;
+  trial_ends_at?: string | null;
+  is_active?: boolean;
+  deactivated_at?: string | null;
+  deactivation_reason?: string | null;
 }
+
+export interface TenantHqStats {
+  userCount: number;
+  memberCount: number;
+  activeMemberCount: number;
+  staffCount: number;
+  coachCount: number;
+  adminCount: number;
+  pendingPaymentCount: number;
+  overMemberCap: boolean;
+  trialExpired: boolean;
+  trialEndsSoon: boolean;
+  isActive: boolean;
+}
+
+export interface TenantWithHqStats extends Tenant {
+  platform_plan: PlatformPlanId;
+  stats: TenantHqStats;
+}
+
+export interface PlatformHqOverview {
+  boxCount: number;
+  userCount: number;
+  memberCount: number;
+  activeMemberCount: number;
+  staffCount: number;
+  mrrUsd: number;
+  pendingPaymentCount: number;
+  overCapCount: number;
+  trialCount: number;
+  expiredTrialCount: number;
+  solvencyRate: number;
+  planCounts: Record<PlatformPlanId, number>;
+}
+
+export type HqFinancialPeriod = 'today' | 'week' | 'month' | 'custom';
+
+export type HqTenantPayStatus = 'trial' | 'paid' | 'unpaid' | 'pending';
+
+export interface HqFinancialSeriesPoint {
+  month: string;
+  collectedUsd: number;
+  otherIncomeUsd: number;
+  incomeUsd: number;
+  expensesUsd: number;
+  netUsd: number;
+}
+
+export interface HqMethodMix {
+  label: string;
+  usd: number;
+  count: number;
+}
+
+export interface HqCategoryMix {
+  category: string;
+  usd: number;
+  count: number;
+}
+
+export interface HqTenantFinancialRow {
+  id: string;
+  name: string;
+  slug: string;
+  platform_plan: PlatformPlanId;
+  isActive: boolean;
+  monthlyFeeUsd: number;
+  collectedUsd: number;
+  payStatus: HqTenantPayStatus;
+  lastPaidAt: string | null;
+  paymentCount: number;
+}
+
+export interface HqFinancialOverview {
+  expectedMrrUsd: number;
+  collectedUsd: number;
+  otherIncomeUsd: number;
+  incomeUsd: number;
+  expensesUsd: number;
+  netUsd: number;
+  marginPct: number;
+  unpaidCount: number;
+  unpaidUsd: number;
+  pendingCount: number;
+  trialCount: number;
+  paidBoxCount: number;
+  boxCount: number;
+}
+
+export interface HqLedgerPayment {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'approved' | 'rejected';
+  method: string;
+  period_start: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface HqLedgerIncome {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  currency: string;
+  income_date: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface HqLedgerExpense {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  currency: string;
+  expense_date: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface HqFinancialsPayload {
+  period: HqFinancialPeriod;
+  start: string;
+  end: string;
+  overview: HqFinancialOverview;
+  series: HqFinancialSeriesPoint[];
+  methodMix: HqMethodMix[];
+  expenseMix: HqCategoryMix[];
+  tenants: HqTenantFinancialRow[];
+  payments: HqLedgerPayment[];
+  incomes: HqLedgerIncome[];
+  expenses: HqLedgerExpense[];
+}
+
+export interface HqTenantFinancialDetail {
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    platform_plan: PlatformPlanId;
+    isActive: boolean;
+    monthlyFeeUsd: number;
+  };
+  period: HqFinancialPeriod;
+  start: string;
+  end: string;
+  collectedUsd: number;
+  payStatus: HqTenantPayStatus;
+  lastPaidAt: string | null;
+  series: HqFinancialSeriesPoint[];
+  payments: HqLedgerPayment[];
+}
+
+export const HQ_EXPENSE_CATEGORIES = [
+  'Hosting',
+  'Tools',
+  'Staff',
+  'Marketing',
+  'Legal',
+  'Travel',
+  'Other',
+] as const;
+
+export type HqExpenseCategory = (typeof HQ_EXPENSE_CATEGORIES)[number];
+
+export const HQ_INCOME_CATEGORIES = [
+  'services',
+  'income_adjustments',
+  'other_income',
+] as const;
+
+export type HqIncomeCategory = (typeof HQ_INCOME_CATEGORIES)[number];
 
 export type PaymentMethodType = 'pago_movil' | 'zelle' | 'binance' | 'efectivo' | 'otro';
 
