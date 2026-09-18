@@ -531,7 +531,6 @@ export const translations = {
     'Context / Description': 'Context / Description',
     'e.g. Electricity Bill - April': 'e.g. Electricity Bill - April',
     'Amount': 'Amount',
-    'Cancel': 'Cancel',
     'Live Reference': 'Live Reference',
 
     // Income
@@ -1087,9 +1086,6 @@ export const translations = {
     'Save Changes': 'Save Changes',
     'Yes, Delete': 'Yes, Delete',
     'Yes, Update': 'Yes, Update',
-    'Active': 'Active',
-    'Inactive': 'Inactive',
-    'Status': 'Status',
     'Status updated': 'Status updated',
     'Initializing Data Stream...': 'Initializing Data Stream...',
     'No records found.': 'No records found.',
@@ -1883,7 +1879,6 @@ export const translations = {
     'Context / Description': 'Contexto / Descripción',
     'e.g. Electricity Bill - April': 'ej. Factura Eléctrica - Abril',
     'Amount': 'Monto',
-    'Cancel': 'Cancelar',
     'Live Reference': 'Referencia en Vivo',
 
     // Income
@@ -2443,9 +2438,6 @@ export const translations = {
     'Save Changes': 'Guardar Cambios',
     'Yes, Delete': 'Sí, Eliminar',
     'Yes, Update': 'Sí, Actualizar',
-    'Active': 'Activo',
-    'Inactive': 'Inactivo',
-    'Status': 'Estado',
     'Status updated': 'Estado actualizado',
     'Initializing Data Stream...': 'Iniciando flujo de datos...',
     'No records found.': 'No se encontraron registros.',
