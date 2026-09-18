@@ -87,7 +87,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const res = await financialService.runExpiryCheck();
       toast(res.message, 'info');
     } catch {
-      toast('Expiry sync error.', 'error');
+      toast(t('Expiry sync error.'), 'error');
     } finally {
       setRunningExpiry(false);
     }

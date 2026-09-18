@@ -122,7 +122,7 @@ export const financialService = {
     }
   },
 
-  async approvePayment(paymentId: string, userId: string): Promise<void> {
+  async approvePayment(paymentId: string, userId: string): Promise<{ activated: boolean }> {
     const { error: payError } = await supabase
       .from('payments')
       .update({ status: 'approved' })
@@ -144,6 +144,7 @@ export const financialService = {
     }
 
     await this.notifyPaymentStatus(userId, 'approved');
+    return { activated: Boolean(profileUpdate) };
   },
 
   async rejectPayment(paymentId: string, userId?: string, reason?: string): Promise<void> {

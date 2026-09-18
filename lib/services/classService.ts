@@ -13,9 +13,34 @@ export type ClassUpdateFields = {
 const classSelect = `
   *,
   coach:profiles(full_name),
-  bookings:bookings(count),
-  waitlist:class_waitlist(count)
+  bookings:bookings(status),
+  waitlist:class_waitlist(status)
 `;
+
+function occupancyCount(
+  rows: { status?: string; count?: number }[] | undefined,
+  statuses: string[],
+) {
+  if (!rows?.length) return 0;
+  if (typeof rows[0].status === 'string') {
+    return rows.filter((row) => statuses.includes(row.status || '')).length;
+  }
+  return rows[0].count ?? 0;
+}
+
+function mapClassOccupancy(rows: unknown[] | null): ClassSession[] {
+  return (rows ?? []).map((item) => {
+    const row = item as ClassSession & {
+      bookings?: { status?: string; count?: number }[];
+      waitlist?: { status?: string; count?: number }[];
+    };
+    return {
+      ...row,
+      bookings: [{ count: occupancyCount(row.bookings, ['booked', 'attended']) }],
+      waitlist: [{ count: occupancyCount(row.waitlist, ['active']) }],
+    };
+  }) as ClassSession[];
+}
 
 export const classService = {
   /**
@@ -32,7 +57,7 @@ export const classService = {
       .order('start_time', { ascending: true });
 
     if (error) throw error;
-    return data as ClassSession[];
+    return mapClassOccupancy(data);
   },
 
   /**
@@ -49,7 +74,7 @@ export const classService = {
       .order('start_time', { ascending: true });
 
     if (error) throw error;
-    return data as ClassSession[];
+    return mapClassOccupancy(data);
   },
 
   async getClassesByRange(startUtc: string, endUtc: string): Promise<ClassSession[]> {
@@ -61,7 +86,7 @@ export const classService = {
       .order('start_time', { ascending: true });
 
     if (error) throw error;
-    return data as ClassSession[];
+    return mapClassOccupancy(data);
   },
 
   async updateClass(id: string, updates: ClassUpdateFields): Promise<void> {
@@ -201,7 +226,9 @@ export const classService = {
         attributedRevenue: 0,
         coachCost: 0,
       };
-      slotData.booked += bookings.length;
+      slotData.booked += bookings.filter(
+        (booking) => booking.status === 'booked' || booking.status === 'attended',
+      ).length;
       slotData.capacity += cls.max_capacity || 0;
       slotData.classes += 1;
       for (const booking of bookings) {

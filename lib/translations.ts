@@ -226,9 +226,12 @@ export const translations = {
     'VERIFY & UNLOCK': 'VERIFY & UNLOCK',
     'Reject Payment': 'Reject Payment',
     'Payment approved successfully': 'Payment approved successfully',
+    'Partial payment recorded. Membership still unpaid.':
+      'Partial payment recorded. Membership still unpaid.',
     'Error approving payment. Please try again.': 'Error approving payment. Please try again.',
     'Payment rejected': 'Payment rejected',
     'Error rejecting payment. Please try again.': 'Error rejecting payment. Please try again.',
+    'Expiry sync error.': 'Expiry sync error.',
     "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?":
       "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?",
     'Confirm Rejection': 'Confirm Rejection',
@@ -601,7 +604,95 @@ export const translations = {
     'Registration marked as paid for': 'Registration marked as paid for',
     'WhatsApp message opened': 'WhatsApp message opened',
     'Failed to analyze data': 'Failed to analyze data',
-    
+
+    // Revenue Rescue (Insights)
+    'Revenue Rescue': 'Revenue Rescue',
+    'The conversations your team should complete today to protect revenue.':
+      'The conversations your team should complete today to protect revenue.',
+    'Monthly revenue at risk': 'Monthly revenue at risk',
+    'Revenue recovered': 'Revenue recovered',
+    'Open actions': 'Open actions',
+    'Resolution rate': 'Resolution rate',
+    Priorities: 'Priorities',
+    Contacted: 'Contacted',
+    Snoozed: 'Snoozed',
+    Recovered: 'Recovered',
+    'Refresh signals': 'Refresh signals',
+    Owner: 'Owner',
+    'Why this surfaced': 'Why this surfaced',
+    'Next best action': 'Next best action',
+    Snooze: 'Snooze',
+    Resolve: 'Resolve',
+    Escalate: 'Escalate',
+    'This member has no phone number.': 'This member has no phone number.',
+    'No interventions in this view.': 'No interventions in this view.',
+    'Calculating revenue at risk...': 'Calculating revenue at risk...',
+    'Could not load Revenue Rescue.': 'Could not load Revenue Rescue.',
+    'Could not save action.': 'Could not save action.',
+    'Could not load history.': 'Could not load history.',
+    'Reason: vacation, injury, schedule, finances, or other':
+      'Reason: vacation, injury, schedule, finances, or other',
+    'Outcome: returned, paid, changed plan, or other':
+      'Outcome: returned, paid, changed plan, or other',
+    'Did this action protect the monthly membership value?':
+      'Did this action protect the monthly membership value?',
+    'Closed loop measured': 'Closed loop measured',
+    'All signals': 'All signals',
+    Payment: 'Payment',
+    'First 90 days': 'First 90 days',
+    'No-show': 'No-show',
+    Open: 'Open',
+    Resolved: 'Resolved',
+    Escalated: 'Escalated',
+    Urgent: 'Urgent',
+    Member: 'Member',
+    'MRR at risk': 'MRR at risk',
+    WhatsApp: 'WhatsApp',
+    History: 'History',
+    'View history': 'View history',
+    'Intervention history': 'Intervention history',
+    'No events yet.': 'No events yet.',
+    Assigned: 'Assigned',
+    Due: 'Due',
+    '{{count}} open actions': '{{count}} open actions',
+    '{{count}} contacted': '{{count}} contacted',
+    '{{count}} returned to class': '{{count}} returned to class',
+    'Returned to class': 'Returned to class',
+    'Registration recovered': 'Registration recovered',
+    'Payment recovered': 'Payment recovered',
+    'Membership renewed': 'Membership renewed',
+    'Membership revenue at risk': 'Membership revenue at risk',
+    'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.':
+      'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.',
+    'Offer payment help or a temporary plan alternative.':
+      'Offer payment help or a temporary plan alternative.',
+    'Registration fee pending': 'Registration fee pending',
+    '${{amount}} registration fee remains unpaid.':
+      '${{amount}} registration fee remains unpaid.',
+    'Confirm the payment method and agree on a payment date.':
+      'Confirm the payment method and agree on a payment date.',
+    'First 90 days need attention': 'First 90 days need attention',
+    'Day {{days}} member is averaging {{visits}} visits/week.':
+      'Day {{days}} member is averaging {{visits}} visits/week.',
+    'Assign a coach check-in and book the next suitable class.':
+      'Assign a coach check-in and book the next suitable class.',
+    'Attendance momentum dropped': 'Attendance momentum dropped',
+    '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.':
+      '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.',
+    'No attended class has been recorded.': 'No attended class has been recorded.',
+    'Ask what changed and reserve a realistic comeback class.':
+      'Ask what changed and reserve a realistic comeback class.',
+    'Repeated no-shows': 'Repeated no-shows',
+    '{{count}} booked classes were missed in the last 30 days.':
+      '{{count}} booked classes were missed in the last 30 days.',
+    'Discuss schedule friction and recommend a better time slot.':
+      'Discuss schedule friction and recommend a better time slot.',
+    'Member experience needs recovery': 'Member experience needs recovery',
+    'Recent feedback average is {{rating}} out of 5.':
+      'Recent feedback average is {{rating}} out of 5.',
+    'Manager should ask what went wrong and agree on one fix.':
+      'Manager should ask what went wrong and agree on one fix.',
+
     // Schedule Page
     'Class Schedule': 'Class Schedule',
     'Manage upcoming classes and coach assignments.': 'Manage upcoming classes and coach assignments.',
@@ -1249,7 +1340,7 @@ export const translations = {
     'Delete workout dated message': 'This will permanently remove the workout for {{date}}. Athletes will no longer see it in the app.',
     "TODAY'S WORKOUT": "TODAY'S WORKOUT",
     'Auto-scales for iOS/Android': 'Auto-scales for iOS/Android',
-    'Athlete / Contact': 'Athlete /',
+    'Athlete / Contact': 'Athlete / Contact',
     None: 'None',
     '3. Strength': '3. Strength',
     '4. Metcon (Conditioning)': '4. Metcon (Conditioning)',
@@ -1487,9 +1578,12 @@ export const translations = {
     'VERIFY & UNLOCK': 'VERIFICAR Y DESBLOQUEAR',
     'Reject Payment': 'Rechazar Pago',
     'Payment approved successfully': 'Pago aprobado exitosamente',
+    'Partial payment recorded. Membership still unpaid.':
+      'Abono registrado. La membresía sigue impaga.',
     'Error approving payment. Please try again.': 'Error al aprobar el pago. Inténtalo de nuevo.',
     'Payment rejected': 'Pago rechazado',
     'Error rejecting payment. Please try again.': 'Error al rechazar el pago. Inténtalo de nuevo.',
+    'Expiry sync error.': 'Error al sincronizar vencimientos.',
     "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?":
       'Esto bloqueará el acceso del atleta inmediatamente. ¿Estás seguro de rechazar el pago de {{name}}?',
     'Confirm Rejection': 'Confirmar Rechazo',
@@ -1862,6 +1956,94 @@ export const translations = {
     'Registration marked as paid for': 'Inscripción marcada como pagada para',
     'WhatsApp message opened': 'Mensaje de WhatsApp abierto',
     'Failed to analyze data': 'Error al analizar los datos',
+
+    // Revenue Rescue (Insights)
+    'Revenue Rescue': 'Rescate de Ingresos',
+    'The conversations your team should complete today to protect revenue.':
+      'Las conversaciones que tu equipo debe completar hoy para proteger ingresos.',
+    'Monthly revenue at risk': 'Ingreso mensual en riesgo',
+    'Revenue recovered': 'Ingreso recuperado',
+    'Open actions': 'Acciones abiertas',
+    'Resolution rate': 'Tasa de resolución',
+    Priorities: 'Prioridades',
+    Contacted: 'Contactados',
+    Snoozed: 'Pausados',
+    Recovered: 'Recuperados',
+    'Refresh signals': 'Actualizar señales',
+    Owner: 'Responsable',
+    'Why this surfaced': 'Por qué aparece',
+    'Next best action': 'Siguiente acción',
+    Snooze: 'Pausar',
+    Resolve: 'Resolver',
+    Escalate: 'Escalar',
+    'This member has no phone number.': 'El atleta no tiene teléfono.',
+    'No interventions in this view.': 'No hay intervenciones en esta vista.',
+    'Calculating revenue at risk...': 'Calculando ingresos en riesgo...',
+    'Could not load Revenue Rescue.': 'No se pudo cargar Rescate de Ingresos.',
+    'Could not save action.': 'No se pudo guardar la acción.',
+    'Could not load history.': 'No se pudo cargar el historial.',
+    'Reason: vacation, injury, schedule, finances, or other':
+      'Motivo: vacaciones, lesión, horario, finanzas u otro',
+    'Outcome: returned, paid, changed plan, or other':
+      'Resultado: volvió, pagó, cambió de plan u otro',
+    'Did this action protect the monthly membership value?':
+      '¿Esta acción protegió el valor mensual de la membresía?',
+    'Closed loop measured': 'Ciclo completo medido',
+    'All signals': 'Todas las señales',
+    Payment: 'Pago',
+    'First 90 days': 'Primeros 90 días',
+    'No-show': 'Ausencia',
+    Open: 'Abierto',
+    Resolved: 'Resuelto',
+    Escalated: 'Escalado',
+    Urgent: 'Urgente',
+    Member: 'Miembro',
+    'MRR at risk': 'MRR en riesgo',
+    WhatsApp: 'WhatsApp',
+    History: 'Historial',
+    'View history': 'Ver historial',
+    'Intervention history': 'Historial de intervención',
+    'No events yet.': 'Sin eventos todavía.',
+    Assigned: 'Asignado',
+    Due: 'Vence',
+    '{{count}} open actions': '{{count}} acciones abiertas',
+    '{{count}} contacted': '{{count}} contactados',
+    '{{count}} returned to class': '{{count}} volvieron a entrenar',
+    'Returned to class': 'Volvió a entrenar',
+    'Registration recovered': 'Inscripción recuperada',
+    'Payment recovered': 'Pago recuperado',
+    'Membership renewed': 'Membresía renovada',
+    'Membership revenue at risk': 'Ingreso de membresía en riesgo',
+    'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.':
+      'El acceso está inactivo y aproximadamente ${{amount}} de ingreso mensual está en riesgo.',
+    'Offer payment help or a temporary plan alternative.':
+      'Ofrece ayuda de pago o una alternativa temporal de plan.',
+    'Registration fee pending': 'Cuota de inscripción pendiente',
+    '${{amount}} registration fee remains unpaid.':
+      'Queda pendiente ${{amount}} de la cuota de inscripción.',
+    'Confirm the payment method and agree on a payment date.':
+      'Confirma el método de pago y acuerda una fecha de pago.',
+    'First 90 days need attention': 'Los primeros 90 días necesitan atención',
+    'Day {{days}} member is averaging {{visits}} visits/week.':
+      'El miembro en el día {{days}} promedia {{visits}} visitas/semana.',
+    'Assign a coach check-in and book the next suitable class.':
+      'Asigna un check-in de coach y reserva la próxima clase adecuada.',
+    'Attendance momentum dropped': 'Cayó el ritmo de asistencia',
+    '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.':
+      '{{days}} días desde la última clase asistida; la frecuencia semanal bajó {{percent}}%.',
+    'No attended class has been recorded.': 'No se ha registrado ninguna clase asistida.',
+    'Ask what changed and reserve a realistic comeback class.':
+      'Pregunta qué cambió y reserva una clase realista para volver.',
+    'Repeated no-shows': 'Ausencias repetidas',
+    '{{count}} booked classes were missed in the last 30 days.':
+      '{{count}} clases reservadas se perdieron en los últimos 30 días.',
+    'Discuss schedule friction and recommend a better time slot.':
+      'Habla de la fricción de horario y recomienda un mejor horario.',
+    'Member experience needs recovery': 'La experiencia del miembro necesita recuperación',
+    'Recent feedback average is {{rating}} out of 5.':
+      'El promedio de feedback reciente es {{rating}} de 5.',
+    'Manager should ask what went wrong and agree on one fix.':
+      'El manager debe preguntar qué falló y acordar un arreglo.',
 
     // Schedule Page
     'Class Schedule': 'Horario de Clases',
@@ -2515,7 +2697,7 @@ export const translations = {
     'Delete workout dated message': 'Esto eliminará permanentemente el entrenamiento del {{date}}. Los atletas ya no lo verán en la app.',
     "TODAY'S WORKOUT": 'ENTRENAMIENTO DE HOY',
     'Auto-scales for iOS/Android': 'Escala automáticamente para iOS/Android',
-    'Athlete / Contact': 'Atleta /',
+    'Athlete / Contact': 'Atleta / Contacto',
     None: 'Ninguno',
     '3. Strength': '3. Fuerza',
     '4. Metcon (Conditioning)': '4. Metcon (Acondicionamiento)',

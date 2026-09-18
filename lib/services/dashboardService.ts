@@ -106,20 +106,27 @@ export const dashboardService = {
 
     const { data: classes, error } = await supabase
       .from('classes')
-      .select('id, class_type, start_time, max_capacity, bookings:bookings(count)')
+      .select('id, class_type, start_time, max_capacity, bookings:bookings(status)')
       .gte('start_time', startOfDay)
       .lte('start_time', endOfDay);
     
     if (error) throw error;
     if (!classes || classes.length === 0) return { lowOccupancy: [], usagePercent: 0 };
 
+    const normalized = classes.map((cls) => {
+      const booked = (cls.bookings || []).filter(
+        (row: { status?: string }) => row.status === 'booked' || row.status === 'attended',
+      ).length;
+      return { ...cls, bookings: [{ count: booked }] };
+    });
+
     let totalCapacity = 0;
     let totalBooked = 0;
     const LOW_OCCUPANCY_THRESHOLD = 0.3; // 30% based on user latest edit
 
-    const lowOccupancy = classes.filter(cls => {
+    const lowOccupancy = normalized.filter(cls => {
       const cap = cls.max_capacity || 12;
-      const booked = cls.bookings?.[0]?.count || 0;
+      const booked = cls.bookings[0]?.count || 0;
       totalCapacity += cap;
       totalBooked += booked;
       return booked / cap < LOW_OCCUPANCY_THRESHOLD;

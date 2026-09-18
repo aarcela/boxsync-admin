@@ -387,10 +387,10 @@ export default function SchedulePage() {
           onClick={() => setIsDetailsModalOpen(false)}
         >
           <div 
-            className="bg-pits-background rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[95vh]"
+            className="bg-pits-background rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-4 border-b border-pits-border">
+            <div className="flex justify-between items-center p-4 border-b border-pits-border shrink-0">
               <h3 className="text-xl font-black text-pits-text uppercase italic">{t('Class Details')}</h3>
               <button 
                 onClick={() => setIsDetailsModalOpen(false)}
@@ -400,7 +400,7 @@ export default function SchedulePage() {
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain">
               {(() => {
                 const cls = classes.find(c => c.id === selectedClassId);
                 if (!cls) return null;
@@ -427,20 +427,20 @@ export default function SchedulePage() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                    <div className="rounded-xl border border-pits-primary/30 bg-pits-primary-soft p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <ShieldAlert size={16} className="text-amber-400" />
-                        <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider italic">
+                        <ShieldAlert size={16} className="text-pits-primary" />
+                        <h4 className="text-xs font-black text-pits-primary uppercase tracking-wider italic">
                           {t('Private Coach Brief')}
                         </h4>
                       </div>
                       {loadingRoster ? (
                         <p className="text-pits-dim text-sm">{t('Loading schedule...')}</p>
                       ) : coachBriefError ? (
-                        <p className="text-red-300 text-sm">{coachBriefError}</p>
+                        <p className="text-pits-error text-sm">{coachBriefError}</p>
                       ) : coachBrief ? (
                         <div className="space-y-4">
-                          <p className="text-amber-100/80 text-xs leading-relaxed">{coachBrief.notice}</p>
+                          <p className="text-pits-text text-xs leading-relaxed">{coachBrief.notice}</p>
                           <div className="rounded-lg border border-pits-edge bg-pits-surface-muted p-3">
                             <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
                               {t("Today's WOD")}
@@ -464,7 +464,7 @@ export default function SchedulePage() {
                                 <p><strong className="text-pits-text">{t('Scaling')}:</strong> {athlete.scalingNote}</p>
                                 <p><strong className="text-pits-text">{t('Pacing target')}:</strong> {athlete.pacingTarget}</p>
                                 {athlete.healthCaution && (
-                                  <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-100 leading-relaxed">
+                                  <p className="rounded-lg border border-pits-primary/40 bg-pits-surface-elevated p-3 text-pits-text leading-relaxed">
                                     <strong>{t('Health caution')}:</strong> {athlete.healthCaution}
                                   </p>
                                 )}
@@ -557,7 +557,7 @@ export default function SchedulePage() {
               })()}
             </div>
             
-            <div className="p-4 border-t border-pits-edge flex justify-end bg-pits-surface-muted rounded-b-xl">
+            <div className="p-4 border-t border-pits-edge flex justify-end bg-pits-surface-muted rounded-b-xl shrink-0">
               <button
                 onClick={() => setIsDetailsModalOpen(false)}
                 className="px-6 py-2 bg-pits-surface-elevated border border-pits-edge text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-pits-edge transition-colors shadow-sm"

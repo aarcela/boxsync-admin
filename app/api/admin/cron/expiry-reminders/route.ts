@@ -27,6 +27,10 @@ function daysBetween(a: Date, b: Date): number {
  * per its own marketing copy — not built to scale past that without batching
  * the plan/payment lookups).
  */
+export async function GET(request: Request) {
+  return POST(request);
+}
+
 export async function POST(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {

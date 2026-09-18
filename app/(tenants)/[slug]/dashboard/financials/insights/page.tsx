@@ -16,6 +16,7 @@ import {
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
+import type { TranslationKey } from '@/lib/translations';
 import {
   InterventionStatus,
   InterventionEvent,
@@ -36,7 +37,7 @@ type BadgeTone = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2 };
 
-const SIGNAL_LABELS: Record<RescueSignalType, string> = {
+const SIGNAL_LABELS: Record<RescueSignalType, TranslationKey> = {
   payment: 'Payment',
   attendance: 'Attendance',
   onboarding: 'First 90 days',
@@ -44,6 +45,123 @@ const SIGNAL_LABELS: Record<RescueSignalType, string> = {
   feedback: 'Experience',
   registration: 'Registration',
 };
+
+const STATUS_LABELS: Record<InterventionStatus, TranslationKey> = {
+  open: 'Open',
+  contacted: 'Contacted',
+  snoozed: 'Snoozed',
+  resolved: 'Resolved',
+  escalated: 'Escalated',
+};
+
+const PRIORITY_LABELS: Record<RescuePriority, TranslationKey> = {
+  urgent: 'Urgent',
+  high: 'High',
+  medium: 'Medium',
+};
+
+const EVENT_LABELS: Record<string, TranslationKey> = {
+  assigned: 'Assigned',
+  contacted: 'Contacted',
+  snoozed: 'Snoozed',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
+};
+
+const OUTCOME_LABELS: Record<string, TranslationKey> = {
+  returned_to_class: 'Returned to class',
+  registration_recovered: 'Registration recovered',
+  payment_recovered: 'Payment recovered',
+  membership_renewed: 'Membership renewed',
+};
+
+function interventionCopy(
+  item: RescueIntervention,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+) {
+  const evidence = item.evidence || {};
+  switch (item.signal_key) {
+    case 'payment-overdue':
+      return {
+        title: t('Membership revenue at risk'),
+        explanation: t(
+          'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.',
+          { amount: Number(evidence.planValue ?? item.monthly_value).toFixed(0) }
+        ),
+        suggestedAction: t('Offer payment help or a temporary plan alternative.'),
+      };
+    case 'registration-unpaid':
+      return {
+        title: t('Registration fee pending'),
+        explanation: t('${{amount}} registration fee remains unpaid.', {
+          amount: Number(evidence.registrationFee ?? item.monthly_value).toFixed(0),
+        }),
+        suggestedAction: t(
+          'Confirm the payment method and agree on a payment date.'
+        ),
+      };
+    case 'first-90-days':
+      return {
+        title: t('First 90 days need attention'),
+        explanation: t(
+          'Day {{days}} member is averaging {{visits}} visits/week.',
+          {
+            days: Number(evidence.membershipAgeDays ?? 0),
+            visits: Number(evidence.recentPerWeek ?? 0).toFixed(1),
+          }
+        ),
+        suggestedAction: t(
+          'Assign a coach check-in and book the next suitable class.'
+        ),
+      };
+    case 'attendance-decline': {
+      const inactiveDays = Number(evidence.inactiveDays ?? 999);
+      return {
+        title: t('Attendance momentum dropped'),
+        explanation:
+          inactiveDays < 999
+            ? t(
+                '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.',
+                {
+                  days: inactiveDays,
+                  percent: Number(evidence.declinePercent ?? 0),
+                }
+              )
+            : t('No attended class has been recorded.'),
+        suggestedAction: t(
+          'Ask what changed and reserve a realistic comeback class.'
+        ),
+      };
+    }
+    case 'repeat-no-show':
+      return {
+        title: t('Repeated no-shows'),
+        explanation: t(
+          '{{count}} booked classes were missed in the last 30 days.',
+          { count: Number(evidence.noShows30d ?? 0) }
+        ),
+        suggestedAction: t(
+          'Discuss schedule friction and recommend a better time slot.'
+        ),
+      };
+    case 'low-feedback':
+      return {
+        title: t('Member experience needs recovery'),
+        explanation: t('Recent feedback average is {{rating}} out of 5.', {
+          rating: Number(evidence.averageFeedback ?? 0).toFixed(1),
+        }),
+        suggestedAction: t(
+          'Manager should ask what went wrong and agree on one fix.'
+        ),
+      };
+    default:
+      return {
+        title: item.title,
+        explanation: item.explanation,
+        suggestedAction: item.suggested_action,
+      };
+  }
+}
 
 const STATUS_TONE: Record<InterventionStatus, BadgeTone> = {
   open: 'warning',
@@ -61,7 +179,7 @@ const PRIORITY_TONE: Record<RescuePriority, BadgeTone> = {
 
 export default function FinancialInsightsPage() {
   const { tenantId } = useTenant();
-  const { lang } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [interventions, setInterventions] = useState<RescueIntervention[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -74,65 +192,6 @@ export default function FinancialInsightsPage() {
     Record<string, InterventionEvent[]>
   >({});
   const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
-
-  const copy =
-    lang === 'es'
-      ? {
-          title: 'Rescate de Ingresos',
-          subtitle:
-            'Las conversaciones que tu equipo debe completar hoy para proteger ingresos.',
-          atRisk: 'Ingreso mensual en riesgo',
-          recovered: 'Ingreso recuperado',
-          actions: 'Acciones abiertas',
-          completion: 'Tasa de resolución',
-          actionable: 'Prioridades',
-          contacted: 'Contactados',
-          snoozed: 'Pausados',
-          resolved: 'Recuperados',
-          all: 'Todos',
-          refresh: 'Actualizar señales',
-          assigned: 'Responsable',
-          unassigned: 'Sin asignar',
-          due: 'Vence',
-          evidence: 'Por qué aparece',
-          recommendation: 'Siguiente acción',
-          send: 'Abrir WhatsApp',
-          snooze: 'Pausar',
-          resolve: 'Resolver',
-          escalate: 'Escalar',
-          noPhone: 'El atleta no tiene teléfono.',
-          empty: 'No hay intervenciones en esta vista.',
-          loading: 'Calculando ingresos en riesgo...',
-          returned: 'volvieron a entrenar',
-        }
-      : {
-          title: 'Revenue Rescue',
-          subtitle:
-            'The conversations your team should complete today to protect revenue.',
-          atRisk: 'Monthly revenue at risk',
-          recovered: 'Revenue recovered',
-          actions: 'Open actions',
-          completion: 'Resolution rate',
-          actionable: 'Priorities',
-          contacted: 'Contacted',
-          snoozed: 'Snoozed',
-          resolved: 'Recovered',
-          all: 'All',
-          refresh: 'Refresh signals',
-          assigned: 'Owner',
-          unassigned: 'Unassigned',
-          due: 'Due',
-          evidence: 'Why this surfaced',
-          recommendation: 'Next best action',
-          send: 'Open WhatsApp',
-          snooze: 'Snooze',
-          resolve: 'Resolve',
-          escalate: 'Escalate',
-          noPhone: 'This member has no phone number.',
-          empty: 'No interventions in this view.',
-          loading: 'Calculating revenue at risk...',
-          returned: 'returned to class',
-        };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -150,16 +209,11 @@ export default function FinancialInsightsPage() {
       );
     } catch (error) {
       console.error(error);
-      toast(
-        lang === 'es'
-          ? 'No se pudo cargar Rescate de Ingresos.'
-          : 'Could not load Revenue Rescue.',
-        'error'
-      );
+      toast(t('Could not load Revenue Rescue.'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [lang, tenantId, toast]);
+  }, [t, tenantId, toast]);
 
   useEffect(() => {
     void loadData();
@@ -195,10 +249,7 @@ export default function FinancialInsightsPage() {
       await loadData();
     } catch (error) {
       console.error(error);
-      toast(
-        lang === 'es' ? 'No se pudo guardar la acción.' : 'Could not save action.',
-        'error'
-      );
+      toast(t('Could not save action.'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -212,7 +263,7 @@ export default function FinancialInsightsPage() {
   const handleContact = async (item: RescueIntervention) => {
     const phone = item.member?.phone?.replace(/\D/g, '');
     if (!phone) {
-      toast(copy.noPhone, 'warning');
+      toast(t('This member has no phone number.'), 'warning');
       return;
     }
     const message = messageDrafts[item.id] || item.whatsapp_message;
@@ -228,9 +279,7 @@ export default function FinancialInsightsPage() {
 
   const handleSnooze = async (item: RescueIntervention) => {
     const reason = window.prompt(
-      lang === 'es'
-        ? 'Motivo: vacaciones, lesión, horario, finanzas u otro'
-        : 'Reason: vacation, injury, schedule, finances, or other'
+      t('Reason: vacation, injury, schedule, finances, or other')
     );
     if (!reason?.trim()) return;
     await runAction(item.id, () =>
@@ -240,15 +289,11 @@ export default function FinancialInsightsPage() {
 
   const handleResolve = async (item: RescueIntervention) => {
     const reason = window.prompt(
-      lang === 'es'
-        ? 'Resultado: volvió, pagó, cambió de plan u otro'
-        : 'Outcome: returned, paid, changed plan, or other'
+      t('Outcome: returned, paid, changed plan, or other')
     );
     if (!reason?.trim()) return;
     const recovered = window.confirm(
-      lang === 'es'
-        ? '¿Esta acción protegió el valor mensual de la membresía?'
-        : 'Did this action protect the monthly membership value?'
+      t('Did this action protect the monthly membership value?')
     )
       ? Number(item.monthly_value)
       : 0;
@@ -272,37 +317,34 @@ export default function FinancialInsightsPage() {
       }));
     } catch (error) {
       console.error(error);
-      toast(
-        lang === 'es' ? 'No se pudo cargar el historial.' : 'Could not load history.',
-        'error'
-      );
+      toast(t('Could not load history.'), 'error');
     }
   };
 
   const viewTabs: Array<{ key: ViewFilter; label: string; count: number }> = [
     {
       key: 'actionable',
-      label: copy.actionable,
+      label: t('Priorities'),
       count: interventions.filter(
         (item) => item.status === 'open' || item.status === 'escalated'
       ).length,
     },
     {
       key: 'contacted',
-      label: copy.contacted,
+      label: t('Contacted'),
       count: interventions.filter((item) => item.status === 'contacted').length,
     },
     {
       key: 'snoozed',
-      label: copy.snoozed,
+      label: t('Snoozed'),
       count: interventions.filter((item) => item.status === 'snoozed').length,
     },
     {
       key: 'resolved',
-      label: copy.resolved,
+      label: t('Recovered'),
       count: interventions.filter((item) => item.status === 'resolved').length,
     },
-    { key: 'all', label: copy.all, count: interventions.length },
+    { key: 'all', label: t('All'), count: interventions.length },
   ];
 
   return (
@@ -311,12 +353,12 @@ export default function FinancialInsightsPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
-              {copy.title}
+              {t('Revenue Rescue')}
             </h1>
-            <StatusBadge tone="info">Retention</StatusBadge>
+            <StatusBadge tone="info">{t('Retention')}</StatusBadge>
           </div>
           <p className="mt-1 max-w-2xl text-sm font-medium text-pits-dim">
-            {copy.subtitle}
+            {t('The conversations your team should complete today to protect revenue.')}
           </p>
         </div>
         <button
@@ -326,35 +368,35 @@ export default function FinancialInsightsPage() {
           className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[8px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          {copy.refresh}
+          {t('Refresh signals')}
         </button>
       </header>
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
-          label={copy.atRisk}
+          label={t('Monthly revenue at risk')}
           value={`$${summary.openRevenueAtRisk.toLocaleString()}`}
-          detail={`${summary.openCount} ${copy.actions.toLowerCase()}`}
+          detail={t('{{count}} open actions', { count: summary.openCount })}
           icon={AlertCircle}
           tone="danger"
         />
         <MetricCard
-          label={copy.recovered}
+          label={t('Revenue recovered')}
           value={`$${summary.recoveredRevenue.toLocaleString()}`}
-          detail={`${summary.returnedCount} ${copy.returned}`}
+          detail={t('{{count}} returned to class', { count: summary.returnedCount })}
           icon={DollarSign}
           tone="success"
         />
         <MetricCard
-          label={copy.actions}
+          label={t('Open actions')}
           value={String(summary.openCount)}
-          detail={`${summary.contactedCount} ${copy.contacted.toLowerCase()}`}
+          detail={t('{{count}} contacted', { count: summary.contactedCount })}
           icon={Users}
         />
         <MetricCard
-          label={copy.completion}
+          label={t('Resolution rate')}
           value={`${summary.completionRate}%`}
-          detail={lang === 'es' ? 'Ciclo completo medido' : 'Closed loop measured'}
+          detail={t('Closed loop measured')}
           icon={TrendingUp}
         />
       </section>
@@ -390,10 +432,10 @@ export default function FinancialInsightsPage() {
           }
           className="min-h-10 rounded-xl border border-pits-edge bg-pits-surface-muted px-3 text-xs font-bold text-pits-text outline-none focus:border-pits-primary"
         >
-          <option value="all">{copy.all} signals</option>
+          <option value="all">{t('All signals')}</option>
           {Object.entries(SIGNAL_LABELS).map(([key, label]) => (
             <option key={key} value={key}>
-              {label}
+              {t(label)}
             </option>
           ))}
         </select>
@@ -403,17 +445,25 @@ export default function FinancialInsightsPage() {
         <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-pits-edge bg-pits-surface-elevated">
           <RefreshCw size={30} className="mb-4 animate-spin text-pits-primary" />
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-dim">
-            {copy.loading}
+            {t('Calculating revenue at risk...')}
           </p>
         </div>
       ) : visible.length === 0 ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-pits-edge bg-pits-surface-elevated">
           <UserCheck size={36} className="mb-3 text-pits-success" />
-          <p className="font-black uppercase italic text-pits-text">{copy.empty}</p>
+          <p className="font-black uppercase italic text-pits-text">
+            {t('No interventions in this view.')}
+          </p>
         </div>
       ) : (
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {visible.map((item) => (
+          {visible.map((item) => {
+            const copy = interventionCopy(item, t);
+            const outcomeKey = item.outcome_type || '';
+            const outcomeLabel = OUTCOME_LABELS[outcomeKey]
+              ? t(OUTCOME_LABELS[outcomeKey])
+              : item.outcome_type || item.resolution_reason;
+            return (
             <article
               key={item.id}
               className={`rounded-2xl border bg-pits-surface-elevated p-5 shadow-sm ${
@@ -425,21 +475,21 @@ export default function FinancialInsightsPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <StatusBadge tone="info">{SIGNAL_LABELS[item.signal_type]}</StatusBadge>
-                    <StatusBadge tone={STATUS_TONE[item.status]}>{item.status}</StatusBadge>
-                    <StatusBadge tone={PRIORITY_TONE[item.priority]}>{item.priority}</StatusBadge>
+                    <StatusBadge tone="info">{t(SIGNAL_LABELS[item.signal_type])}</StatusBadge>
+                    <StatusBadge tone={STATUS_TONE[item.status]}>{t(STATUS_LABELS[item.status])}</StatusBadge>
+                    <StatusBadge tone={PRIORITY_TONE[item.priority]}>{t(PRIORITY_LABELS[item.priority])}</StatusBadge>
                   </div>
                   <h2 className="truncate text-lg font-black uppercase italic tracking-tight text-pits-text">
-                    {item.member?.full_name || 'Member'}
+                    {item.member?.full_name || t('Member')}
                   </h2>
-                  <p className="text-sm font-bold text-pits-dim">{item.title}</p>
+                  <p className="text-sm font-bold text-pits-dim">{copy.title}</p>
                 </div>
                 <div className="shrink-0 sm:text-right">
                   <p className="text-xl sm:text-2xl font-black italic text-pits-text break-all leading-none">
                     ${Number(item.monthly_value).toLocaleString()}
                   </p>
                   <p className="mt-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                    MRR at risk
+                    {t('MRR at risk')}
                   </p>
                 </div>
               </div>
@@ -447,18 +497,18 @@ export default function FinancialInsightsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-pits-surface-muted p-3">
                   <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                    {copy.evidence}
+                    {t('Why this surfaced')}
                   </p>
                   <p className="text-xs font-semibold leading-relaxed text-pits-text">
-                    {item.explanation}
+                    {copy.explanation}
                   </p>
                 </div>
                 <div className="rounded-xl bg-pits-primary-soft/50 p-3">
                   <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-primary">
-                    {copy.recommendation}
+                    {t('Next best action')}
                   </p>
                   <p className="text-xs font-semibold leading-relaxed text-pits-text">
-                    {item.suggested_action}
+                    {copy.suggestedAction}
                   </p>
                 </div>
               </div>
@@ -468,7 +518,7 @@ export default function FinancialInsightsPage() {
                   <div className="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
                     <label className="block">
                       <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                        {copy.assigned}
+                        {t('Owner')}
                       </span>
                       <select
                         value={item.assigned_to || ''}
@@ -478,7 +528,7 @@ export default function FinancialInsightsPage() {
                         }
                         className="min-h-10 w-full rounded-xl border border-pits-edge bg-pits-surface-muted px-3 text-xs font-bold text-pits-text outline-none focus:border-pits-primary"
                       >
-                        <option value="">{copy.unassigned}</option>
+                        <option value="">{t('Unassigned')}</option>
                         {staff.map((person) => (
                           <option key={person.id} value={person.id}>
                             {person.full_name || person.role} · {person.role}
@@ -488,7 +538,7 @@ export default function FinancialInsightsPage() {
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                        WhatsApp
+                        {t('WhatsApp')}
                       </span>
                       <textarea
                         rows={2}
@@ -512,7 +562,7 @@ export default function FinancialInsightsPage() {
                       {item.due_at && (
                         <StatusBadge tone="warning">
                           <Clock size={11} />
-                          {copy.due}{' '}
+                          {t('Due')}{' '}
                           {new Date(item.due_at).toLocaleDateString(
                             lang === 'es' ? 'es-ES' : 'en-US'
                           )}
@@ -525,7 +575,7 @@ export default function FinancialInsightsPage() {
                         onClick={() => void toggleHistory(item.id)}
                         className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
                       >
-                        {lang === 'es' ? 'Historial' : 'History'}
+                        {t('History')}
                       </button>
                       <button
                         type="button"
@@ -533,7 +583,7 @@ export default function FinancialInsightsPage() {
                         onClick={() => void handleSnooze(item)}
                         className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
                       >
-                        {copy.snooze}
+                        {t('Snooze')}
                       </button>
                       <button
                         type="button"
@@ -545,7 +595,7 @@ export default function FinancialInsightsPage() {
                         }
                         className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-error hover:bg-pits-error/10"
                       >
-                        {copy.escalate}
+                        {t('Escalate')}
                       </button>
                       <button
                         type="button"
@@ -554,7 +604,7 @@ export default function FinancialInsightsPage() {
                         className="inline-flex items-center gap-1 rounded-lg border border-pits-edge px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-text hover:bg-pits-surface-muted"
                       >
                         <CheckCircle2 size={12} />
-                        {copy.resolve}
+                        {t('Resolve')}
                       </button>
                       <button
                         type="button"
@@ -563,7 +613,7 @@ export default function FinancialInsightsPage() {
                         className="inline-flex items-center gap-1 rounded-lg bg-pits-primary px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dark-text shadow-sm hover:bg-pits-primary-dark"
                       >
                         <MessageCircle size={12} />
-                        {copy.send}
+                        {t('Open WhatsApp')}
                         <ArrowUpRight size={11} />
                       </button>
                     </div>
@@ -576,7 +626,7 @@ export default function FinancialInsightsPage() {
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-pits-success/20 bg-pits-success/10 p-3 text-pits-success">
                     <div>
                       <p className="text-[8px] font-black uppercase tracking-widest">
-                        {item.outcome_type || item.resolution_reason}
+                        {outcomeLabel}
                       </p>
                       <p className="mt-1 text-xs font-semibold">
                         {item.outcome_detected_at
@@ -595,7 +645,7 @@ export default function FinancialInsightsPage() {
                     onClick={() => void toggleHistory(item.id)}
                     className="mt-2 text-[9px] font-black uppercase tracking-wider text-pits-dim"
                   >
-                    {lang === 'es' ? 'Ver historial' : 'View history'}
+                    {t('View history')}
                   </button>
                 </>
               )}
@@ -603,11 +653,11 @@ export default function FinancialInsightsPage() {
               {openHistoryId === item.id && (
                 <div className="mt-4 rounded-xl border border-pits-edge bg-pits-surface-muted p-3">
                   <p className="mb-3 text-[8px] font-black uppercase tracking-widest text-pits-dim">
-                    {lang === 'es' ? 'Historial de intervención' : 'Intervention history'}
+                    {t('Intervention history')}
                   </p>
                   {(eventHistory[item.id] || []).length === 0 ? (
                     <p className="text-xs text-pits-dim">
-                      {lang === 'es' ? 'Sin eventos todavía.' : 'No events yet.'}
+                      {t('No events yet.')}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -617,7 +667,9 @@ export default function FinancialInsightsPage() {
                           className="flex items-center justify-between gap-3 text-xs"
                         >
                           <span className="font-bold capitalize text-pits-text">
-                            {event.event_type.replace(/_/g, ' ')}
+                            {EVENT_LABELS[event.event_type]
+                              ? t(EVENT_LABELS[event.event_type])
+                              : event.event_type.replace(/_/g, ' ')}
                             {event.actor?.full_name
                               ? ` · ${event.actor.full_name}`
                               : ''}
@@ -634,7 +686,8 @@ export default function FinancialInsightsPage() {
                 </div>
               )}
             </article>
-          ))}
+            );
+          })}
         </section>
       )}
     </div>

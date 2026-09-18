@@ -10,6 +10,7 @@ import {
   IncomeRecord,
 } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
+import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { isLocalCurrency } from '@/lib/currency';
 
@@ -24,6 +25,7 @@ function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): 
 
 export function useFinancials(period: string, customRange?: { start: Date; end: Date }) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { currencies } = useTenant();
   
   const [loading, setLoading] = useState(true);
@@ -180,21 +182,28 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
 
   const approve = async (paymentId: string, userId: string) => {
     try {
-      await financialService.approvePayment(paymentId, userId);
-      toast('Payment cleared. Solvent status synced.', 'success');
+      const { activated } = await financialService.approvePayment(paymentId, userId);
+      toast(
+        t(
+          activated
+            ? 'Payment approved successfully'
+            : 'Partial payment recorded. Membership still unpaid.',
+        ),
+        'success',
+      );
       await fetchFinancials();
     } catch {
-      toast('Approval sequence failed.', 'error');
+      toast(t('Error approving payment. Please try again.'), 'error');
     }
   };
 
   const reject = async (paymentId: string, userId?: string, reason?: string) => {
     try {
       await financialService.rejectPayment(paymentId, userId, reason);
-      toast('Payment rejected. Ledger updated.', 'warning');
+      toast(t('Payment rejected'), 'warning');
       await fetchFinancials();
     } catch {
-      toast('Rejection failed.', 'error');
+      toast(t('Error rejecting payment. Please try again.'), 'error');
     }
   };
 
@@ -205,7 +214,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       toast(res.message, 'info');
       await fetchFinancials();
     } catch {
-      toast('Expiry sync error.', 'error');
+      toast(t('Expiry sync error.'), 'error');
     } finally {
       setRunningExpiry(false);
     }

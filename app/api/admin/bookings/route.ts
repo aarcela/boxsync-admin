@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
     const { data: classData, error: classError } = await supabaseAdmin
       .from('classes')
-      .select('max_capacity, tenant_id, bookings:bookings(count)')
+      .select('max_capacity, tenant_id')
       .eq('id', classId)
       .single();
 
@@ -97,8 +97,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Athlete not found' }, { status: 404 });
     }
 
-    const bookingCount = classData.bookings?.[0]?.count ?? 0;
-    if (bookingCount >= classData.max_capacity) {
+    const { count: bookingCount } = await supabaseAdmin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('class_id', classId)
+      .in('status', ['booked', 'attended']);
+
+    if ((bookingCount ?? 0) >= classData.max_capacity) {
       return NextResponse.json(
         { error: 'Class is at full capacity' },
         { status: 409 }

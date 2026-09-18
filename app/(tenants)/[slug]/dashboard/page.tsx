@@ -58,10 +58,17 @@ export default function DashboardPage() {
   // ACTION: APPROVE PAYMENT
   const handleApprove = async (id: string, userId: string) => {
     try {
-      await financialService.approvePayment(id, userId);
+      const { activated } = await financialService.approvePayment(id, userId);
       removePaymentLocally(id);
       refresh();
-      toast(t('Payment approved successfully'), 'success');
+      toast(
+        t(
+          activated
+            ? 'Payment approved successfully'
+            : 'Partial payment recorded. Membership still unpaid.',
+        ),
+        'success',
+      );
     } catch {
       toast(t('Error approving payment. Please try again.'), 'error');
     }

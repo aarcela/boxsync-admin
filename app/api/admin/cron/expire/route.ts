@@ -8,6 +8,10 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false } }
 );
 
+export async function GET(request: Request) {
+  return POST(request);
+}
+
 export async function POST(request: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET;
