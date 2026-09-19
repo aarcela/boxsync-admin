@@ -67,21 +67,170 @@ export async function sendExpoPush(
     return;
   }
 
-  const messages = tokens.map((to) => ({ to, title, body, data, sound: 'default' }));
-
-  const response = await fetch(EXPO_PUSH_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(messages),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error(`Expo push API error (${response.status}): ${errorBody}`);
+  const messages = tokens.map((to) => ({ to, title, body, data, sound: 'default' as const }));
+  const { errors } = await postExpoMessages(messages);
+  if (errors.length > 0) {
+    console.error('Expo push errors:', errors.join(' | '));
   }
+}
+
+const EXPO_BATCH_SIZE = 100;
+const MAX_CUSTOM_RECIPIENTS = 500;
+const EXPO_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
+
+type ExpoTicket = {
+  status?: string;
+  id?: string;
+  message?: string;
+  details?: { error?: string };
+};
+
+async function postExpoMessages(
+  messages: Array<{
+    to: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+    sound: 'default';
+  }>
+): Promise<{ delivered: number; errors: string[] }> {
+  const ticketIds: string[] = [];
+  const errors: string[] = [];
+  let delivered = 0;
+
+  for (let i = 0; i < messages.length; i += EXPO_BATCH_SIZE) {
+    const chunk = messages.slice(i, i + EXPO_BATCH_SIZE);
+    const response = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(chunk),
+    });
+    const payload = (await response.json()) as {
+      data?: ExpoTicket | ExpoTicket[];
+      errors?: Array<{ message?: string }>;
+    };
+    if (!response.ok) {
+      throw new Error(
+        payload.errors?.[0]?.message ||
+          `Expo push API error (${response.status})`
+      );
+    }
+    const tickets = Array.isArray(payload.data)
+      ? payload.data
+      : payload.data
+        ? [payload.data]
+        : [];
+    for (const ticket of tickets) {
+      if (ticket.status === 'error') {
+        errors.push(
+          ticket.message || ticket.details?.error || 'Expo push failed'
+        );
+      } else if (ticket.id) {
+        ticketIds.push(ticket.id);
+        delivered += 1;
+      }
+    }
+  }
+
+  if (ticketIds.length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    const receiptRes = await fetch(EXPO_RECEIPTS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ ids: ticketIds }),
+    });
+    const receiptPayload = (await receiptRes.json()) as {
+      data?: Record<string, ExpoTicket>;
+    };
+    for (const receipt of Object.values(receiptPayload.data || {})) {
+      if (receipt.status === 'error') {
+        errors.push(
+          receipt.message || receipt.details?.error || 'Expo push receipt failed'
+        );
+        delivered = Math.max(0, delivered - 1);
+      }
+    }
+  }
+
+  return { delivered, errors };
+}
+
+export async function sendCustomPushes(params: {
+  tenantId: string;
+  userIds: string[] | 'all';
+  title: string;
+  body: string;
+}): Promise<{ sent: number; skipped: number; error?: string }> {
+  const title = params.title.trim();
+  const body = params.body.trim();
+
+  let query = supabaseAdmin
+    .from('push_tokens')
+    .select('user_id, expo_push_token')
+    .eq('tenant_id', params.tenantId);
+
+  if (params.userIds !== 'all') {
+    if (params.userIds.length === 0) return { sent: 0, skipped: 0 };
+    if (params.userIds.length > MAX_CUSTOM_RECIPIENTS) {
+      throw new Error(`Too many recipients (max ${MAX_CUSTOM_RECIPIENTS})`);
+    }
+
+    const { data: scoped, error: scopeError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('tenant_id', params.tenantId)
+      .in('id', params.userIds);
+
+    if (scopeError) throw scopeError;
+    const allowed = new Set((scoped || []).map((row) => row.id));
+    const inTenant = params.userIds.filter((id) => allowed.has(id));
+    if (inTenant.length === 0) return { sent: 0, skipped: params.userIds.length };
+    query = query.in('user_id', inTenant);
+  }
+
+  const { data: tokenRows, error } = await query;
+  if (error) throw error;
+
+  const tokensByUser = new Map<string, string[]>();
+  for (const row of tokenRows || []) {
+    if (!row.expo_push_token) continue;
+    const list = tokensByUser.get(row.user_id) || [];
+    list.push(row.expo_push_token);
+    tokensByUser.set(row.user_id, list);
+  }
+
+  const targeted =
+    params.userIds === 'all' ? [...tokensByUser.keys()] : params.userIds;
+  const skipped =
+    params.userIds === 'all' ? 0 : targeted.filter((id) => !tokensByUser.has(id)).length;
+
+  const messages = [...tokensByUser.values()].flat().map((to) => ({
+    to,
+    title,
+    body,
+    data: { type: 'custom' },
+    sound: 'default' as const,
+  }));
+
+  if (messages.length > 0) {
+    const result = await postExpoMessages(messages);
+    if (result.delivered === 0 && result.errors.length > 0) {
+      throw new Error(result.errors[0]);
+    }
+    return {
+      sent: result.delivered,
+      skipped,
+      error: result.errors[0],
+    };
+  }
+
+  return { sent: tokensByUser.size, skipped };
 }
 
 export async function sendPaymentApprovedPush(userId: string): Promise<void> {

@@ -15,6 +15,7 @@ import {
   X, 
   DollarSign,
   Megaphone,
+  Bell,
   ClipboardCheck,
   BarChart3,
   MessageSquare,
@@ -200,6 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         label: t('Talk to members'),
         items: [
           { name: t('Announcements'), href: '/dashboard/news', icon: Megaphone, tip: t('Nav tip Announcements') },
+          { name: t('Push notifications'), href: '/dashboard/notifications', icon: Bell, tip: t('Nav tip Push notifications') },
           { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') },
           { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare, tip: t('Nav tip Feedback') },
         ],
