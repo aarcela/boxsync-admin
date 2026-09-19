@@ -158,9 +158,25 @@ export const financialService = {
     if (userId) await this.notifyPaymentStatus(userId, 'rejected', reason);
   },
 
-  async runExpiryCheck(): Promise<{ message: string }> {
-    const response = await fetch('/api/admin/cron/expire', { method: 'POST' });
-    return response.json();
+  async getDueExpiryCount(): Promise<number> {
+    const response = await fetch('/api/admin/memberships/expire');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof data.error === 'string' ? data.error : 'Failed to load expiry count');
+    }
+    return Number(data.count) || 0;
+  },
+
+  async runExpiryCheck(): Promise<{ message: string; count: number }> {
+    const response = await fetch('/api/admin/memberships/expire', { method: 'POST' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof data.error === 'string' ? data.error : 'Expiry sync error.');
+    }
+    return {
+      message: typeof data.message === 'string' ? data.message : '',
+      count: Number(data.count) || 0,
+    };
   },
 
   async getReferenceExchangeRate(

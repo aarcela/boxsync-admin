@@ -14,6 +14,7 @@ import { Profile, MembershipPlan } from '@/lib/types/gym';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabase } from '@/lib/supabase';
 import { getRenewDateInputValue } from '@/lib/renew-date';
+import ProfileAvatar from '@/components/ProfileAvatar';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -362,11 +363,10 @@ export default function AthletesPage() {
                       <div className="flex items-center">
                         <div className="relative">
                           <div className="w-10 h-10 rounded-full bg-pits-surface-muted flex items-center justify-center text-pits-dim font-bold text-sm mr-3 overflow-hidden border border-pits-edge">
-                             {profile.avatar_url ? (
-                               <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
-                             ) : (
-                               <span>{profile.full_name?.charAt(0) || 'U'}</span>
-                             )}
+                             <ProfileAvatar
+                               url={profile.avatar_url}
+                               name={profile.full_name}
+                             />
                           </div>
                           {profile.role !== 'member' && (
                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-black border-2 border-white rounded-full flex items-center justify-center">

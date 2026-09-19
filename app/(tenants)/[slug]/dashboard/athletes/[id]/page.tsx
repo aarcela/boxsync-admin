@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -40,6 +39,7 @@ import { getRenewDateInputValue, renewDateToIso } from '@/lib/renew-date';
 import { supabase } from '@/lib/supabase';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import ProfileAvatar from '@/components/ProfileAvatar';
 
 type ConfirmKind =
   | 'solvency'
@@ -423,16 +423,11 @@ export default function AthleteDetailPage() {
             <div className="relative shrink-0">
               <div className="w-28 h-28 rounded-2xl bg-pits-surface-elevated p-1 shadow-lg border border-pits-edge">
                 <div className="relative w-full h-full rounded-xl bg-pits-surface-muted flex items-center justify-center text-pits-dim overflow-hidden">
-                  {profile.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      alt={profile.full_name || t('Unnamed')}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <User size={40} aria-hidden />
-                  )}
+                  <ProfileAvatar
+                    url={profile.avatar_url}
+                    name={profile.full_name}
+                    fallback={<User size={40} aria-hidden />}
+                  />
                 </div>
               </div>
               <div

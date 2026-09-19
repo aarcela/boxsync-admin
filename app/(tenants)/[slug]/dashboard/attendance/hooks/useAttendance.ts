@@ -34,14 +34,16 @@ export function useAttendance() {
     try {
       const data = await classService.getClassesByDate(selectedDate);
       setClasses(data);
-      
-      // Auto-select class closest to now if looking at today
+
+      if (data.length === 0) return;
+
+      // Today: closest class to now. Other days: first class, so roster is ready.
       const todayStr = getCaracasDate();
-      if (selectedDate === todayStr && data.length > 0) {
+      if (selectedDate === todayStr) {
         const now = new Date();
         let closestId = data[0].id;
         let minDiff = Infinity;
-        
+
         data.forEach(cls => {
           const diff = Math.abs(new Date(cls.start_time).getTime() - now.getTime());
           if (diff < minDiff) {
@@ -50,6 +52,8 @@ export function useAttendance() {
           }
         });
         setSelectedClassId(closestId);
+      } else {
+        setSelectedClassId(data[0].id);
       }
     } catch (error) {
       console.error('Fetch classes error:', error);
@@ -145,21 +149,23 @@ export function useAttendance() {
     }
   };
 
-  const markAll = async (newStatus: BookingStatus) => {
-    const toUpdate = roster.filter(b => b.status !== newStatus);
+  const markRemaining = async (newStatus: Extract<BookingStatus, 'attended' | 'no_show'>) => {
+    const toUpdate = roster.filter(b => b.status === 'booked');
     if (toUpdate.length === 0) {
-      toast(t('All athletes are already marked as {{status}}', { status: t(newStatus as 'attended' | 'no_show' | 'booked') }), 'info');
+      toast(t('All athletes are already marked as {{status}}', { status: t(newStatus) }), 'info');
       return;
     }
 
     const previousRoster = [...roster];
-    setRoster((prev: Booking[]) => prev.map((b: Booking) => ({ ...b, status: newStatus })));
+    setRoster((prev: Booking[]) => prev.map((b: Booking) =>
+      b.status === 'booked' ? { ...b, status: newStatus } : b
+    ));
 
     try {
       await classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus);
       toast(t('{{count}} athletes marked as {{status}}', {
         count: toUpdate.length,
-        status: t(newStatus as 'attended' | 'no_show' | 'booked'),
+        status: t(newStatus),
       }), 'success');
     } catch (error) {
       console.error(error);
@@ -200,7 +206,7 @@ export function useAttendance() {
     updateStatus,
     addAthlete,
     removeAthlete,
-    markAll,
+    markRemaining,
     nextDay,
     prevDay
   };

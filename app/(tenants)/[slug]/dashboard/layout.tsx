@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -16,7 +16,7 @@ import {
   DollarSign,
   Megaphone,
   ClipboardCheck,
-  Zap,
+  BarChart3,
   MessageSquare,
   TrendingUp,
   Wallet,
@@ -25,6 +25,8 @@ import {
   MessagesSquare,
   Trophy,
   Tags,
+  Layers,
+  CreditCard,
   Banknote,
   Receipt,
   Clock,
@@ -43,21 +45,31 @@ type NavSubItem = {
   name: string;
   href: string;
   icon: LucideIcon;
+  tip: string;
 };
 
 type NavLinkItem = {
   name: string;
   href: string;
   icon: LucideIcon;
+  tip: string;
 };
 
 type NavParentItem = {
   name: string;
   icon: LucideIcon;
+  tip: string;
   subItems: NavSubItem[];
 };
 
 type NavItem = NavLinkItem | NavParentItem;
+
+type NavSection = {
+  id: string;
+  /** Empty = no header (used when the only item is an accordion with the same name). */
+  label: string;
+  items: NavItem[];
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -72,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userFullName, setUserFullName] = useState<string | null>(null);
   const [runningExpiry, setRunningExpiry] = useState(false);
   const [confirmExpiryOpen, setConfirmExpiryOpen] = useState(false);
+  const [dueCount, setDueCount] = useState(0);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -81,15 +94,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => mq.removeEventListener('change', sync);
   }, []);
 
+  const loadDueCount = useCallback(async () => {
+    try {
+      setDueCount(await financialService.getDueExpiryCount());
+    } catch {
+      // Keep last known count; toast only on an explicit run.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDueCount();
+    const onFocus = () => {
+      void loadDueCount();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [loadDueCount]);
+
   const runExpiry = async () => {
     setRunningExpiry(true);
     try {
       const res = await financialService.runExpiryCheck();
-      toast(res.message, 'info');
+      if (res.count === 0) {
+        toast(t('No memberships to expire.'), 'info');
+      } else {
+        toast(t('Locked {{count}} expired memberships.', { count: res.count }), 'success');
+      }
+      setDueCount(0);
     } catch {
       toast(t('Expiry sync error.'), 'error');
     } finally {
       setRunningExpiry(false);
+      await loadDueCount();
     }
   };
 
@@ -102,63 +138,91 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return userFullName.slice(0, 2).toUpperCase();
   })();
 
-  const navItems = useMemo((): NavItem[] => {
-    const financialSubItems = [
-      { name: t('Dashboard'), href: '/dashboard/financials', icon: DollarSign },
-      { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet },
-      { name: t('Incomes'), href: '/dashboard/income', icon: TrendingUp },
-      { name: t('Accountability'), href: '/dashboard/accountability', icon: Scale },
-      { name: t('Insights'), href: '/dashboard/financials/insights', icon: Zap },
+  const navSections = useMemo((): NavSection[] => {
+    const moneySubItems: NavSubItem[] = [
+      { name: t('Money overview'), href: '/dashboard/financials', icon: DollarSign, tip: t('Nav tip Money overview') },
+      { name: t('Income'), href: '/dashboard/income', icon: TrendingUp, tip: t('Nav tip Income') },
+      { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet, tip: t('Nav tip Expenses') },
+      { name: t('Who has paid'), href: '/dashboard/accountability', icon: Scale, tip: t('Nav tip Who has paid') },
+      { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags, tip: t('Nav tip Membership Plans') },
+      { name: t('How they pay'), href: '/dashboard/payment_methods', icon: CreditCard, tip: t('Nav tip How they pay') },
+      { name: t('Reports'), href: '/dashboard/financials/insights', icon: BarChart3, tip: t('Nav tip Reports') },
     ];
 
     if (userRole === 'admin') {
-      financialSubItems.push({
-        name: t('Salary'),
-        href: '/dashboard/salary',
-        icon: Banknote,
-      });
-      financialSubItems.push({
-        name: t('Payroll'),
-        href: '/dashboard/payroll',
-        icon: Receipt,
-      });
+      moneySubItems.push(
+        { name: t('Salary'), href: '/dashboard/salary', icon: Banknote, tip: t('Nav tip Salary') },
+        { name: t('Payroll'), href: '/dashboard/payroll', icon: Receipt, tip: t('Nav tip Payroll') },
+      );
     }
 
     return [
-      { name: t('Overview'), href: '/dashboard', icon: LayoutDashboard },
-      { name: t('Attendance'), href: '/dashboard/attendance', icon: ClipboardCheck },
       {
-        name: t('Financial'),
-        icon: DollarSign,
-        subItems: financialSubItems,
-      },
-      { name: t('Roster'), href: '/dashboard/athletes', icon: Users },
-      {
-        name: t('Box Management'),
-        icon: Dumbbell,
-        subItems: [
-          { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays },
-          { name: t('WOD Editor'), href: '/dashboard/wods', icon: Dumbbell },
-          { name: t('News'), href: '/dashboard/news', icon: Megaphone },
-          { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare },
-          { name: t('Payment Methods'), href: '/dashboard/payment_methods', icon: Wallet },
-          { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags },
-          { name: t('Class Types'), href: '/dashboard/class_types', icon: Tags },
-          { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy },
+        id: 'today',
+        label: t('Today'),
+        items: [
+          { name: t('Home'), href: '/dashboard', icon: LayoutDashboard, tip: t('Nav tip Home') },
+          { name: t('Nav Check-in'), href: '/dashboard/attendance', icon: ClipboardCheck, tip: t('Nav tip Check-in') },
+          { name: t('Athletes'), href: '/dashboard/athletes', icon: Users, tip: t('Nav tip Athletes') },
         ],
       },
-      { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare },
-      { name: t('Performance'), href: '/dashboard/performance', icon: TrendingUp },
-      { name: lang === 'es' ? 'Piloto Fundador' : 'Founding Pilot', href: '/dashboard/pilot', icon: Rocket },
+      {
+        id: 'classes',
+        label: '',
+        items: [
+          {
+            name: t('Classes'),
+            icon: Dumbbell,
+            tip: t('Nav tip Classes'),
+            subItems: [
+              { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays, tip: t('Nav tip Schedule') },
+              { name: t('Daily workouts'), href: '/dashboard/wods', icon: Dumbbell, tip: t('Nav tip Daily workouts') },
+              { name: t('Class Types'), href: '/dashboard/class_types', icon: Layers, tip: t('Nav tip Class Types') },
+              { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy, tip: t('Nav tip Personal Records') },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'money',
+        label: '',
+        items: [
+          {
+            name: t('Money'),
+            icon: DollarSign,
+            tip: t('Nav tip Money'),
+            subItems: moneySubItems,
+          },
+        ],
+      },
+      {
+        id: 'talk',
+        label: t('Talk to members'),
+        items: [
+          { name: t('Announcements'), href: '/dashboard/news', icon: Megaphone, tip: t('Nav tip Announcements') },
+          { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') },
+          { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare, tip: t('Nav tip Feedback') },
+        ],
+      },
+      {
+        id: 'results',
+        label: t('Results'),
+        items: [
+          { name: t('Box health'), href: '/dashboard/performance', icon: TrendingUp, tip: t('Nav tip Box health') },
+        ],
+      },
+      {
+        id: 'special',
+        label: t('Special'),
+        items: [
+          { name: t('Founding Pilot'), href: '/dashboard/pilot', icon: Rocket, tip: t('Nav tip Founding Pilot') },
+        ],
+      },
     ];
-  }, [t, userRole, lang]);
+  }, [t, userRole]);
 
   const toggleMenu = (menuName: string) => {
-    setOpenMenus(prev => 
-      prev.includes(menuName) 
-        ? prev.filter(m => m !== menuName) 
-        : [...prev, menuName]
-    );
+    setOpenMenus((prev) => (prev.includes(menuName) ? [] : [menuName]));
   };
 
   const closeSidebarOnMobile = () => {
@@ -241,86 +305,105 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
-        <nav className="flex-1 min-h-0 overflow-y-auto py-6 space-y-2 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {navItems.map((item) => {
-            const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
-            const isMenuOpen =
-              openMenus.includes(item.name) ||
-              ('subItems' in item && item.subItems?.some(sub => pathname === sub.href) === true);
-            const isActive = 'href' in item 
-              ? pathname === item.href 
-              : 'subItems' in item && item.subItems?.some(sub => pathname === sub.href);
-            
-            return (
-              <div key={item.name} className="space-y-1">
-                {hasSubItems ? (
-                  <button
-                    onClick={() => toggleMenu(item.name)}
-                    className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                      ${isActive
-                        ? 'border-pits-shell-accent text-pits-shell-ink'
-                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                    `}
-                  >
-                    <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
-                    {isSidebarOpen && (
-                      <>
-                        <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
-                          {item.name}
-                        </span>
-                        <ChevronDown 
-                          size={16} 
-                          className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} 
-                        />
-                      </>
-                    )}
-                  </button>
-                ) : 'href' in item ? (
-                  <Link
-                    href={item.href}
-                    onClick={closeSidebarOnMobile}
-                    className={`flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                      ${isActive 
-                        ? 'border-pits-shell-accent text-pits-shell-ink' 
-                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                    `}
-                  >
-                    <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
-                    {isSidebarOpen && (
-                      <span className="ml-3 font-bold text-sm uppercase tracking-wide">
-                        {item.name}
-                      </span>
-                    )}
-                  </Link>
-                ) : null}
+        <nav className="flex-1 min-h-0 overflow-y-auto py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {navSections.map((section) => (
+            <div key={section.id} className="space-y-1">
+              {isSidebarOpen && section.label && (
+                <p className="px-3 pt-1 pb-1 text-[9px] font-black uppercase tracking-widest text-pits-shell-ink-muted/70">
+                  {section.label}
+                </p>
+              )}
+              {!isSidebarOpen && section.id !== 'today' && (
+                <div className="mx-2 my-2 border-t border-pits-shell-edge" />
+              )}
+              {section.items.map((item) => {
+                const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
+                const isMenuOpen =
+                  openMenus.includes(item.name) ||
+                  ('subItems' in item && item.subItems?.some((sub) => pathname === sub.href) === true);
+                const isActive =
+                  'href' in item
+                    ? pathname === item.href
+                    : 'subItems' in item && item.subItems?.some((sub) => pathname === sub.href);
 
-                {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
-                  <div className="ml-4 space-y-1 border-l border-pits-shell-edge pl-2">
-                    {item.subItems.map((sub) => {
-                      const isSubActive = pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.name}
-                          href={sub.href}
-                          onClick={closeSidebarOnMobile}
-                          className={`flex items-center p-2 rounded-lg transition-colors group
-                            ${isSubActive 
-                              ? 'border-pits-shell-accent text-pits-shell-ink' 
+                return (
+                  <div key={`${section.id}-${item.name}`} className="space-y-1">
+                    {hasSubItems ? (
+                      <Tooltip content={item.tip} side="right" className="w-full">
+                        <button
+                          type="button"
+                          onClick={() => toggleMenu(item.name)}
+                          className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
+                            ${isActive
+                              ? 'border-pits-shell-accent text-pits-shell-ink'
                               : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                           `}
                         >
-                          <sub.icon size={16} className={isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
-                          <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
-                            {sub.name}
-                          </span>
+                          <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
+                          {isSidebarOpen && (
+                            <>
+                              <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
+                                {item.name}
+                              </span>
+                              <ChevronDown
+                                size={16}
+                                className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
+                              />
+                            </>
+                          )}
+                        </button>
+                      </Tooltip>
+                    ) : 'href' in item ? (
+                      <Tooltip content={item.tip} side="right" className="w-full">
+                        <Link
+                          href={item.href}
+                          onClick={closeSidebarOnMobile}
+                          className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
+                            ${isActive
+                              ? 'border-pits-shell-accent text-pits-shell-ink'
+                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
+                          `}
+                        >
+                          <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
+                          {isSidebarOpen && (
+                            <span className="ml-3 font-bold text-sm uppercase tracking-wide">
+                              {item.name}
+                            </span>
+                          )}
                         </Link>
-                      );
-                    })}
+                      </Tooltip>
+                    ) : null}
+
+                    {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
+                      <div className="ml-4 space-y-1 border-l border-pits-shell-edge pl-2">
+                        {item.subItems.map((sub) => {
+                          const isSubActive = pathname === sub.href;
+                          return (
+                            <Tooltip key={sub.href} content={sub.tip} side="right" className="w-full">
+                              <Link
+                                href={sub.href}
+                                onClick={closeSidebarOnMobile}
+                                className={`w-full flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
+                                  ${isSubActive
+                                    ? 'border-pits-shell-accent text-pits-shell-ink'
+                                    : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
+                                `}
+                              >
+                                <sub.icon size={16} className={isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
+                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
+                                  {sub.name}
+                                </span>
+                              </Link>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Footer / Logout */}
@@ -379,17 +462,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Tooltip content={t('Sync solvency expiry tip')}>
+            <Tooltip
+              content={
+                dueCount > 0
+                  ? t('Nav tip memberships due', { count: dueCount })
+                  : t('Nav tip Update expired memberships')
+              }
+            >
               <button
                 type="button"
                 onClick={() => setConfirmExpiryOpen(true)}
                 disabled={runningExpiry}
-                className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors border border-pits-shell-edge disabled:opacity-50"
+                className={`relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 ${
+                  dueCount > 0
+                    ? 'bg-pits-red/15 hover:bg-pits-red/25 text-pits-red border-pits-red/40'
+                    : 'bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent border-pits-shell-edge'
+                }`}
               >
                 <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
                 <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">
-                  {t('Run Expiry Sync')}
+                  {t('Update expired memberships')}
                 </span>
+                {dueCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-red text-white text-[9px] font-black leading-none flex items-center justify-center">
+                    {dueCount > 99 ? '99+' : dueCount}
+                  </span>
+                )}
               </button>
             </Tooltip>
 
@@ -415,9 +513,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <ConfirmDialog
         isOpen={confirmExpiryOpen}
-        title={t('Operational Halt?')}
-        message={t('Expiry warning message')}
-        confirmLabel={t('EXECUTE')}
+        title={t('Lock expired memberships?')}
+        message={
+          dueCount > 0
+            ? t('Expiry lock confirm', { count: dueCount })
+            : t('No members due to expire.')
+        }
+        confirmLabel={t('Lock access')}
         variant="warning"
         onConfirm={async () => {
           setConfirmExpiryOpen(false);

@@ -22,7 +22,10 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data, error } = await supabaseAdmin.rpc('expire_monthly_memberships');
+    const { data, error } = await supabaseAdmin.rpc('expire_monthly_memberships', {
+      p_tenant_id: null,
+      p_dry_run: false,
+    });
 
     if (error) throw error;
 

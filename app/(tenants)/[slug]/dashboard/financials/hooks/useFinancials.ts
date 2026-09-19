@@ -38,6 +38,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [runningExpiry, setRunningExpiry] = useState(false);
+  const [dueCount, setDueCount] = useState(0);
 
   const [stats, setStats] = useState<FinancialStats>({
     reference: { totalRevenue: 0, pendingAmount: 0, pendingCount: 0, cashAmount: 0, methodCounts: {} },
@@ -166,6 +167,19 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     fetchFinancials();
   }, [fetchFinancials]);
 
+  useEffect(() => {
+    let cancelled = false;
+    financialService
+      .getDueExpiryCount()
+      .then((count) => {
+        if (!cancelled) setDueCount(count);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
       const methodObj = paymentMethods.find(m => m.id === p.method || m.label.toLowerCase() === String(p.method || '').toLowerCase());
@@ -211,12 +225,22 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     setRunningExpiry(true);
     try {
       const res = await financialService.runExpiryCheck();
-      toast(res.message, 'info');
+      if (res.count === 0) {
+        toast(t('No memberships to expire.'), 'info');
+      } else {
+        toast(t('Locked {{count}} expired memberships.', { count: res.count }), 'success');
+      }
+      setDueCount(0);
       await fetchFinancials();
     } catch {
       toast(t('Expiry sync error.'), 'error');
     } finally {
       setRunningExpiry(false);
+      try {
+        setDueCount(await financialService.getDueExpiryCount());
+      } catch {
+        // Keep last known count.
+      }
     }
   };
 
@@ -238,6 +262,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     currentPage,
     setCurrentPage,
     runningExpiry,
+    dueCount,
     approve,
     reject,
     runExpiry,

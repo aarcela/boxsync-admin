@@ -73,6 +73,7 @@ export default function FinancialsPage() {
     incomes,
     paymentMethods,
     runningExpiry,
+    dueCount,
     approve,
     reject,
     runExpiry,
@@ -567,10 +568,19 @@ export default function FinancialsPage() {
                 <button 
                   onClick={() => setConfirmConfig({ isOpen: true, action: 'expiry', paymentId: '', userId: '', athleteName: '' })}
                   disabled={runningExpiry}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-pits-surface-muted hover:bg-pits-edge text-pits-text rounded-2xl text-[11px] font-black uppercase transition-all border border-pits-edge"
+                  className={`relative w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase transition-all border ${
+                    dueCount > 0
+                      ? 'bg-pits-red/15 hover:bg-pits-red/25 text-pits-red border-pits-red/40'
+                      : 'bg-pits-surface-muted hover:bg-pits-edge text-pits-text border-pits-edge'
+                  }`}
                 >
                    <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
                    {t('Run Expiry Sync')}
+                   {dueCount > 0 && (
+                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-red text-white text-[9px] font-black leading-none flex items-center justify-center">
+                       {dueCount > 99 ? '99+' : dueCount}
+                     </span>
+                   )}
                 </button>
                 <div className="flex items-start gap-2 p-3 bg-pits-primary-soft rounded-2xl border border-pits-edge">
                    <Info size={14} className="text-pits-primary mt-0.5 shrink-0" />
@@ -587,13 +597,15 @@ export default function FinancialsPage() {
 
       <ConfirmDialog
         isOpen={confirmConfig.isOpen}
-        title={confirmConfig.action === 'expiry' ? t('Operational Halt?') : confirmConfig.action === 'reject' ? t('Protocol: Reject') : t('Protocol: Verify')}
+        title={confirmConfig.action === 'expiry' ? t('Lock expired memberships?') : confirmConfig.action === 'reject' ? t('Protocol: Reject') : t('Protocol: Verify')}
         message={
           confirmConfig.action === 'expiry' 
-            ? t('Expiry warning message')
+            ? dueCount > 0
+              ? t('Expiry lock confirm', { count: dueCount })
+              : t('No members due to expire.')
             : t('Confirm status update message', { name: confirmConfig.athleteName })
         }
-        confirmLabel={confirmConfig.action === 'expiry' ? t('EXECUTE') : confirmConfig.action === 'reject' ? t('REJECT') : t('VERIFY')}
+        confirmLabel={confirmConfig.action === 'expiry' ? t('Lock access') : confirmConfig.action === 'reject' ? t('REJECT') : t('VERIFY')}
         variant={confirmConfig.action === 'expiry' ? 'warning' : confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
         onCancel={() => {
