@@ -10,6 +10,8 @@ export type PlatformPlanDef = {
   /** null = unlimited active members */
   maxActiveMembers: number | null;
   trialDays: number | null;
+  /** Monthly Ask AI questions. HQ can override per tenant. */
+  aiMonthlyQuestions: number;
 };
 
 export const DEFAULT_PLATFORM_PLAN: PlatformPlanId = 'trial';
@@ -23,6 +25,7 @@ export const PLATFORM_PLANS: Record<PlatformPlanId, PlatformPlanDef> = {
     priceUsd: 0,
     maxActiveMembers: null,
     trialDays: TRIAL_DAYS,
+    aiMonthlyQuestions: 20,
   },
   starter: {
     id: 'starter',
@@ -30,6 +33,7 @@ export const PLATFORM_PLANS: Record<PlatformPlanId, PlatformPlanDef> = {
     priceUsd: 59,
     maxActiveMembers: 60,
     trialDays: null,
+    aiMonthlyQuestions: 40,
   },
   growth: {
     id: 'growth',
@@ -37,6 +41,7 @@ export const PLATFORM_PLANS: Record<PlatformPlanId, PlatformPlanDef> = {
     priceUsd: 89,
     maxActiveMembers: 150,
     trialDays: null,
+    aiMonthlyQuestions: 80,
   },
   pro: {
     id: 'pro',
@@ -44,6 +49,7 @@ export const PLATFORM_PLANS: Record<PlatformPlanId, PlatformPlanDef> = {
     priceUsd: 129,
     maxActiveMembers: null,
     trialDays: null,
+    aiMonthlyQuestions: 150,
   },
 };
 

@@ -31,7 +31,8 @@ import {
   Banknote,
   Receipt,
   Clock,
-  Rocket
+  Rocket,
+  Sparkles
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -211,6 +212,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         label: t('Results'),
         items: [
           { name: t('Box health'), href: '/dashboard/performance', icon: TrendingUp, tip: t('Nav tip Box health') },
+          { name: t('Ask AI'), href: '/dashboard/ask', icon: Sparkles, tip: t('Nav tip Ask AI') },
         ],
       },
       {
@@ -508,7 +510,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Scrollable Page Content */}
-        <main className="bg-pits-edge flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 lg:p-6 text-pits-ink">
+        <main
+          className={`bg-pits-edge flex-1 min-w-0 min-h-0 p-4 lg:p-6 text-pits-ink ${
+            pathname.includes('/dashboard/ask')
+              ? 'overflow-hidden flex flex-col'
+              : 'overflow-y-auto overflow-x-hidden'
+          }`}
+        >
           {children}
         </main>
       </div>

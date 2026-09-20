@@ -9,7 +9,7 @@ import {
 } from '../platform-plans';
 
 export const TENANT_COLUMNS =
-  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason';
+  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason, ai_monthly_question_limit';
 
 function normalizeTenant(row: Tenant): Tenant {
   return {
@@ -153,6 +153,22 @@ export const tenantService = {
         deactivated_at: is_active ? null : new Date().toISOString(),
         deactivation_reason: is_active ? null : deactivation_reason,
       })
+      .eq('id', tenantId)
+      .select(TENANT_COLUMNS)
+      .single();
+
+    if (error) throw error;
+    return normalizeTenant(data as Tenant);
+  },
+
+  async updateAiMonthlyQuestionLimit(
+    tenantId: string,
+    ai_monthly_question_limit: number | null,
+    client: SupabaseClient
+  ): Promise<Tenant> {
+    const { data, error } = await client
+      .from('tenants')
+      .update({ ai_monthly_question_limit })
       .eq('id', tenantId)
       .select(TENANT_COLUMNS)
       .single();

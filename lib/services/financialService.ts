@@ -3,7 +3,7 @@ import { buildPaymentApprovedProfileUpdate, getMemberPeriodBalance } from '../pl
 import { PaymentMethod, PaymentRecord } from '@/lib/types/gym';
 import {
   CurrencyType,
-  ExchangeRateSource,
+  type ExchangeRateSource,
   exchangeRateEndpoint,
   parseTenantExchangeRateConfig,
 } from '@/lib/currency';
@@ -180,11 +180,11 @@ export const financialService = {
   },
 
   async getReferenceExchangeRate(
-    referenceCurrency: CurrencyType | 'EUR' | 'USD' | 'VES' = CurrencyType.USD,
-    source: ExchangeRateSource = 'bcv'
+    referenceCurrency: string = CurrencyType.USD,
+    source: Exclude<ExchangeRateSource, 'custom'> | 'bcv' = 'oficial'
   ): Promise<number> {
     try {
-      const path = exchangeRateEndpoint(referenceCurrency as CurrencyType, source);
+      const path = exchangeRateEndpoint(referenceCurrency, source);
       const response = await fetch(path);
       const data = await response.json();
       return Number(data.promedio);
@@ -194,8 +194,8 @@ export const financialService = {
     }
   },
 
-  /** Applies the tenant's configured base source (BCV/paralelo) + margin % on top of the fetched rate. */
-  async getEffectiveExchangeRate(tenantId: string, referenceCurrency: CurrencyType | 'EUR' | 'USD' | 'VES'): Promise<number> {
+  /** Tenant source (official / parallel / custom) plus margin on live rates. */
+  async getEffectiveExchangeRate(tenantId: string, referenceCurrency: string): Promise<number> {
     const { data: tenant, error } = await supabase
       .from('tenants')
       .select('settings')
@@ -204,6 +204,9 @@ export const financialService = {
     if (error) throw error;
 
     const config = parseTenantExchangeRateConfig(tenant?.settings);
+    if (config.baseSource === 'custom') {
+      return config.customRate && config.customRate > 0 ? config.customRate : 0;
+    }
     const baseRate = await this.getReferenceExchangeRate(referenceCurrency, config.baseSource);
     return baseRate * (1 + config.marginPercent / 100);
   },

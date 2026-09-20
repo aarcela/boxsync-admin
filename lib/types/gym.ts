@@ -17,6 +17,7 @@ export interface Tenant {
   is_active?: boolean;
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
+  ai_monthly_question_limit?: number | null;
 }
 
 export interface TenantHqStats {
@@ -31,6 +32,9 @@ export interface TenantHqStats {
   trialExpired: boolean;
   trialEndsSoon: boolean;
   isActive: boolean;
+  aiQuestionsUsed: number;
+  aiQuestionLimit: number;
+  aiCustomLimit: boolean;
 }
 
 export interface TenantWithHqStats extends Tenant {
@@ -203,7 +207,7 @@ export type PaymentMethodFields = Record<string, string>;
 export interface PaymentMethod {
   id: string;
   label: string;
-  currency: CurrencyType;
+  currency: string;
   method_type: PaymentMethodType;
   fields: PaymentMethodFields;
   /** Legacy free-text details — still used when method_type === 'otro'. */
@@ -422,7 +426,7 @@ export interface ExpenseRecord {
   description: string;
   category: ExpenseCategory;
   amount: number;
-  currency: CurrencyType;
+  currency: string;
   exchange_rate_at_time: number;
   expense_date: string;
   created_at: string;
@@ -449,7 +453,7 @@ export interface IncomeRecord {
   description: string;
   category: IncomeCategory;
   amount: number;
-  currency: CurrencyType;
+  currency: string;
   exchange_rate_at_time: number;
   income_date: string;
   payment_method?: string;

@@ -103,6 +103,31 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ tenant });
     }
 
+    if (body.action === 'set_ai_quota') {
+      const raw = body.ai_monthly_question_limit;
+      if (raw !== null && raw !== undefined && raw !== '') {
+        const limit = typeof raw === 'number' ? raw : Number(raw);
+        if (!Number.isInteger(limit) || limit < 0 || limit > 10000) {
+          return NextResponse.json(
+            { error: 'ai_monthly_question_limit must be an integer between 0 and 10000, or empty for the plan default.' },
+            { status: 400 }
+          );
+        }
+        const tenant = await tenantService.updateAiMonthlyQuestionLimit(
+          tenantId,
+          limit,
+          supabaseAdmin
+        );
+        return NextResponse.json({ tenant });
+      }
+      const tenant = await tenantService.updateAiMonthlyQuestionLimit(
+        tenantId,
+        null,
+        supabaseAdmin
+      );
+      return NextResponse.json({ tenant });
+    }
+
     if (isPlatformPlanId(body.platform_plan)) {
       const tenant = await tenantService.updatePlatformPlan(
         tenantId,

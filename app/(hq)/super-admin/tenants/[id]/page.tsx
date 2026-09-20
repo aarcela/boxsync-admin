@@ -12,8 +12,10 @@ import {
   getPlatformPlan,
   type PlatformPlanId,
 } from '@/lib/platform-plans';
+import { defaultAiMonthlyQuestions } from '@/lib/ai/quota';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
 import type { TenantWithHqStats } from '@/lib/types/gym';
+import TenantImportPanel from '@/components/hq/TenantImportPanel';
 
 type TenantAdmin = {
   id: string;
@@ -57,6 +59,8 @@ export default function SuperAdminTenantDetailPage() {
   >(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<PlatformPlanId>('trial');
+  const [aiLimitInput, setAiLimitInput] = useState('');
+  const [savingQuota, setSavingQuota] = useState(false);
   const [tenantName, setTenantName] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
   const [fullName, setFullName] = useState('');
@@ -84,6 +88,11 @@ export default function SuperAdminTenantDetailPage() {
       if (nextTenant) {
         setTenantName(nextTenant.name);
         setTenantSlug(nextTenant.slug);
+        setAiLimitInput(
+          nextTenant.ai_monthly_question_limit == null
+            ? ''
+            : String(nextTenant.ai_monthly_question_limit)
+        );
       }
     } catch {
       toast(t('Could not load admins.'), 'error');
@@ -120,6 +129,24 @@ export default function SuperAdminTenantDetailPage() {
       toast(t('Could not update plan.'), 'error');
     } finally {
       setSavingPlan(false);
+    }
+  };
+
+  const commitQuota = async () => {
+    if (!tenantId) return;
+    setSavingQuota(true);
+    try {
+      const trimmed = aiLimitInput.trim();
+      await patchTenant({
+        action: 'set_ai_quota',
+        ai_monthly_question_limit: trimmed === '' ? null : Number(trimmed),
+      });
+      toast(t('Ask AI quota updated.'), 'success');
+      await loadAdmins();
+    } catch {
+      toast(t('Could not update Ask AI quota.'), 'error');
+    } finally {
+      setSavingQuota(false);
     }
   };
 
@@ -309,6 +336,22 @@ export default function SuperAdminTenantDetailPage() {
                   : undefined
             }
           />
+          <StatCard
+            label={t('Ask AI quota')}
+            value={
+              tenant.stats.aiQuestionLimit <= 0
+                ? t('Disabled')
+                : t('{{used}} of {{limit}} questions this month', {
+                    used: String(tenant.stats.aiQuestionsUsed),
+                    limit: String(tenant.stats.aiQuestionLimit),
+                  })
+            }
+            warn={
+              tenant.stats.aiQuestionLimit > 0 &&
+              tenant.stats.aiQuestionsUsed >= tenant.stats.aiQuestionLimit
+            }
+            hint={tenant.stats.aiCustomLimit ? t('Custom limit') : t('Plan default')}
+          />
         </div>
       )}
 
@@ -440,6 +483,48 @@ export default function SuperAdminTenantDetailPage() {
         </div>
       </form>
 
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void commitQuota();
+        }}
+        className="bg-pits-surface-elevated border border-pits-edge rounded-2xl p-6 space-y-4"
+      >
+        <h2 className="text-sm font-bold uppercase tracking-widest text-pits-ink-muted">
+          {t('Ask AI quota')}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto] items-end">
+          <div>
+            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
+              {t('Monthly questions')}
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={10000}
+              value={aiLimitInput}
+              onChange={(e) => setAiLimitInput(e.target.value)}
+              placeholder={t('Use plan default ({{count}})', {
+                count: String(
+                  defaultAiMonthlyQuestions(selectedPlan)
+                ),
+              })}
+              disabled={savingQuota || loading}
+              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none disabled:opacity-60"
+            />
+            <p className="mt-1 text-[11px] text-pits-ink-muted">{t('Ask AI quota help')}</p>
+          </div>
+          <button
+            type="submit"
+            disabled={savingQuota || !tenantId}
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-pits-primary text-pits-dark-text font-bold uppercase tracking-widest text-sm disabled:opacity-60"
+          >
+            {savingQuota ? <Loader2 size={16} className="animate-spin" /> : null}
+            {savingQuota ? t('Saving...') : t('Save quota')}
+          </button>
+        </div>
+      </form>
+
       {tenant?.platform_plan === 'trial' && (
         <div className="bg-pits-primary-soft border border-pits-primary/30 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -521,6 +606,8 @@ export default function SuperAdminTenantDetailPage() {
           {creating ? t('Creating...') : t('Create admin')}
         </button>
       </form>
+
+      <TenantImportPanel tenantId={tenantId} />
 
       <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-pits-edge">

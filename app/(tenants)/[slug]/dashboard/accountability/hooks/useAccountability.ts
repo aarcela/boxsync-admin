@@ -3,7 +3,6 @@ import { financialService } from '@/lib/services/financialService';
 import { expenseService } from '@/lib/services/expenseService';
 import { incomeService } from '@/lib/services/incomeService';
 import { 
-  CurrencyType, 
   PaymentRecord, 
   ExpenseRecord,
   IncomeRecord,
@@ -14,7 +13,7 @@ import { isLocalCurrency } from '@/lib/currency';
 
 export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
   const { toast } = useToast();
-  const { currencies } = useTenant();
+  const { currencies, tenantId } = useTenant();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -39,7 +38,9 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
         financialService.getPayments(startDate, endDate),
         incomeService.getIncomes(dateStart, dateEnd),
         expenseService.getExpenses(dateStart, dateEnd),
-        financialService.getReferenceExchangeRate(currencies.reference),
+        tenantId
+          ? financialService.getEffectiveExchangeRate(tenantId, currencies.reference)
+          : financialService.getReferenceExchangeRate(currencies.reference),
         financialService.getPaymentMethods()
       ]);
 
@@ -55,7 +56,7 @@ export function useAccountability(selectedMonth: string) { // Format: YYYY-MM
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, toast, currencies.reference]);
+  }, [selectedMonth, toast, currencies.reference, tenantId]);
 
   useEffect(() => {
     fetchData();

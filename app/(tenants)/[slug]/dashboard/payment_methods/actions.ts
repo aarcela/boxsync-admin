@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdminTenantId } from '@/lib/require-admin-tenant';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { paymentMethodService } from '@/lib/services/paymentMethodService';
-import { CurrencyType, PaymentMethodType, PaymentMethodFields } from '@/lib/types/gym';
+import { PaymentMethodType, PaymentMethodFields } from '@/lib/types/gym';
 import { PAYMENT_METHOD_FIELD_DEFS } from '@/lib/payment-method-fields';
 
 function readStructuredFields(formData: FormData, methodType: PaymentMethodType): PaymentMethodFields {
@@ -23,7 +23,7 @@ function readStructuredFields(formData: FormData, methodType: PaymentMethodType)
 export async function createPaymentMethodAction(formData: FormData) {
   const tenantId = await requireAdminTenantId();
   const label = formData.get('label') as string;
-  const currency = formData.get('currency') as CurrencyType;
+  const currency = formData.get('currency') as string;
   const method_type = (formData.get('method_type') as PaymentMethodType) || 'otro';
   const details = formData.get('details') as string;
   const is_active = formData.get('is_active') === 'true';
@@ -34,7 +34,7 @@ export async function createPaymentMethodAction(formData: FormData) {
     currency,
     method_type,
     fields,
-    details: method_type === 'otro' ? details : null,
+    details: method_type === 'otro' ? (details || '') : '',
     is_active,
   });
 
@@ -44,7 +44,7 @@ export async function createPaymentMethodAction(formData: FormData) {
 export async function updatePaymentMethodAction(id: string, formData: FormData) {
   const tenantId = await requireAdminTenantId();
   const label = formData.get('label') as string;
-  const currency = formData.get('currency') as CurrencyType;
+  const currency = formData.get('currency') as string;
   const method_type = (formData.get('method_type') as PaymentMethodType) || 'otro';
   const details = formData.get('details') as string;
   const is_active = formData.get('is_active') === 'true';
@@ -55,7 +55,7 @@ export async function updatePaymentMethodAction(id: string, formData: FormData) 
     currency,
     method_type,
     fields,
-    details: method_type === 'otro' ? details : null,
+    details: method_type === 'otro' ? (details || '') : '',
     is_active,
   });
 

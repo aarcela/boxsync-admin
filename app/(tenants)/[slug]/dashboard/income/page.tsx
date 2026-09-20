@@ -24,13 +24,11 @@ import {
   IncomeRecord,
   IncomeCategory,
   IncomeStatus,
-  CurrencyType,
   PaymentMethod,
 } from '@/lib/types/gym';
 import type { TranslationKey } from '@/lib/translations';
 import { useTenant } from '@/components/TenantContext';
 import {
-  currencyOptionLabel,
   currencySymbol,
   isLocalCurrency,
 } from '@/lib/currency';
@@ -50,7 +48,7 @@ const CATEGORIES: IncomeCategory[] = [
 export default function IncomePage() {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { currencies } = useTenant();
+  const { currencies, tenantId } = useTenant();
 
   const [loading, setLoading] = useState(true);
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
@@ -58,7 +56,7 @@ export default function IncomePage() {
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewCurrency, setViewCurrency] = useState<CurrencyType>(currencies.reference);
+  const [viewCurrency, setViewCurrency] = useState(currencies.reference);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null);
 
@@ -90,7 +88,9 @@ export default function IncomePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const rate = await financialService.getReferenceExchangeRate(currencies.reference);
+      const rate = tenantId
+        ? await financialService.getEffectiveExchangeRate(tenantId, currencies.reference)
+        : await financialService.getReferenceExchangeRate(currencies.reference);
       setExchangeRate(rate);
 
       const year = parseInt(selectedPeriod.split('-')[0]);
@@ -114,7 +114,7 @@ export default function IncomePage() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, tenantId, currencies.reference]);
 
   const handleAddIncome = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -503,14 +503,14 @@ export default function IncomePage() {
                     <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
                     <select
                       value={newIncome.currency}
-                      onChange={(e) => setNewIncome({ ...newIncome, currency: e.target.value as CurrencyType })}
+                      onChange={(e) => setNewIncome({ ...newIncome, currency: e.target.value })}
                       className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                     >
-                      <option value={currencies.reference}>
-                        {currencyOptionLabel(currencies.reference, 'reference')}
-                      </option>
                       <option value={currencies.local}>
-                        {currencyOptionLabel(currencies.local, 'local')}
+                        {t('Local')} · {currencies.local}
+                      </option>
+                      <option value={currencies.reference}>
+                        {t('Reference')} · {currencies.reference}
                       </option>
                     </select>
                   </div>
@@ -529,6 +529,19 @@ export default function IncomePage() {
                       onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
                       className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red transition-all placeholder:text-pits-dim"
                     />
+                    {newIncome.amount && Number(newIncome.amount) > 0 && (
+                      <p className="text-[10px] text-pits-dim font-medium">
+                        {isLocalCurrency(newIncome.currency, currencies) && exchangeRate
+                          ? t('Counts as {{amount}} {{currency}}', {
+                              amount: (Number(newIncome.amount) / exchangeRate).toFixed(2),
+                              currency: currencies.reference,
+                            })
+                          : t('Counts as {{amount}} {{currency}}', {
+                              amount: Number(newIncome.amount).toFixed(2),
+                              currency: currencies.reference,
+                            })}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2 relative">
                     <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Official Rate')}</label>
@@ -570,7 +583,14 @@ export default function IncomePage() {
                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method')}</label>
                   <select
                     value={newIncome.payment_method}
-                    onChange={(e) => setNewIncome({ ...newIncome, payment_method: e.target.value })}
+                    onChange={(e) => {
+                      const method = paymentMethods.find((m) => m.id === e.target.value);
+                      setNewIncome({
+                        ...newIncome,
+                        payment_method: e.target.value,
+                        currency: method?.currency || newIncome.currency,
+                      });
+                    }}
                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                   >
                     <option value="">— {t('Select method')} —</option>

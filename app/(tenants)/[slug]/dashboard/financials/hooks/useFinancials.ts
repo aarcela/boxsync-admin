@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { financialService } from '@/lib/services/financialService';
 import { incomeService } from '@/lib/services/incomeService';
 import { 
-  CurrencyType, 
   PaymentRecord, 
   PaymentMethod, 
   FinancialStats, 
@@ -26,14 +25,14 @@ function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): 
 export function useFinancials(period: string, customRange?: { start: Date; end: Date }) {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { currencies } = useTenant();
+  const { currencies, tenantId } = useTenant();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
-  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(currencies.reference);
+  const [activeCurrency, setActiveCurrency] = useState(currencies.reference);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -98,7 +97,9 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         incomeService.getIncomes(incomeStart, incomeEnd),
         financialService.getPaymentMethods(),
         financialService.getMemberStats(),
-        financialService.getReferenceExchangeRate(currencies.reference)
+        tenantId
+          ? financialService.getEffectiveExchangeRate(tenantId, currencies.reference)
+          : financialService.getReferenceExchangeRate(currencies.reference),
       ]);
 
       setPayments(paymentsData);
@@ -161,7 +162,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     } finally {
       setLoading(false);
     }
-  }, [period, customRange, toast, currencies]);
+  }, [period, customRange, toast, currencies, tenantId]);
 
   useEffect(() => {
     fetchFinancials();

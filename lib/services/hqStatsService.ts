@@ -9,6 +9,7 @@ import {
   type PlatformPlanId,
 } from '../platform-plans';
 import { tenantService } from './tenantService';
+import { currentAiPeriodYm, resolveAiMonthlyQuestions } from '../ai/quota';
 
 type ProfileRow = {
   tenant_id: string | null;
@@ -40,14 +41,20 @@ export const hqStatsService = {
   }> {
     const tenants = await tenantService.listTenants(client);
 
-    const [{ data: profiles, error: profilesError }, { data: pending, error: paymentsError }] =
-      await Promise.all([
-        client.from('profiles').select('tenant_id, role, is_solvent'),
-        client.from('payments').select('tenant_id').eq('status', 'pending'),
-      ]);
+    const periodYm = currentAiPeriodYm();
+    const [
+      { data: profiles, error: profilesError },
+      { data: pending, error: paymentsError },
+      { data: aiUsage, error: aiUsageError },
+    ] = await Promise.all([
+      client.from('profiles').select('tenant_id, role, is_solvent'),
+      client.from('payments').select('tenant_id').eq('status', 'pending'),
+      client.from('tenant_ai_usage').select('tenant_id, questions_used').eq('period_ym', periodYm),
+    ]);
 
     if (profilesError) throw profilesError;
     if (paymentsError) throw paymentsError;
+    if (aiUsageError) throw aiUsageError;
 
     const byTenant = new Map<string, Counts>();
     for (const tenant of tenants) {
@@ -77,6 +84,11 @@ export const hqStatsService = {
         payment.tenant_id,
         (pendingByTenant.get(payment.tenant_id) ?? 0) + 1
       );
+    }
+
+    const aiUsedByTenant = new Map<string, number>();
+    for (const row of (aiUsage ?? []) as { tenant_id: string; questions_used: number }[]) {
+      aiUsedByTenant.set(row.tenant_id, row.questions_used ?? 0);
     }
 
     const planCounts: Record<PlatformPlanId, number> = {
@@ -128,6 +140,12 @@ export const hqStatsService = {
           trialExpired,
           trialEndsSoon,
           isActive: tenant.is_active !== false,
+          aiQuestionsUsed: aiUsedByTenant.get(tenant.id) ?? 0,
+          aiQuestionLimit: resolveAiMonthlyQuestions(
+            platform_plan,
+            tenant.ai_monthly_question_limit
+          ),
+          aiCustomLimit: tenant.ai_monthly_question_limit != null,
         },
       };
     });

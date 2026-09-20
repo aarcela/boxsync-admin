@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useAccountability } from './hooks/useAccountability';
-import { CurrencyType } from '@/lib/types/gym';
 import { currencySymbol } from '@/lib/currency';
 
 const MONTHS = [
@@ -38,7 +37,7 @@ export default function AccountabilityPage() {
 
   const periodString = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   const { loading, stats, refresh, expenses, payments, currencies } = useAccountability(periodString);
-  const [activeCurrency, setActiveCurrency] = useState<CurrencyType>(currencies.reference);
+  const [activeCurrency, setActiveCurrency] = useState(currencies.reference);
 
   useEffect(() => {
     setActiveCurrency((prev) =>

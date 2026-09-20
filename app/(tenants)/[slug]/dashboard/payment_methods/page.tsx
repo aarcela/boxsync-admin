@@ -22,18 +22,26 @@ import { paymentMethodService } from '@/lib/services/paymentMethodService';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
 import { tenantExchangeRateService } from '@/lib/services/tenantExchangeRateService';
 import { tenantSupportService } from '@/lib/services/tenantSupportService';
-import { PaymentMethod, PaymentMethodType, PaymentMethodFields, CurrencyType } from '@/lib/types/gym';
-import type { TenantExchangeRateConfig } from '@/lib/currency';
+import { PaymentMethod, PaymentMethodType, PaymentMethodFields } from '@/lib/types/gym';
 import {
   PAYMENT_METHOD_FIELD_DEFS,
   PAYMENT_METHOD_TYPE_LABELS,
   PAYMENT_METHOD_TYPES,
 } from '@/lib/payment-method-fields';
+import { financialService } from '@/lib/services/financialService';
 import {
+  CUSTOM_CURRENCY_VALUE,
+  DEFAULT_EXCHANGE_RATE_CONFIG,
   LOCAL_CURRENCY_OPTIONS,
   REFERENCE_CURRENCY_OPTIONS,
+  computeEffectiveRate,
   currencyOptionLabel,
   currencySymbol,
+  defaultCurrencyForMethodType,
+  normalizeCurrencyCode,
+  supportsLiveFx,
+  type ExchangeRateSource,
+  type TenantExchangeRateConfig,
 } from '@/lib/currency';
 import { 
   createPaymentMethodAction, 
@@ -41,6 +49,10 @@ import {
   deletePaymentMethodAction,
   togglePaymentMethodStatusAction 
 } from './actions';
+
+function currencySelectValue(code: string, options: string[]) {
+  return options.includes(code) ? code : CUSTOM_CURRENCY_VALUE;
+}
 
 export default function PaymentMethodsPage() {
   const { toast } = useToast();
@@ -56,25 +68,25 @@ export default function PaymentMethodsPage() {
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [methodToDelete, setMethodToDelete] = useState<string | null>(null);
-  const [savingCurrencies, setSavingCurrencies] = useState(false);
+  const [savingMoney, setSavingMoney] = useState(false);
   const [draftCurrencies, setDraftCurrencies] = useState(currencies);
-  const [rateConfig, setRateConfig] = useState<TenantExchangeRateConfig>({ baseSource: 'bcv', marginPercent: 0 });
-  const [savingRateConfig, setSavingRateConfig] = useState(false);
+  const [rateConfig, setRateConfig] = useState<TenantExchangeRateConfig>(DEFAULT_EXCHANGE_RATE_CONFIG);
   const [supportWhatsApp, setSupportWhatsApp] = useState('');
   const [savingSupport, setSavingSupport] = useState(false);
+  const [livePromedio, setLivePromedio] = useState<number | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<{
     label: string;
-    currency: CurrencyType;
+    currency: string;
     method_type: PaymentMethodType;
     fields: PaymentMethodFields;
     details: string;
     is_active: boolean;
   }>({
     label: '',
-    currency: currencies.reference,
-    method_type: 'otro',
+    currency: currencies.local,
+    method_type: 'pago_movil',
     fields: {},
     details: '',
     is_active: true
@@ -93,6 +105,12 @@ export default function PaymentMethodsPage() {
           : currencies.reference,
     }));
   }, [currencies.reference, currencies.local]);
+
+  useEffect(() => {
+    if (!supportsLiveFx(draftCurrencies) && rateConfig.baseSource !== 'custom') {
+      setRateConfig((prev) => ({ ...prev, baseSource: 'custom' }));
+    }
+  }, [draftCurrencies.reference, draftCurrencies.local, rateConfig.baseSource]);
 
   const fetchMethods = async (activeTenantId: string) => {
     setLoading(true);
@@ -131,18 +149,72 @@ export default function PaymentMethodsPage() {
     loadContext();
   }, [contextTenantId]);
 
-  const handleSaveRateConfig = async () => {
+  useEffect(() => {
+    if (rateConfig.baseSource === 'custom') {
+      setLivePromedio(null);
+      return;
+    }
+    if (!supportsLiveFx(draftCurrencies)) {
+      setLivePromedio(null);
+      return;
+    }
+    let cancelled = false;
+    financialService
+      .getReferenceExchangeRate(
+        draftCurrencies.reference,
+        rateConfig.baseSource === 'paralelo' ? 'paralelo' : 'oficial'
+      )
+      .then((promedio) => {
+        if (!cancelled) setLivePromedio(promedio > 0 ? promedio : null);
+      })
+      .catch(() => {
+        if (!cancelled) setLivePromedio(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draftCurrencies.reference, draftCurrencies.local, rateConfig.baseSource]);
+
+  const effectiveRate = computeEffectiveRate(rateConfig, livePromedio);
+
+  const handleSaveMoneySettings = async () => {
     if (!tenantId) return;
-    setSavingRateConfig(true);
+    const reference = normalizeCurrencyCode(draftCurrencies.reference);
+    const local = normalizeCurrencyCode(draftCurrencies.local);
+    if (!reference || !local) {
+      toast(t('Enter a valid 3-letter currency code'), 'error');
+      return;
+    }
+    if (reference === local) {
+      toast(t('Reference and local currencies must differ'), 'error');
+      return;
+    }
+    if (rateConfig.baseSource === 'custom' && !(rateConfig.customRate && rateConfig.customRate > 0)) {
+      toast(t('Enter a custom exchange rate greater than zero'), 'error');
+      return;
+    }
+    if (rateConfig.baseSource !== 'custom' && !supportsLiveFx({ reference, local })) {
+      toast(t('Official and parallel rates are only available for USD/EUR vs VES. Use a custom rate.'), 'error');
+      return;
+    }
+    setSavingMoney(true);
     try {
-      const saved = await tenantExchangeRateService.updateForTenant(tenantId, rateConfig);
-      setRateConfig(saved);
-      toast(t('Exchange rate settings saved'), 'success');
+      const [savedCurrencies, savedRate] = await Promise.all([
+        tenantCurrencyService.updateForTenant(tenantId, { reference, local }),
+        tenantExchangeRateService.updateForTenant(tenantId, {
+          ...rateConfig,
+          customRate: rateConfig.baseSource === 'custom' ? rateConfig.customRate : null,
+        }),
+      ]);
+      setCurrencies(savedCurrencies);
+      setDraftCurrencies(savedCurrencies);
+      setRateConfig(savedRate);
+      toast(t('Money settings saved'), 'success');
     } catch (error) {
       console.error(error);
-      toast(t('Failed to save exchange rate settings'), 'error');
+      toast(t('Failed to save money settings'), 'error');
     } finally {
-      setSavingRateConfig(false);
+      setSavingMoney(false);
     }
   };
 
@@ -161,31 +233,15 @@ export default function PaymentMethodsPage() {
     }
   };
 
-  const handleSaveCurrencies = async () => {
-    if (!tenantId) return;
-    if (draftCurrencies.reference === draftCurrencies.local) {
-      toast(t('Reference and local currencies must differ'), 'error');
-      return;
-    }
-    setSavingCurrencies(true);
-    try {
-      const saved = await tenantCurrencyService.updateForTenant(tenantId, draftCurrencies);
-      setCurrencies(saved);
-      toast(t('Currency denominations saved'), 'success');
-    } catch (error) {
-      console.error(error);
-      toast(t('Failed to save currency denominations'), 'error');
-    } finally {
-      setSavingCurrencies(false);
-    }
-  };
-
   const handleOpenForm = (method?: PaymentMethod) => {
     if (method) {
       setEditingMethod(method);
       setFormData({
         label: method.label,
-        currency: method.currency,
+        currency:
+          method.currency === currencies.local || method.currency === currencies.reference
+            ? method.currency
+            : defaultCurrencyForMethodType(method.method_type || 'otro', currencies),
         method_type: method.method_type || 'otro',
         fields: method.fields || {},
         details: method.details || '',
@@ -195,8 +251,8 @@ export default function PaymentMethodsPage() {
       setEditingMethod(null);
       setFormData({
         label: '',
-        currency: currencies.reference,
-        method_type: 'otro',
+        currency: currencies.local,
+        method_type: 'pago_movil',
         fields: {},
         details: '',
         is_active: true
@@ -314,37 +370,39 @@ export default function PaymentMethodsPage() {
         </button>
       </div>
 
-      {/* CURRENCY DENOMINATIONS */}
-      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+      {/* BOX MONEY */}
+      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h2 className="text-sm font-black uppercase tracking-tight text-pits-text">
-              {t('Currency denominations')}
+              {t('Box money')}
             </h2>
             <p className="text-[11px] text-pits-dim font-semibold mt-1 uppercase tracking-wide">
-              {t('Set REF hard currency and local denomination for this box')}
+              {t('Plans are priced in the reference. Local methods convert at your rate.')}
             </p>
           </div>
           <button
             type="button"
-            onClick={handleSaveCurrencies}
-            disabled={savingCurrencies}
+            onClick={handleSaveMoneySettings}
+            disabled={savingMoney}
             className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
           >
-            {savingCurrencies ? t('Processing...') : t('Save currencies')}
+            {savingMoney ? t('Processing...') : t('Save money settings')}
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Reference (REF)')}</label>
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Reference currency')}</label>
             <select
-              value={draftCurrencies.reference}
-              onChange={(e) =>
+              value={currencySelectValue(draftCurrencies.reference, REFERENCE_CURRENCY_OPTIONS)}
+              onChange={(e) => {
+                const value = e.target.value;
                 setDraftCurrencies((prev) => ({
                   ...prev,
-                  reference: e.target.value as CurrencyType,
-                }))
-              }
+                  reference: value === CUSTOM_CURRENCY_VALUE ? (REFERENCE_CURRENCY_OPTIONS.includes(prev.reference) ? '' : prev.reference) : value,
+                }));
+              }}
               className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
             >
               {REFERENCE_CURRENCY_OPTIONS.map((code) => (
@@ -352,18 +410,37 @@ export default function PaymentMethodsPage() {
                   {currencyOptionLabel(code, 'reference')}
                 </option>
               ))}
+              <option value={CUSTOM_CURRENCY_VALUE}>{t('Custom')}</option>
             </select>
+            {currencySelectValue(draftCurrencies.reference, REFERENCE_CURRENCY_OPTIONS) === CUSTOM_CURRENCY_VALUE && (
+              <input
+                type="text"
+                maxLength={3}
+                placeholder="USD"
+                value={draftCurrencies.reference}
+                onChange={(e) =>
+                  setDraftCurrencies((prev) => ({
+                    ...prev,
+                    reference: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3),
+                  }))
+                }
+                className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
+              />
+            )}
+            <p className="text-[10px] text-pits-dim font-medium">{t('What membership plans are priced in (Zelle, Binance).')}</p>
           </div>
+
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Local denomination')}</label>
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Local currency')}</label>
             <select
-              value={draftCurrencies.local}
-              onChange={(e) =>
+              value={currencySelectValue(draftCurrencies.local, LOCAL_CURRENCY_OPTIONS)}
+              onChange={(e) => {
+                const value = e.target.value;
                 setDraftCurrencies((prev) => ({
                   ...prev,
-                  local: e.target.value as CurrencyType,
-                }))
-              }
+                  local: value === CUSTOM_CURRENCY_VALUE ? (LOCAL_CURRENCY_OPTIONS.includes(prev.local) ? '' : prev.local) : value,
+                }));
+              }}
               className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
             >
               {LOCAL_CURRENCY_OPTIONS.filter((code) => code !== draftCurrencies.reference).map(
@@ -373,61 +450,96 @@ export default function PaymentMethodsPage() {
                   </option>
                 )
               )}
+              <option value={CUSTOM_CURRENCY_VALUE}>{t('Custom')}</option>
             </select>
+            {currencySelectValue(draftCurrencies.local, LOCAL_CURRENCY_OPTIONS) === CUSTOM_CURRENCY_VALUE && (
+              <input
+                type="text"
+                maxLength={3}
+                placeholder="VES"
+                value={draftCurrencies.local}
+                onChange={(e) =>
+                  setDraftCurrencies((prev) => ({
+                    ...prev,
+                    local: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3),
+                  }))
+                }
+                className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
+              />
+            )}
+            <p className="text-[10px] text-pits-dim font-medium">{t('What athletes pay locally (Pago Móvil, cash).')}</p>
           </div>
-        </div>
-        <p className="text-[10px] text-pits-dim mt-3 font-medium">
-          {t('Active pair')}: {currencies.reference} ({currencySymbol(currencies.reference)}) /{' '}
-          {currencies.local} ({currencySymbol(currencies.local)})
-        </p>
-      </div>
 
-      {/* EXCHANGE RATE SOURCE */}
-      <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-tight text-pits-text">
-              {t('Exchange rate source')}
-            </h2>
-            <p className="text-[11px] text-pits-dim font-semibold mt-1 uppercase tracking-wide">
-              {t('Choose the base rate and an optional margin applied on top')}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleSaveRateConfig}
-            disabled={savingRateConfig}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-          >
-            {savingRateConfig ? t('Processing...') : t('Save rate settings')}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Base source')}</label>
+            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Exchange rate')}</label>
             <select
               value={rateConfig.baseSource}
               onChange={(e) =>
-                setRateConfig((prev) => ({ ...prev, baseSource: e.target.value as 'bcv' | 'paralelo' }))
+                setRateConfig((prev) => ({
+                  ...prev,
+                  baseSource: e.target.value as ExchangeRateSource,
+                }))
               }
               className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
             >
-              <option value="bcv">{t('BCV (Official)')}</option>
-              <option value="paralelo">{t('Paralelo')}</option>
+              <option value="oficial" disabled={!supportsLiveFx(draftCurrencies)}>
+                {t('Official')}
+              </option>
+              <option value="paralelo" disabled={!supportsLiveFx(draftCurrencies)}>
+                {t('Parallel')}
+              </option>
+              <option value="custom">{t('Custom')}</option>
             </select>
+            {rateConfig.baseSource === 'custom' ? (
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="1"
+                value={rateConfig.customRate ?? ''}
+                onChange={(e) =>
+                  setRateConfig((prev) => ({
+                    ...prev,
+                    customRate: e.target.value === '' ? null : Number(e.target.value),
+                  }))
+                }
+                className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+              />
+            ) : (
+              <input
+                type="number"
+                step="0.1"
+                placeholder={t('Margin %')}
+                value={rateConfig.marginPercent}
+                onChange={(e) =>
+                  setRateConfig((prev) => ({ ...prev, marginPercent: Number(e.target.value) || 0 }))
+                }
+                className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+              />
+            )}
+            <p className="text-[10px] text-pits-dim font-medium">
+              {rateConfig.baseSource === 'custom'
+                ? `${t('Custom rate')}: 1 ${draftCurrencies.reference || 'REF'} = ${rateConfig.customRate || '—'} ${draftCurrencies.local || 'LOC'}`
+                : `${t('Margin %')} · ${t('Official and parallel use Venezuela live rates.')}`}
+            </p>
           </div>
-          <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Margin %')}</label>
-            <input
-              type="number"
-              step="0.1"
-              value={rateConfig.marginPercent}
-              onChange={(e) =>
-                setRateConfig((prev) => ({ ...prev, marginPercent: Number(e.target.value) || 0 }))
-              }
-              className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-            />
-          </div>
+        </div>
+
+        <div className="rounded-2xl border border-pits-edge bg-pits-surface-muted px-4 py-3">
+          <p className="text-[10px] font-black uppercase text-pits-dim mb-1">{t('Athlete checkout preview')}</p>
+          {effectiveRate ? (
+            <p className="text-xs font-bold text-pits-text">
+              {t('Local method example')}: 30 {draftCurrencies.reference} → {(30 * effectiveRate).toLocaleString(undefined, { maximumFractionDigits: 2 })} {draftCurrencies.local}
+              {'  ·  '}
+              {t('Reference method example')}: 30 {draftCurrencies.reference} → 30 {draftCurrencies.reference}
+            </p>
+          ) : (
+            <p className="text-xs font-bold text-pits-dim">
+              {rateConfig.baseSource === 'custom'
+                ? t('Enter a custom rate to preview conversion.')
+                : t('Live rate unavailable. Switch to custom or check the pair.')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -513,8 +625,8 @@ export default function PaymentMethodsPage() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
                           {method.currency === currencies.reference
-                            ? `REF · ${method.currency}`
-                            : method.currency}
+                            ? `${t('Reference')} · ${method.currency}`
+                            : `${t('Local')} · ${method.currency}`}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -635,7 +747,12 @@ export default function PaymentMethodsPage() {
                      value={formData.method_type}
                      onChange={(e) => {
                        const method_type = e.target.value as PaymentMethodType;
-                       setFormData((prev) => ({ ...prev, method_type, fields: {} }));
+                       setFormData((prev) => ({
+                         ...prev,
+                         method_type,
+                         fields: {},
+                         currency: defaultCurrencyForMethodType(method_type, currencies),
+                       }));
                      }}
                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                    >
@@ -645,23 +762,53 @@ export default function PaymentMethodsPage() {
                    </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                      <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
-                      <select 
-                        value={formData.currency}
-                        onChange={(e) => setFormData({...formData, currency: e.target.value as CurrencyType})}
-                        className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                      >
-                        <option value={currencies.reference}>
-                          {currencyOptionLabel(currencies.reference, 'reference')}
-                        </option>
-                        <option value={currencies.local}>
-                          {currencyOptionLabel(currencies.local, 'local')}
-                        </option>
-                      </select>
+                <div className="space-y-2">
+                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Athletes pay in')}</label>
+                   <div className="grid grid-cols-2 gap-2">
+                     <button
+                       type="button"
+                       onClick={() => setFormData({ ...formData, currency: currencies.local })}
+                       className={`rounded-2xl border px-3 py-3 text-left transition-all ${
+                         formData.currency === currencies.local
+                           ? 'border-pits-red bg-pits-primary-soft'
+                           : 'border-pits-edge bg-pits-surface-muted'
+                       }`}
+                     >
+                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Local')}</div>
+                       <div className="text-xs font-black text-pits-text mt-0.5">
+                         {currencies.local} ({currencySymbol(currencies.local)})
+                       </div>
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setFormData({ ...formData, currency: currencies.reference })}
+                       className={`rounded-2xl border px-3 py-3 text-left transition-all ${
+                         formData.currency === currencies.reference
+                           ? 'border-pits-red bg-pits-primary-soft'
+                           : 'border-pits-edge bg-pits-surface-muted'
+                       }`}
+                     >
+                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Reference')}</div>
+                       <div className="text-xs font-black text-pits-text mt-0.5">
+                         {currencies.reference} ({currencySymbol(currencies.reference)})
+                       </div>
+                     </button>
                    </div>
-                   <div className="space-y-2">
+                   <p className="text-[10px] text-pits-dim font-medium">
+                     {formData.currency === currencies.local
+                       ? (effectiveRate
+                           ? t('Local method converts the plan. Example: {{plan}} {{ref}} → {{localAmount}} {{local}}', {
+                               plan: '30',
+                               ref: currencies.reference,
+                               localAmount: (30 * effectiveRate).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                               local: currencies.local,
+                             })
+                           : t('Local methods convert the plan price using the box exchange rate.'))
+                       : t('Reference methods charge the same amount as the plan (no conversion).')}
+                   </p>
+                </div>
+
+                <div className="space-y-2">
                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
                       <select 
                         value={String(formData.is_active)}
@@ -671,7 +818,6 @@ export default function PaymentMethodsPage() {
                         <option value="true">{t('Active')}</option>
                         <option value="false">{t('Inactive')}</option>
                       </select>
-                   </div>
                 </div>
 
                 {formData.method_type === 'otro' ? (

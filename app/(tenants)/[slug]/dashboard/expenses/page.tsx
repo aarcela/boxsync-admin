@@ -20,7 +20,7 @@ import type { TranslationKey } from '@/lib/translations';
 import { supabase } from '@/lib/supabase';
 import { expenseService, parseExpenseCategory } from '@/lib/services/expenseService';
 import { financialService } from '@/lib/services/financialService';
-import { ExpenseRecord, ExpenseCategory, EXPENSE_CATEGORIES, CurrencyType, PaymentMethod } from '@/lib/types/gym';
+import { ExpenseRecord, ExpenseCategory, EXPENSE_CATEGORIES, PaymentMethod } from '@/lib/types/gym';
 import { useTenant } from '@/components/TenantContext';
 import {
   currencyOptionLabel,
@@ -42,7 +42,7 @@ const expenseStatusKey = (status?: string): TranslationKey => {
 export default function ExpensesPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { currencies } = useTenant();
+  const { currencies, tenantId } = useTenant();
   const categoryLabel = (category: string) => {
     const key = expenseCategoryKey(category);
     return key ? t(key) : category;
@@ -55,7 +55,7 @@ export default function ExpensesPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewCurrency, setViewCurrency] = useState<CurrencyType>(currencies.reference);
+  const [viewCurrency, setViewCurrency] = useState(currencies.reference);
   const [statusConfirm, setStatusConfirm] = useState<{ id: string; nextStatus: 'pending' | 'paid' | 'due' } | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
@@ -88,7 +88,9 @@ export default function ExpensesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const rate = await financialService.getReferenceExchangeRate(currencies.reference);
+      const rate = tenantId
+        ? await financialService.getEffectiveExchangeRate(tenantId, currencies.reference)
+        : await financialService.getReferenceExchangeRate(currencies.reference);
       setExchangeRate(rate);
 
       // Current month range
@@ -109,7 +111,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, toast, currencies.reference, t]);
+  }, [selectedPeriod, toast, currencies.reference, t, tenantId]);
 
   useEffect(() => {
     fetchData();
@@ -484,7 +486,7 @@ export default function ExpensesPage() {
                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
                       <select 
                         value={newExpense.currency}
-                        onChange={(e) => setNewExpense({...newExpense, currency: e.target.value as CurrencyType})}
+                        onChange={(e) => setNewExpense({...newExpense, currency: e.target.value})}
                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
                       >
                         <option value={currencies.reference}>

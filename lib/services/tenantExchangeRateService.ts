@@ -44,6 +44,7 @@ export const tenantExchangeRateService = {
       exchangeRate: {
         baseSource: config.baseSource,
         marginPercent: config.marginPercent,
+        customRate: config.baseSource === 'custom' ? config.customRate : null,
       },
     };
 
