@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert, Info } from 'lucide-react';
 import CreateClassModal, { ClassFormPrefill, ClassModalMode } from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
+import Tooltip from '@/components/Tooltip';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
@@ -128,9 +129,14 @@ export default function SchedulePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
-            {t('Class Schedule')}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
+              {t('Class Schedule')}
+            </h2>
+            <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
+              <Info size={16} className="text-pits-dim cursor-help" />
+            </Tooltip>
+          </div>
           <p className="text-pits-dim font-medium text-sm">
             {t('Manage upcoming classes and coach assignments.')}
           </p>
@@ -484,7 +490,12 @@ export default function SchedulePage() {
                     </div>
 
                     <div>
-                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic">{t('Athletes')}</h4>
+                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic flex items-center gap-1.5">
+                        {t('Athletes')}
+                        <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
+                          <Info size={12} className="text-pits-dim cursor-help" />
+                        </Tooltip>
+                      </h4>
                       {loadingRoster ? (
                         <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('Loading schedule...')}</p>
                       ) : roster.length === 0 ? (

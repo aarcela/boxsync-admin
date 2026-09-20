@@ -19,7 +19,7 @@ export function buildMobileJoinDeepLink(slug: string): string {
 }
 
 /**
- * Public HTTPS join URL (optional landing / universal link target).
+ * Public HTTPS join URL on the marketing site (`landing/`, getwodus.com).
  * The mobile app also parses this payload from a QR scan.
  */
 export function buildPublicJoinUrl(slug: string): string {

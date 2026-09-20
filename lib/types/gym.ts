@@ -378,6 +378,7 @@ export interface Profile {
   onboarding_affidavit_truth?: boolean;
   onboarding_affidavit_fit?: boolean;
   onboarding_affidavit_release?: boolean;
+  onboarding_affidavit_terms?: boolean;
   instagram?: string | null;
   admin_note?: string | null;
   inscription_cost?: number;

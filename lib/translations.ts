@@ -314,7 +314,7 @@ export const translations = {
     'Nav tip Ask AI': 'Ask how memberships, payments, and the dashboard work',
     'Nav tip Founding Pilot': 'Special partner program — skip if not invited',
     Appearance: 'Appearance',
-    'Nav tip Appearance': 'Color palette athletes see in the app',
+    'Nav tip Appearance': 'Colors and modules athletes see in the app',
     'App color palette': 'Athlete app look',
     'App color palette help':
       'Pick a preset for the member app. The staff dashboard stays on the light Wodus theme.',
@@ -347,7 +347,44 @@ export const translations = {
     'Palette saved': 'Palette saved. Members will see it in the app.',
     'Failed to save palette': 'Could not save palette.',
     'Failed to load palette': 'Could not load palette.',
+    'App modules': 'App modules',
+    'App modules help':
+      'Turn on what your box uses. Off modules hide from the athlete app and the staff menu.',
+    'Module daily workouts desc':
+      'WOD of the day on the athlete home and the Daily workouts editor.',
+    'Module personal records desc':
+      'PRs tab in the app and the Personal Records editor in the dashboard.',
+    'Module community desc':
+      'Community tab in the app and the Community page in the dashboard.',
+    'Weekly attendance': 'Weekly attendance',
+    'Module attendance desc':
+      'Attendance card and streak on the athlete home.',
+    'Modules saved': 'Modules saved. Members will see the change in the app.',
+    'Failed to save modules': 'Could not save modules.',
+    'Failed to load modules': 'Could not load modules.',
+    Onboarding: 'Onboarding',
+    'Nav tip Onboarding': 'Choose which athlete profile fields are required',
+    'Onboarding fields help':
+      'Required fields must be filled before athletes can use the app. Name, birth date, and sex stay required. Photo is always optional.',
+    'Onboarding group basic': 'Basic info',
+    'Onboarding group contact': 'Contact',
+    'Onboarding group sports': 'Training',
+    'Onboarding group health': 'Health',
+    'Onboarding group emergency': 'Emergency',
+    'Onboarding field weight': 'Weight (kg)',
+    'Onboarding field instagram': 'Instagram',
+    'Onboarding field level': 'Training level',
+    'Onboarding field years': 'Years doing exercise',
+    'Onboarding locked': 'Always required',
+    'Onboarding terms always': 'Terms and affidavit',
+    'Onboarding terms always help':
+      'Athletes must accept the WODUS terms, health disclaimer, and liability release. This cannot be turned off.',
+    'Onboarding required saved': 'Required fields saved. Athletes will see the change in the app.',
+    'Failed to save onboarding': 'Could not save onboarding settings.',
+    'Failed to load onboarding': 'Could not load onboarding settings.',
+    'Terms acceptance': 'Terms & Conditions',
     'App preview': 'App preview',
+    'New PR!': 'New PR!',
     Book: 'Book',
     'Nav tip Update expired memberships':
       'Blocks members whose paid period has fully run out',
@@ -874,6 +911,8 @@ export const translations = {
     // Schedule Page
     'Class Schedule': 'Class Schedule',
     'Manage upcoming classes and coach assignments.': 'Manage upcoming classes and coach assignments.',
+    'Athlete booking window tip':
+      'App: athletes can book until class start. They can cancel only up to 1 hour before. Staff can still add or remove from the roster.',
     'Schedule Class': 'Schedule Class',
     'Loading schedule...': 'Loading schedule...',
     'No upcoming classes found. Schedule one above.': 'No upcoming classes found. Schedule one above.',
@@ -886,7 +925,7 @@ export const translations = {
     'No athletes have booked yet.': 'No athletes have booked yet.',
     'Class Details': 'Class Details',
     'Private Coach Brief': 'Private Coach Brief',
-    "Today's WOD": "Today's WOD",
+    "Today's WOD": "Today's workout",
     'No WOD scheduled': 'No WOD scheduled',
     'Level not set': 'Level not set',
     'Suggested load': 'Suggested load',
@@ -1495,7 +1534,7 @@ export const translations = {
     'CF Level': 'CF Level',
     Experience: 'Experience',
     New: 'New',
-    'Home Box': 'Home Box',
+    'Home Box': 'Previous training place',
     'Health & Safety': 'Health & Safety',
     Allergies: 'Allergies',
     'Medical Conditions': 'Medical Conditions',
@@ -1916,7 +1955,7 @@ export const translations = {
     'Nav tip Ask AI': 'Pregunta cómo funcionan membresías, pagos y el panel',
     'Nav tip Founding Pilot': 'Programa de socios — ignóralo si no te invitaron',
     Appearance: 'Apariencia',
-    'Nav tip Appearance': 'Paleta de color que ven los atletas en la app',
+    'Nav tip Appearance': 'Colores y módulos que ven los atletas en la app',
     'App color palette': 'Look de la app',
     'App color palette help':
       'Elige un preset para la app de miembros. El panel de staff sigue en el tema claro de Wodus.',
@@ -1949,7 +1988,44 @@ export const translations = {
     'Palette saved': 'Paleta guardada. Los miembros la verán en la app.',
     'Failed to save palette': 'No se pudo guardar la paleta.',
     'Failed to load palette': 'No se pudo cargar la paleta.',
+    'App modules': 'Módulos de la app',
+    'App modules help':
+      'Activa lo que usa tu box. Si apagas un módulo, desaparece de la app y del menú del staff.',
+    'Module daily workouts desc':
+      'WOD del día en el home de atletas y el editor de entrenamientos.',
+    'Module personal records desc':
+      'Pestaña de PRs en la app y el editor de records en el panel.',
+    'Module community desc':
+      'Pestaña de comunidad en la app y la página de Comunidad en el panel.',
+    'Weekly attendance': 'Asistencia semanal',
+    'Module attendance desc':
+      'Tarjeta de asistencia y racha en el home del atleta.',
+    'Modules saved': 'Módulos guardados. Los miembros verán el cambio en la app.',
+    'Failed to save modules': 'No se pudieron guardar los módulos.',
+    'Failed to load modules': 'No se pudieron cargar los módulos.',
+    Onboarding: 'Onboarding',
+    'Nav tip Onboarding': 'Elige qué campos del perfil del atleta son obligatorios',
+    'Onboarding fields help':
+      'Los campos obligatorios deben completarse antes de usar la app. Nombre, fecha de nacimiento y sexo siguen siendo obligatorios. La foto siempre es opcional.',
+    'Onboarding group basic': 'Info básica',
+    'Onboarding group contact': 'Contacto',
+    'Onboarding group sports': 'Entrenamiento',
+    'Onboarding group health': 'Salud',
+    'Onboarding group emergency': 'Emergencia',
+    'Onboarding field weight': 'Peso (kg)',
+    'Onboarding field instagram': 'Instagram',
+    'Onboarding field level': 'Nivel de entrenamiento',
+    'Onboarding field years': 'Años haciendo ejercicio',
+    'Onboarding locked': 'Siempre obligatorio',
+    'Onboarding terms always': 'Términos y declaración',
+    'Onboarding terms always help':
+      'Los atletas deben aceptar los términos de WODUS, la exención de riesgo y la liberación de responsabilidad. Esto no se puede apagar.',
+    'Onboarding required saved': 'Campos obligatorios guardados. Los atletas verán el cambio en la app.',
+    'Failed to save onboarding': 'No se pudieron guardar los ajustes de onboarding.',
+    'Failed to load onboarding': 'No se pudieron cargar los ajustes de onboarding.',
+    'Terms acceptance': 'Términos y Condiciones',
     'App preview': 'Vista previa',
+    'New PR!': '¡Nuevo PR!',
     Book: 'Reservar',
     'Nav tip Update expired memberships':
       'Bloquea a miembros cuyo período pagado ya se agotó',
@@ -2476,6 +2552,8 @@ export const translations = {
     // Schedule Page
     'Class Schedule': 'Horario de Clases',
     'Manage upcoming classes and coach assignments.': 'Gestiona las próximas clases y asignaciones de coaches.',
+    'Athlete booking window tip':
+      'App: los atletas pueden reservar hasta el inicio de la clase. Solo pueden cancelar hasta 1 hora antes. El staff puede agregar o quitar del roster.',
     'Schedule Class': 'Programar Clase',
     'Loading schedule...': 'Cargando horario...',
     'No upcoming classes found. Schedule one above.': 'No se encontraron clases próximas. Programa una arriba.',
@@ -2488,7 +2566,7 @@ export const translations = {
     'No athletes have booked yet.': 'Aún no hay atletas inscritos.',
     'Class Details': 'Detalles de la Clase',
     'Private Coach Brief': 'Resumen Privado del Coach',
-    "Today's WOD": 'WOD de Hoy',
+    "Today's WOD": 'Entrenamiento de hoy',
     'No WOD scheduled': 'No hay WOD programado',
     'Level not set': 'Nivel no definido',
     'Suggested load': 'Carga sugerida',
@@ -3101,7 +3179,7 @@ export const translations = {
     'CF Level': 'Nivel CF',
     Experience: 'Experiencia',
     New: 'Nuevo',
-    'Home Box': 'Box de origen',
+    'Home Box': 'Lugar de entrenamiento anterior',
     'Health & Safety': 'Salud y seguridad',
     Allergies: 'Alergias',
     'Medical Conditions': 'Condiciones médicas',

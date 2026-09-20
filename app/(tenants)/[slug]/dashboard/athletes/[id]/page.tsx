@@ -797,6 +797,7 @@ export default function AthleteDetailPage() {
                   ['Truthfulness', profile.onboarding_affidavit_truth],
                   ['Physical Fit', profile.onboarding_affidavit_fit],
                   ['Rights Release', profile.onboarding_affidavit_release],
+                  ['Terms acceptance', profile.onboarding_affidavit_terms],
                 ] as const
               ).map(([label, ok]) => (
                 <div key={label} className="flex justify-between items-center text-xs">

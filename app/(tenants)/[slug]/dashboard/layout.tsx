@@ -33,7 +33,8 @@ import {
   Clock,
   Rocket,
   Sparkles,
-  Palette
+  Palette,
+  ClipboardList
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -80,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Always start closed so SSR + first client paint match (avoid hydration mismatch).
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
-  const { name: boxName } = useTenant();
+  const { name: boxName, features } = useTenant();
   const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -179,9 +180,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             tip: t('Nav tip Classes'),
             subItems: [
               { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays, tip: t('Nav tip Schedule') },
-              { name: t('Daily workouts'), href: '/dashboard/wods', icon: Dumbbell, tip: t('Nav tip Daily workouts') },
+              ...(features.wod
+                ? [{ name: t('Daily workouts'), href: '/dashboard/wods', icon: Dumbbell, tip: t('Nav tip Daily workouts') }]
+                : []),
               { name: t('Class Types'), href: '/dashboard/class_types', icon: Layers, tip: t('Nav tip Class Types') },
-              { name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy, tip: t('Nav tip Personal Records') },
+              ...(features.personalRecords
+                ? [{ name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy, tip: t('Nav tip Personal Records') }]
+                : []),
             ],
           },
         ],
@@ -204,7 +209,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         items: [
           { name: t('Announcements'), href: '/dashboard/news', icon: Megaphone, tip: t('Nav tip Announcements') },
           { name: t('Push notifications'), href: '/dashboard/notifications', icon: Bell, tip: t('Nav tip Push notifications') },
-          { name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') },
+          ...(features.community
+            ? [{ name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') }]
+            : []),
           { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare, tip: t('Nav tip Feedback') },
         ],
       },
@@ -229,12 +236,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   icon: Palette,
                   tip: t('Nav tip Appearance'),
                 },
+                {
+                  name: t('Onboarding'),
+                  href: '/dashboard/onboarding',
+                  icon: ClipboardList,
+                  tip: t('Nav tip Onboarding'),
+                },
               ]
             : []),
         ],
       },
     ];
-  }, [t, userRole]);
+  }, [t, userRole, features]);
 
   const toggleMenu = (menuName: string) => {
     setOpenMenus((prev) => (prev.includes(menuName) ? [] : [menuName]));
@@ -245,6 +258,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setIsSidebarOpen(false);
     }
   };
+
+  useEffect(() => {
+    if (pathname.includes('/dashboard/wods') && !features.wod) {
+      router.replace('/dashboard');
+    }
+    if (pathname.includes('/dashboard/personal_records') && !features.personalRecords) {
+      router.replace('/dashboard');
+    }
+    if (pathname.includes('/dashboard/community') && !features.community) {
+      router.replace('/dashboard');
+    }
+  }, [pathname, features.wod, features.personalRecords, features.community, router]);
 
   // Client-side guard (middleware is the primary enforcement)
   useEffect(() => {

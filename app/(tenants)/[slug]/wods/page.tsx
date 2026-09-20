@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { tenantService } from '@/lib/services/tenantService';
+import { parseTenantFeatures } from '@/lib/tenant-features';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export default async function TenantWodsPage({
@@ -11,7 +12,7 @@ export default async function TenantWodsPage({
   const { slug } = await params;
   const tenant = await tenantService.getTenantBySlug(slug, supabaseAdmin);
 
-  if (!tenant) {
+  if (!tenant || !parseTenantFeatures(tenant.settings).wod) {
     notFound();
   }
   return (

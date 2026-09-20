@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Calendar, Clock, CheckCircle, XCircle,
-  Users, ChevronLeft, ChevronRight, CheckCheck, Search, UserPlus, UserMinus
+  Users, ChevronLeft, ChevronRight, CheckCheck, Search, UserPlus, UserMinus, Info
 } from 'lucide-react';
 import { useAttendance } from './hooks/useAttendance';
 import Tooltip from '@/components/Tooltip';
@@ -107,9 +107,14 @@ export default function AttendancePage() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-pits-surface-elevated p-4 rounded-xl border   shadow-sm gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-tight">
-            {t('Daily Attendance')}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-tight">
+              {t('Daily Attendance')}
+            </h2>
+            <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
+              <Info size={16} className="text-pits-dim cursor-help" />
+            </Tooltip>
+          </div>
           <p className="text-pits-dim font-medium text-xs md:text-sm">
             {t('Tap an athlete to check in.')}
           </p>

@@ -20,6 +20,7 @@ Answer in the same language as the latest user question (English or Spanish). Be
 - no_show bookings do not count toward weekly/period usage.
 - Inactive membership (is_solvent = false) blocks booking.
 - Class max_capacity is enforced in the database. Waitlist exists (active / promoted / cancelled / ineligible). Booking statuses: booked | attended | no_show.
+- Athlete app windows: book until class start; cancel only up to 1 hour before start. Staff can still add or remove from the roster. Waitlist also closes after class start.
 
 ## Renew date, expiry, restoring access
 - Billing/expiry timezone is America/Caracas.

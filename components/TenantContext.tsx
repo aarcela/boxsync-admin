@@ -4,6 +4,10 @@ import { createContext, useCallback, useContext, useState } from 'react';
 import type { TenantCurrencyConfig } from '@/lib/currency';
 import { DEFAULT_TENANT_CURRENCIES } from '@/lib/currency';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
+import {
+  DEFAULT_TENANT_FEATURES,
+  type TenantFeatures,
+} from '@/lib/tenant-features';
 
 export type TenantContextValue = {
   tenantId: string;
@@ -12,6 +16,8 @@ export type TenantContextValue = {
   currencies: TenantCurrencyConfig;
   setCurrencies: (next: TenantCurrencyConfig) => void;
   refreshCurrencies: () => Promise<TenantCurrencyConfig>;
+  features: TenantFeatures;
+  setFeatures: (next: TenantFeatures) => void;
 };
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -20,13 +26,17 @@ export function TenantProvider({
   value,
   children,
 }: {
-  value: Omit<TenantContextValue, 'setCurrencies' | 'refreshCurrencies'> & {
+  value: Omit<TenantContextValue, 'setCurrencies' | 'refreshCurrencies' | 'setFeatures'> & {
     currencies?: TenantCurrencyConfig;
+    features?: TenantFeatures;
   };
   children: React.ReactNode;
 }) {
   const [currencies, setCurrencies] = useState<TenantCurrencyConfig>(
     value.currencies ?? DEFAULT_TENANT_CURRENCIES
+  );
+  const [features, setFeatures] = useState<TenantFeatures>(
+    value.features ?? DEFAULT_TENANT_FEATURES
   );
 
   const refreshCurrencies = useCallback(async () => {
@@ -44,6 +54,8 @@ export function TenantProvider({
         currencies,
         setCurrencies,
         refreshCurrencies,
+        features,
+        setFeatures,
       }}
     >
       {children}
