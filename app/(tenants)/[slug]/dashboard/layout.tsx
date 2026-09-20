@@ -32,7 +32,8 @@ import {
   Receipt,
   Clock,
   Rocket,
-  Sparkles
+  Sparkles,
+  Palette
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -220,6 +221,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         label: t('Special'),
         items: [
           { name: t('Founding Pilot'), href: '/dashboard/pilot', icon: Rocket, tip: t('Nav tip Founding Pilot') },
+          ...(userRole === 'admin'
+            ? [
+                {
+                  name: t('Appearance'),
+                  href: '/dashboard/appearance',
+                  icon: Palette,
+                  tip: t('Nav tip Appearance'),
+                },
+              ]
+            : []),
         ],
       },
     ];
