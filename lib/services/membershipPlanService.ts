@@ -41,8 +41,11 @@ export const membershipPlanService = {
     }));
   },
 
-  async getActiveMembershipPlans(tenantId: string): Promise<MembershipPlan[]> {
-    const { data, error } = await supabase
+  async getActiveMembershipPlans(
+    tenantId: string,
+    client: SupabaseClient = supabase
+  ): Promise<MembershipPlan[]> {
+    const { data, error } = await client
       .from('membership_plans')
       .select('*')
       .eq('tenant_id', tenantId)
