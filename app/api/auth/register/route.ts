@@ -12,7 +12,7 @@ const UUID_RE =
  * Public athlete self-registration into a tenant (mobile).
  * POST /api/auth/register
  *
- * Body: { tenant_slug, email, password, full_name, phone?, language, client: "mobile" }
+ * Body: { tenant_slug, email, password, full_name, phone?, plan_id?, language, client: "mobile" }
  * Success 201: { user_id, email }
  *
  * Lives on HQ (hq.getwodus.com) — not on each tenant admin host.
@@ -59,6 +59,22 @@ async function resolveDefaultPlanId(tenantId: string): Promise<string | null> {
   return anyPlan?.id ?? null;
 }
 
+async function resolveRequestedPlanId(
+  tenantId: string,
+  planId: string
+): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('membership_plans')
+    .select('id')
+    .eq('id', planId)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -74,6 +90,8 @@ export async function POST(request: Request) {
       typeof body?.full_name === 'string' ? body.full_name.trim() : '';
     const phone =
       typeof body?.phone === 'string' ? body.phone.trim() : '';
+    const requestedPlanId =
+      typeof body?.plan_id === 'string' ? body.plan_id.trim() : '';
     const language: Language =
       body?.language === 'es' || body?.language === 'en' ? body.language : 'en';
 
@@ -89,6 +107,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'validation' }, { status: 400 });
     }
 
+    if (requestedPlanId && !UUID_RE.test(requestedPlanId)) {
+      return NextResponse.json({ error: 'validation' }, { status: 400 });
+    }
+
     const tenant = await tenantService.getTenantBySlug(
       tenantSlug,
       supabaseAdmin
@@ -99,6 +121,16 @@ export async function POST(request: Request) {
 
     if (!UUID_RE.test(tenant.id)) {
       return NextResponse.json({ error: 'unavailable' }, { status: 500 });
+    }
+
+    let planId: string | null = null;
+    if (requestedPlanId) {
+      planId = await resolveRequestedPlanId(tenant.id, requestedPlanId);
+      if (!planId) {
+        return NextResponse.json({ error: 'validation' }, { status: 400 });
+      }
+    } else {
+      planId = await resolveDefaultPlanId(tenant.id);
     }
 
     const { data: created, error: createError } =
@@ -149,7 +181,6 @@ export async function POST(request: Request) {
       profileUpdate.phone = phone;
     }
 
-    const planId = await resolveDefaultPlanId(tenant.id);
     if (planId) {
       profileUpdate.plan = planId;
       const planFields = await buildPlanChangeFields(
