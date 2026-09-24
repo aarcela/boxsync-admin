@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { prMovementService } from '@/lib/services/prMovementService';
+import { useTenant } from '@/components/TenantContext';
 import {
   addDays,
   addWeeks,
@@ -23,11 +24,59 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 
+function localDateKey(value = new Date()) {
+  return format(value, 'yyyy-MM-dd');
+}
+
+function errorText(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return 'Unknown error occurred';
+}
+
+function isUniqueViolation(error: unknown) {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === '23505',
+  );
+}
+
+function readWodContent(raw: string | null) {
+  const empty = {
+    warm_up: '',
+    technique: '',
+    strength: '',
+    metcon: '',
+    scaling: '',
+    stimulus: '',
+  };
+  if (!raw) return empty;
+  try {
+    const parsed = JSON.parse(raw) as Partial<typeof empty>;
+    return {
+      warm_up: parsed.warm_up || '',
+      technique: parsed.technique || '',
+      strength: parsed.strength || '',
+      metcon: parsed.metcon || '',
+      scaling: parsed.scaling || '',
+      stimulus: parsed.stimulus || '',
+    };
+  } catch {
+    return { ...empty, metcon: raw };
+  }
+}
+
 export default function WodEditorPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [loading, setLoading] = useState(false);
+  const { tenantId } = useTenant();
+  const [date, setDate] = useState(() => localDateKey());
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<'edit' | 'preview'>('edit');
   const [isLocked, setIsLocked] = useState(false);
@@ -52,39 +101,11 @@ export default function WodEditorPage() {
   const [prMovements, setPrMovements] = useState<string[]>([]);
 
   const [scheduledDates, setScheduledDates] = useState<Set<string>>(new Set());
-  const [tenantId, setTenantId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadTenant = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      setTenantId(profile?.tenant_id ?? null);
-    };
-    loadTenant();
-  }, []);
-
-  useEffect(() => {
-    if (!tenantId) return;
-
-    const loadMovements = async () => {
-      try {
-        const data = await prMovementService.getPrMovements(tenantId);
-        setPrMovements(
-          data.filter((m) => m.is_active).map((m) => m.name),
-        );
-      } catch {
-        toast(t('Failed to load PR movements'), 'error');
-      }
-    };
-    loadMovements();
-  }, [tenantId]);
+  const [weekVersion, setWeekVersion] = useState(0);
+  const movementsRequested = useRef(false);
+  const saveLock = useRef(false);
+  const dateRef = useRef(date);
+  dateRef.current = date;
 
   const selectedDate = useMemo(() => parseISO(date), [date]);
   const weekStart = useMemo(
@@ -104,90 +125,117 @@ export default function WodEditorPage() {
     return `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
   }, [weekStart]);
 
+  const loadMovements = async () => {
+    if (!tenantId || movementsRequested.current) return;
+    movementsRequested.current = true;
+    try {
+      const data = await prMovementService.getPrMovements(tenantId);
+      setPrMovements(data.filter((m) => m.is_active).map((m) => m.name));
+    } catch {
+      movementsRequested.current = false;
+      toast(t('Failed to load PR movements'), 'error');
+    }
+  };
+
   useEffect(() => {
     if (!tenantId) return;
+    let cancelled = false;
 
     const fetchWeekWods = async () => {
       const start = format(weekStart, 'yyyy-MM-dd');
       const end = format(addDays(weekStart, 6), 'yyyy-MM-dd');
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('wods')
         .select('date')
         .eq('tenant_id', tenantId)
         .gte('date', start)
         .lte('date', end);
-      if (data) {
-        setScheduledDates(new Set(data.map((row) => row.date as string)));
+      if (cancelled) return;
+      if (error) {
+        console.error('Error loading week WODs:', error);
+        return;
       }
+      setScheduledDates(new Set((data ?? []).map((row) => row.date as string)));
     };
     fetchWeekWods();
-  }, [weekStart, loading, wodId, tenantId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [weekStart, tenantId, weekVersion]);
 
-  // Fetch WOD for selected date
+  // Fetch WOD for selected date. Ignore stale responses so a slow load cannot wipe a newer day.
   useEffect(() => {
-    if (!tenantId) {
-      setLoading(false);
-      return;
-    }
+    if (!tenantId) return;
+    let cancelled = false;
 
     const fetchWod = async () => {
       setLoading(true);
-      setWodId(null);
-      setTitle('');
-      setWarmUp('');
-      setTechnique('');
-      setStrength('');
-      setMetcon('');
-      setScaling('');
-      setStimulus('');
-      setScoreType('none');
-      setIsLocked(false);
-
       try {
         const { data, error } = await supabase
           .from('wods')
-          .select('*')
+          .select('id, title, score_type, content')
           .eq('tenant_id', tenantId)
           .eq('date', date)
           .maybeSingle();
 
+        if (cancelled) return;
         if (error) throw error;
 
-        if (data) {
+        const content = readWodContent(data?.content ?? null);
+        if (!data) {
+          setWodId(null);
+          setTitle('');
+          setScoreType('none');
+          setIsLocked(false);
+          setView('edit');
+        } else {
           setWodId(data.id);
           setTitle(data.title || '');
           setScoreType(data.score_type || 'none');
           setIsLocked(true);
           setView('preview');
-
-          try {
-            const contentObj = JSON.parse(data.content);
-            setWarmUp(contentObj.warm_up || '');
-            setTechnique(contentObj.technique || '');
-            setStrength(contentObj.strength || '');
-            setMetcon(contentObj.metcon || '');
-            setScaling(contentObj.scaling || '');
-            setStimulus(contentObj.stimulus || ''); 
-          } catch (e) {
-            console.error('Error parsing WOD content:', e);
-          }
         }
+        setWarmUp(content.warm_up);
+        setTechnique(content.technique);
+        setStrength(content.strength);
+        setMetcon(content.metcon);
+        setScaling(content.scaling);
+        setStimulus(content.stimulus);
       } catch (error) {
+        if (cancelled) return;
         console.error('Error loading WOD:', error);
+        setWodId(null);
+        setTitle('');
+        setWarmUp('');
+        setTechnique('');
+        setStrength('');
+        setMetcon('');
+        setScaling('');
+        setStimulus('');
+        setScoreType('none');
+        setIsLocked(false);
+        setView('edit');
+        toast(t('Failed to load workout'), 'error');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchWod();
+    return () => {
+      cancelled = true;
+    };
   }, [date, tenantId]);
 
   const handleSave = async () => {
+    if (saveLock.current) return;
     if (!tenantId) {
       toast(t('Missing tenant context.'), 'error');
       return;
     }
 
+    saveLock.current = true;
+    const savedDate = date;
     setSaving(true);
     try {
       const contentJson = JSON.stringify({
@@ -199,39 +247,63 @@ export default function WodEditorPage() {
         stimulus,
       });
 
-      const payload = {
-        tenant_id: tenantId,
-        date,
-        title: title || 'Daily WOD',
+      const fields = {
+        date: savedDate,
+        title: title.trim() || 'Daily WOD',
         content: contentJson,
         score_type: scoreType,
+      };
+
+      const applySaved = (id: string) => {
+        if (dateRef.current !== savedDate) return;
+        setWodId(id);
+        setView('preview');
+        setIsLocked(true);
       };
 
       if (wodId) {
         const { error } = await supabase
           .from('wods')
-          .update(payload)
+          .update(fields)
           .eq('id', wodId)
           .eq('tenant_id', tenantId);
         if (error) throw error;
+        applySaved(wodId);
       } else {
         const { data, error } = await supabase
           .from('wods')
-          .insert(payload)
+          .insert({ ...fields, tenant_id: tenantId })
           .select('id')
           .single();
-        if (error) throw error;
-        if (data?.id) setWodId(data.id);
+
+        if (error && isUniqueViolation(error)) {
+          const { data: existing, error: loadError } = await supabase
+            .from('wods')
+            .select('id')
+            .eq('tenant_id', tenantId)
+            .eq('date', savedDate)
+            .maybeSingle();
+          if (loadError || !existing?.id) throw error;
+          const { error: updateError } = await supabase
+            .from('wods')
+            .update(fields)
+            .eq('id', existing.id)
+            .eq('tenant_id', tenantId);
+          if (updateError) throw updateError;
+          applySaved(existing.id);
+        } else {
+          if (error) throw error;
+          if (!data?.id) throw new Error('Insert returned no row');
+          applySaved(data.id);
+        }
       }
 
+      setWeekVersion((version) => version + 1);
       toast(t('Workout Published Successfully'), 'success');
-      setView('preview');
-      setIsLocked(true);
-
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast(`${t('Error saving WOD')}: ${errorMessage}`, 'error');
+      toast(`${t('Error saving WOD')}: ${errorText(error)}`, 'error');
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   };
@@ -270,10 +342,10 @@ export default function WodEditorPage() {
         .eq('tenant_id', tenantId);
       if (error) throw error;
       resetForm();
+      setWeekVersion((version) => version + 1);
       toast(t('Workout deleted'), 'success');
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast(`${t('Error deleting WOD')}: ${errorMessage}`, 'error');
+      toast(`${t('Error deleting WOD')}: ${errorText(error)}`, 'error');
     } finally {
       setDeleting(false);
     }
@@ -374,7 +446,7 @@ export default function WodEditorPage() {
             </h2>
             <p className="text-pits-dim font-medium text-xs flex items-center">
               <Calendar size={12} className="mr-1" />
-              {t('Assigning workout for {{date}}', { date: new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
+              {t('Assigning workout for {{date}}', { date: selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
             </p>
           </div>
         </div>
@@ -384,7 +456,9 @@ export default function WodEditorPage() {
             <input 
               type="date" 
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) setDate(e.target.value);
+              }}
               className="pl-4 pr-10 py-3 bg-pits-surface-muted border border-pits-edge rounded-xl font-bold text-pits-text focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red outline-none shadow-sm transition-all"
             />
           </div>
@@ -524,6 +598,7 @@ export default function WodEditorPage() {
                     if (isLocked) return;
                     setTechniqueSearch('');
                     setTechniqueDropdownOpen(true);
+                    void loadMovements();
                   }}
                   onBlur={() => setTimeout(() => setTechniqueDropdownOpen(false), 200)}
                   placeholder={t('Skill focus placeholder')}
@@ -643,7 +718,7 @@ export default function WodEditorPage() {
                     {title || t("TODAY'S WORKOUT")}
                   </div>
                   <div className="text-[10px] font-bold text-pits-dim tracking-widest uppercase">
-                    {new Date(date).toDateString()}
+                    {selectedDate.toDateString()}
                   </div>
 
                   {/* Reactive Blocks */}
@@ -676,8 +751,9 @@ export default function WodEditorPage() {
             {/* Save Action */}
             <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
               <button
+                type="button"
                 onClick={isLocked ? requestUnlock : handleSave}
-                disabled={saving}
+                disabled={saving || loading || deleting}
                 className={`w-full py-4 rounded-xl flex items-center justify-center font-black uppercase tracking-widest text-sm shadow-xl transition-all
                   ${saving ? 'bg-pits-dim text-pits-dark-text cursor-not-allowed' : isLocked ? 'bg-pits-success hover:opacity-90 text-pits-dark-text shadow-pits-primary/20' : 'bg-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:scale-[1.02] active:scale-[0.98] shadow-pits-primary/20'}
                 `}
@@ -737,7 +813,7 @@ export default function WodEditorPage() {
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         title={t('Delete workout title')}
-        message={t('Delete workout dated message', { date: new Date(date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
+        message={t('Delete workout dated message', { date: selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
         confirmLabel={t('Delete')}
         cancelLabel={t('Cancel')}
         variant="danger"
