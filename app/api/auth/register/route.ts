@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { buildPlanChangeFields } from '@/lib/plan-period';
+import { enforceAuthPostRateLimit } from '@/lib/rate-limit';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
@@ -94,6 +95,13 @@ export async function POST(request: Request) {
       typeof body?.plan_id === 'string' ? body.plan_id.trim() : '';
     const language: Language =
       body?.language === 'es' || body?.language === 'en' ? body.language : 'en';
+
+    const rateLimited = await enforceAuthPostRateLimit(
+      'register',
+      request,
+      email
+    );
+    if (rateLimited) return rateLimited;
 
     if (!tenantSlug || !SLUG_RE.test(tenantSlug)) {
       return NextResponse.json({ error: 'invalid_slug' }, { status: 400 });

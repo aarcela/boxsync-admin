@@ -4,6 +4,7 @@ import {
   parseTenantExchangeRateConfig,
 } from '@/lib/currency';
 import { publicCorsHeaders } from '@/lib/public-cors';
+import { enforcePublicGetRateLimit } from '@/lib/rate-limit';
 import { financialService } from '@/lib/services/financialService';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { tenantService } from '@/lib/services/tenantService';
@@ -37,6 +38,9 @@ export async function OPTIONS(request: Request) {
  */
 export async function GET(request: Request) {
   try {
+    const rateLimited = await enforcePublicGetRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const { searchParams } = new URL(request.url);
     const raw = searchParams.get('slug') ?? '';
     const slug = raw.trim().toLowerCase();

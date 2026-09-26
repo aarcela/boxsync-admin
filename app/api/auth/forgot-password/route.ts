@@ -10,6 +10,7 @@ import {
 } from '@/lib/email/passwordResetEmail';
 import { createMobilePasswordResetLink } from '@/lib/mobile-password-reset';
 import { MOBILE_RESET_PASSWORD_DEEP_LINK } from '@/lib/constants/app-links';
+import { enforceAuthPostRateLimit } from '@/lib/rate-limit';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
 
@@ -77,6 +78,13 @@ export async function POST(request: Request) {
     const isMobileClient = body?.client === 'mobile';
     const language: Language =
       body?.language === 'es' || body?.language === 'en' ? body.language : 'en';
+
+    const rateLimited = await enforceAuthPostRateLimit(
+      'forgot-password',
+      request,
+      email
+    );
+    if (rateLimited) return rateLimited;
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ message: SUCCESS_MESSAGE });

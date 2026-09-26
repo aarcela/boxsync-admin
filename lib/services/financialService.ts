@@ -7,6 +7,7 @@ import {
   exchangeRateEndpoint,
   parseTenantExchangeRateConfig,
 } from '@/lib/currency';
+import { getCachedFxRate, setCachedFxRate } from '@/lib/fx-cache';
 
 const PAYMENT_PROOFS_BUCKET = 'payment-proofs';
 const SIGNED_URL_TTL_SECONDS = 60 * 10;
@@ -183,11 +184,20 @@ export const financialService = {
     referenceCurrency: string = CurrencyType.USD,
     source: Exclude<ExchangeRateSource, 'custom'> | 'bcv' = 'oficial'
   ): Promise<number> {
+    const normalizedSource = source === 'bcv' ? 'oficial' : source;
+
     try {
+      const cached = await getCachedFxRate(referenceCurrency, normalizedSource);
+      if (cached != null) return cached;
+
       const path = exchangeRateEndpoint(referenceCurrency, source);
       const response = await fetch(path);
       const data = await response.json();
-      return Number(data.promedio);
+      const rate = Number(data.promedio);
+      if (Number.isFinite(rate) && rate > 0) {
+        await setCachedFxRate(referenceCurrency, normalizedSource, rate);
+      }
+      return rate;
     } catch (error) {
       console.error('Failed to fetch reference rate:', error);
       return 0;
