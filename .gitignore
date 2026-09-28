@@ -52,7 +52,7 @@ scripts/
 .vscode/
 
 *.sql
-!supabase/migrations/20260716141000_consolidate_tenant_audit_fixes.sql
+!supabase/migrations/*.sql
 
 *.txt
 *.toml

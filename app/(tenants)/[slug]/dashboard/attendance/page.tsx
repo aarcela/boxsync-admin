@@ -8,6 +8,7 @@ import {
 import { useAttendance } from './hooks/useAttendance';
 import Tooltip from '@/components/Tooltip';
 import AddToClassModal from '@/components/AddToClassModal';
+import AddGuestModal from '@/components/AddGuestModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
@@ -38,21 +39,28 @@ export default function AttendancePage() {
     selectedClassId,
     setSelectedClassId,
     roster,
+    guestRoster,
     loadingRoster,
     searchTerm,
     setSearchTerm,
     filteredRoster,
+    filteredGuestRoster,
     updateStatus,
+    updateGuestStatus,
     addAthlete,
+    addGuest,
     removeAthlete,
+    removeGuest,
     markRemaining,
     nextDay,
     prevDay
   } = useAttendance();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddGuestOpen, setIsAddGuestOpen] = useState(false);
   const [addingAthlete, setAddingAthlete] = useState(false);
-  const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string; kind: 'member' | 'guest' } | null>(null);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
 
@@ -65,14 +73,22 @@ export default function AttendancePage() {
   }, [tenantId]);
 
   const selectedClass = classes.find(c => c.id === selectedClassId);
-  const bookingCount = selectedClass?.bookings[0]?.count ?? roster.length;
+  const bookingCount = selectedClass?.bookings[0]?.count ?? (
+    roster.filter(b => b.status === 'booked' || b.status === 'attended').length
+    + guestRoster.filter(g => g.status === 'booked' || g.status === 'attended').length
+  );
   const isClassFull = selectedClass ? bookingCount >= selectedClass.max_capacity : false;
   const rosterUserIds = roster.map(b => b.profiles.id);
+  const rosterGuestIds = guestRoster.map(g => g.guest_athlete_id);
   const isToday = date === getCaracasDate();
-  const presentCount = roster.filter(b => b.status === 'attended').length;
-  const missedCount = roster.filter(b => b.status === 'no_show').length;
-  const pendingCount = roster.filter(b => b.status === 'booked').length;
-  const showSearch = roster.length > 6;
+  const presentCount = roster.filter(b => b.status === 'attended').length
+    + guestRoster.filter(g => g.status === 'attended').length;
+  const missedCount = roster.filter(b => b.status === 'no_show').length
+    + guestRoster.filter(g => g.status === 'no_show').length;
+  const pendingCount = roster.filter(b => b.status === 'booked').length
+    + guestRoster.filter(g => g.status === 'booked').length;
+  const totalRosterCount = roster.length + guestRoster.length;
+  const showSearch = totalRosterCount > 6;
 
   const handleAddAthlete = async (userId: string) => {
     setAddingAthlete(true);
@@ -86,11 +102,29 @@ export default function AttendancePage() {
     }
   };
 
+  const handleAddGuest = async (input: {
+    fullName?: string;
+    whatsapp?: string;
+    instagram?: string;
+    guestAthleteId?: string;
+  }) => {
+    setAddingGuest(true);
+    try {
+      await addGuest(input);
+      setIsAddGuestOpen(false);
+    } catch {
+      // Error toast handled in hook
+    } finally {
+      setAddingGuest(false);
+    }
+  };
+
   const handleRemoveConfirm = async () => {
     if (!removeConfirm) return;
-    const { id } = removeConfirm;
+    const { id, kind } = removeConfirm;
     setRemoveConfirm(null);
-    await removeAthlete(id);
+    if (kind === 'guest') await removeGuest(id);
+    else await removeAthlete(id);
   };
 
   const toggleAttendance = (booking: Booking) => {
@@ -291,7 +325,7 @@ export default function AttendancePage() {
                 )}
               </div>
               
-              {selectedClassId && roster.length > 0 && (
+              {selectedClassId && (
                 <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                   {showSearch && (
                     <div className="relative w-36 sm:w-48 hidden sm:block">
@@ -315,6 +349,16 @@ export default function AttendancePage() {
                       </button>
                     </Tooltip>
                   )}
+                  {!isClassFull && (
+                    <Tooltip content={t('Add guest to class')}>
+                      <button
+                        onClick={() => setIsAddGuestOpen(true)}
+                        className="px-2.5 py-2 bg-pits-surface-muted border border-pits-edge text-pits-text rounded-lg hover:bg-pits-surface-elevated transition-all shadow-sm active:scale-95 text-[10px] font-black uppercase tracking-wider"
+                      >
+                        {t('Add Guest')}
+                      </button>
+                    </Tooltip>
+                  )}
                   {pendingCount > 0 && (
                     <button
                       onClick={() => markRemaining('attended')}
@@ -328,7 +372,7 @@ export default function AttendancePage() {
               )}
             </div>
 
-            {selectedClassId && roster.length > 0 && (
+            {selectedClassId && totalRosterCount > 0 && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t  ">
                 <div className="flex items-center gap-1.5 text-xs font-bold">
                   <CheckCircle size={14} className="text-green-600" />
@@ -379,17 +423,26 @@ export default function AttendancePage() {
               </div>
             ) : loadingRoster ? (
               <div className="p-12 text-center text-gray-400">{t('Loading roster...')}</div>
-            ) : roster.length === 0 ? (
+            ) : totalRosterCount === 0 ? (
               <div className="p-12 text-center text-gray-400 flex flex-col items-center gap-4">
                 <p>{t('No bookings for this class yet.')}</p>
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  disabled={isClassFull}
-                  className="flex items-center px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-xs font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all disabled:opacity-50"
-                >
-                  <UserPlus size={16} className="mr-2" />
-                  {t('Add Athlete')}
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    disabled={isClassFull}
+                    className="flex items-center px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-xs font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all disabled:opacity-50"
+                  >
+                    <UserPlus size={16} className="mr-2" />
+                    {t('Add Athlete')}
+                  </button>
+                  <button
+                    onClick={() => setIsAddGuestOpen(true)}
+                    disabled={isClassFull}
+                    className="flex items-center px-4 py-2 border border-pits-edge bg-pits-surface-muted text-pits-text rounded-lg text-xs font-black uppercase tracking-wider hover:bg-pits-surface-elevated transition-all disabled:opacity-50"
+                  >
+                    {t('Add Guest')}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -444,7 +497,70 @@ export default function AttendancePage() {
                       <Tooltip content={t('Remove from class')}>
                         <button
                           type="button"
-                          onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name })}
+                          onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name, kind: 'member' })}
+                          className="p-2 rounded-lg text-gray-300 hover:bg-orange-50 hover:text-orange-600 transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                        >
+                          <UserMinus size={18} />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
+                {filteredGuestRoster.map((guest) => {
+                  const attended = guest.status === 'attended';
+                  const missed = guest.status === 'no_show';
+                  const contact = [guest.whatsapp, guest.instagram].filter(Boolean).join(' · ');
+                  return (
+                    <div
+                      key={`guest-${guest.id}`}
+                      className={`group flex items-center gap-1 pr-2 sm:pr-3 transition-colors ${
+                        attended ? 'bg-green-50/50' : missed ? 'opacity-60' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => updateGuestStatus(guest.id, attended ? 'booked' : 'attended')}
+                        className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700 shrink-0">
+                          {guest.full_name?.charAt(0) || 'G'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="font-bold text-pits-text truncate">{guest.full_name}</p>
+                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              {t('Guest')}
+                            </span>
+                          </div>
+                          <p className={`text-[10px] font-black uppercase tracking-wide ${
+                            attended ? 'text-green-700' : missed ? 'text-red-600' : 'text-blue-600'
+                          }`}>
+                            {t(bookingStatusKey(guest.status))}
+                            {contact ? <span className="normal-case tracking-normal font-semibold text-gray-400"> · {contact}</span> : null}
+                          </p>
+                        </div>
+                        <CheckCircle
+                          size={22}
+                          className={attended ? 'text-green-600 shrink-0' : 'text-gray-200 shrink-0'}
+                        />
+                      </button>
+
+                      <Tooltip content={missed ? t('Reset to Booked') : t('Mark as Missed')}>
+                        <button
+                          type="button"
+                          onClick={() => updateGuestStatus(guest.id, missed ? 'booked' : 'no_show')}
+                          className={`p-2 rounded-lg transition-colors ${
+                            missed ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-red-50 hover:text-red-600'
+                          }`}
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      </Tooltip>
+
+                      <Tooltip content={t('Remove from class')}>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveConfirm({ id: guest.id, name: guest.full_name, kind: 'guest' })}
                           className="p-2 rounded-lg text-gray-300 hover:bg-orange-50 hover:text-orange-600 transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                         >
                           <UserMinus size={18} />
@@ -468,9 +584,17 @@ export default function AttendancePage() {
         adding={addingAthlete}
       />
 
+      <AddGuestModal
+        isOpen={isAddGuestOpen}
+        onClose={() => setIsAddGuestOpen(false)}
+        onSubmit={handleAddGuest}
+        adding={addingGuest}
+        excludedGuestIds={rosterGuestIds}
+      />
+
       <ConfirmDialog
         isOpen={!!removeConfirm}
-        title={t('Remove Athlete')}
+        title={removeConfirm?.kind === 'guest' ? t('Remove Guest') : t('Remove Athlete')}
         message={t('Remove {{name}} from the class? Their booking will be deleted.', {
           name: removeConfirm?.name ?? t('this athlete'),
         })}

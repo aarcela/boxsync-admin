@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { classService } from '@/lib/services/classService';
 import { coachBriefService, CoachBrief } from '@/lib/services/coachBriefService';
 import { ClassSession, Booking, CapacityInsight, WaitlistEntry } from '@/lib/types/gym';
+import { guestService, GuestBooking } from '@/lib/services/guestService';
 
 export function useSchedule() {
   const [classes, setClasses] = useState<ClassSession[]>([]);
@@ -9,6 +10,7 @@ export function useSchedule() {
   
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [roster, setRoster] = useState<Booking[]>([]);
+  const [guestRoster, setGuestRoster] = useState<GuestBooking[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [capacityInsights, setCapacityInsights] = useState<CapacityInsight[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
@@ -39,13 +41,20 @@ export function useSchedule() {
     setLoadingRoster(true);
     setCoachBriefError(null);
     try {
-      const [bookingsResult, waitlistResult, briefResult] = await Promise.allSettled([
+      const [bookingsResult, waitlistResult, briefResult, guestsResult] = await Promise.allSettled([
         classService.getRoster(classId),
         classService.getWaitlist(classId),
         coachBriefService.getForClass(classId),
+        guestService.listForClass(classId),
       ]);
       if (bookingsResult.status === 'rejected') throw bookingsResult.reason;
       setRoster(bookingsResult.value);
+      if (guestsResult.status === 'fulfilled') {
+        setGuestRoster(guestsResult.value);
+      } else {
+        console.error('Error fetching guests:', guestsResult.reason);
+        setGuestRoster([]);
+      }
       if (waitlistResult.status === 'fulfilled') {
         setWaitlist(waitlistResult.value);
       } else {
@@ -77,6 +86,7 @@ export function useSchedule() {
       fetchRoster(selectedClassId);
     } else {
       setRoster([]);
+      setGuestRoster([]);
       setWaitlist([]);
       setCoachBrief(null);
       setCoachBriefError(null);
@@ -99,6 +109,7 @@ export function useSchedule() {
     selectedClassId,
     setSelectedClassId,
     roster,
+    guestRoster,
     waitlist,
     capacityInsights,
     loadingRoster,

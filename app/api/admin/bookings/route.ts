@@ -97,13 +97,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Athlete not found' }, { status: 404 });
     }
 
-    const { count: bookingCount } = await supabaseAdmin
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('class_id', classId)
-      .in('status', ['booked', 'attended']);
-
-    if ((bookingCount ?? 0) >= classData.max_capacity) {
+    const { data: occupancy, error: occError } = await supabaseAdmin.rpc(
+      'class_active_occupancy',
+      { p_class_id: classId },
+    );
+    if (occError) {
+      // Fallback if RPC not yet migrated: member bookings only.
+      const { count: bookingCount } = await supabaseAdmin
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('class_id', classId)
+        .in('status', ['booked', 'attended']);
+      if ((bookingCount ?? 0) >= classData.max_capacity) {
+        return NextResponse.json(
+          { error: 'Class is at full capacity' },
+          { status: 409 }
+        );
+      }
+    } else if ((occupancy as number) >= classData.max_capacity) {
       return NextResponse.json(
         { error: 'Class is at full capacity' },
         { status: 409 }

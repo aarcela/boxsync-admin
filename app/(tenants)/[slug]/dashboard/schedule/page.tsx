@@ -25,6 +25,7 @@ export default function SchedulePage() {
     selectedClassId,
     setSelectedClassId,
     roster,
+    guestRoster,
     waitlist,
     capacityInsights,
     loadingRoster,
@@ -498,7 +499,7 @@ export default function SchedulePage() {
                       </h4>
                       {loadingRoster ? (
                         <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('Loading schedule...')}</p>
-                      ) : roster.length === 0 ? (
+                      ) : roster.length === 0 && guestRoster.length === 0 ? (
                         <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('No bookings yet.')}</p>
                       ) : (
                         <div className="space-y-2">
@@ -530,6 +531,35 @@ export default function SchedulePage() {
                           ))}
                         </div>
                       )}
+                      {guestRoster.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {guestRoster.map((guest) => (
+                            <div key={guest.id} className="flex justify-between items-center p-3 rounded-lg border border-amber-200 bg-amber-50/40 shadow-sm">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="relative w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700">
+                                  {guest.full_name?.charAt(0) || 'G'}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-pits-text text-sm truncate">{guest.full_name}</span>
+                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{t('Guest')}</span>
+                                  </div>
+                                  <p className="text-[10px] text-pits-dim truncate">
+                                    {[guest.whatsapp, guest.instagram].filter(Boolean).join(' · ') || t('No contact saved')}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
+                                ${guest.status === 'attended' ? 'bg-green-100 text-green-700' :
+                                  guest.status === 'no_show' ? 'bg-red-100 text-red-700' :
+                                  'bg-blue-100 text-blue-700'}
+                              `}>
+                                {guest.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div>
