@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireStaffApi } from '@/lib/require-staff-api';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type GuestBookingStatus = 'booked' | 'attended' | 'no_show';
 
@@ -13,6 +12,7 @@ function normalizeContact(value: unknown): string | null {
 export async function GET(request: Request) {
   const staffAuth = await requireStaffApi();
   if ('error' in staffAuth) return staffAuth.error;
+  const { supabase } = staffAuth;
 
   try {
     const staffTenantId = staffAuth.profile.tenant_id as string | null;
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const recent = searchParams.get('recent') === '1';
 
     if (recent) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('guest_athletes')
         .select('id, full_name, whatsapp, instagram, created_at')
         .eq('tenant_id', staffTenantId)
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing classId' }, { status: 400 });
     }
 
-    const { data: classData, error: classError } = await supabaseAdmin
+    const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('id, tenant_id')
       .eq('id', classId)
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('guest_bookings')
       .select(`
         id, status, guest_athlete_id,
@@ -85,6 +85,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const staffAuth = await requireStaffApi();
   if ('error' in staffAuth) return staffAuth.error;
+  const { supabase } = staffAuth;
 
   try {
     const body = await request.json();
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing tenant context.' }, { status: 400 });
     }
 
-    const { data: classData, error: classError } = await supabaseAdmin
+    const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('id, max_capacity, tenant_id')
       .eq('id', classId)
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Class not found' }, { status: 404 });
     }
 
-    const { data: occupancy, error: occError } = await supabaseAdmin.rpc(
+    const { data: occupancy, error: occError } = await supabase.rpc(
       'class_active_occupancy',
       { p_class_id: classId },
     );
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
     } | null = null;
 
     if (resolvedGuestId) {
-      const { data: existingGuest, error: guestError } = await supabaseAdmin
+      const { data: existingGuest, error: guestError } = await supabase
         .from('guest_athletes')
         .select('id, full_name, whatsapp, instagram')
         .eq('id', resolvedGuestId)
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       }
       guestRow = existingGuest;
     } else {
-      const { data: createdGuest, error: createError } = await supabaseAdmin
+      const { data: createdGuest, error: createError } = await supabase
         .from('guest_athletes')
         .insert({
           tenant_id: staffTenantId,
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       resolvedGuestId = createdGuest.id;
     }
 
-    const { data: existingBooking } = await supabaseAdmin
+    const { data: existingBooking } = await supabase
       .from('guest_bookings')
       .select('id')
       .eq('class_id', classId)
@@ -178,7 +179,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: booking, error: bookingError } = await supabaseAdmin
+    const { data: booking, error: bookingError } = await supabase
       .from('guest_bookings')
       .insert({
         tenant_id: staffTenantId,
@@ -211,6 +212,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const staffAuth = await requireStaffApi();
   if ('error' in staffAuth) return staffAuth.error;
+  const { supabase } = staffAuth;
 
   try {
     const body = await request.json();
@@ -228,7 +230,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Missing tenant context.' }, { status: 400 });
     }
 
-    const { data: existing, error: existingError } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabase
       .from('guest_bookings')
       .select('id, tenant_id')
       .eq('id', guestBookingId)
@@ -239,7 +241,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Guest booking not found' }, { status: 404 });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('guest_bookings')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', guestBookingId)
@@ -257,6 +259,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const staffAuth = await requireStaffApi();
   if ('error' in staffAuth) return staffAuth.error;
+  const { supabase } = staffAuth;
 
   try {
     const body = await request.json();
@@ -270,7 +273,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Missing tenant context.' }, { status: 400 });
     }
 
-    const { data: existing, error: existingError } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabase
       .from('guest_bookings')
       .select('id, tenant_id')
       .eq('id', guestBookingId)
@@ -281,7 +284,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Guest booking not found' }, { status: 404 });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('guest_bookings')
       .delete()
       .eq('id', guestBookingId)

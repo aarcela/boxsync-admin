@@ -74,15 +74,26 @@ export function useAttendance() {
   const fetchRoster = useCallback(async (classId: string) => {
     setLoadingRoster(true);
     try {
-      const [bookings, guests] = await Promise.all([
+      const [bookingsResult, guestsResult] = await Promise.allSettled([
         classService.getRoster(classId),
         guestService.listForClass(classId),
       ]);
-      setRoster(bookings);
-      setGuestRoster(guests);
-    } catch (error) {
-      console.error('Fetch roster error:', error);
-      toast(t('Failed to load roster'), 'error');
+
+      if (bookingsResult.status === 'fulfilled') {
+        setRoster(bookingsResult.value);
+      } else {
+        console.error('Fetch roster error:', bookingsResult.reason);
+        setRoster([]);
+        toast(t('Failed to load roster'), 'error');
+      }
+
+      if (guestsResult.status === 'fulfilled') {
+        setGuestRoster(guestsResult.value);
+      } else {
+        console.error('Fetch guest roster error:', guestsResult.reason);
+        setGuestRoster([]);
+        // Don't block member roster on guest failures.
+      }
     } finally {
       setLoadingRoster(false);
     }
