@@ -14,6 +14,7 @@ const classSelect = `
   *,
   coach:profiles(full_name),
   bookings:bookings(status),
+  guest_bookings:guest_bookings(status),
   waitlist:class_waitlist(status)
 `;
 
@@ -32,11 +33,14 @@ function mapClassOccupancy(rows: unknown[] | null): ClassSession[] {
   return (rows ?? []).map((item) => {
     const row = item as ClassSession & {
       bookings?: { status?: string; count?: number }[];
+      guest_bookings?: { status?: string; count?: number }[];
       waitlist?: { status?: string; count?: number }[];
     };
+    const memberCount = occupancyCount(row.bookings, ['booked', 'attended']);
+    const guestCount = occupancyCount(row.guest_bookings, ['booked', 'attended']);
     return {
       ...row,
-      bookings: [{ count: occupancyCount(row.bookings, ['booked', 'attended']) }],
+      bookings: [{ count: memberCount + guestCount }],
       waitlist: [{ count: occupancyCount(row.waitlist, ['active']) }],
     };
   }) as ClassSession[];

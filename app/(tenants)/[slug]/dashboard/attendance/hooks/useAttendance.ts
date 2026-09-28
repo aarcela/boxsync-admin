@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCaracasDate } from '@/lib/utils/date';
 import { classService } from '@/lib/services/classService';
+import { guestService, GuestBooking } from '@/lib/services/guestService';
 import { Booking, ClassSession, BookingStatus } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
@@ -14,6 +15,7 @@ export function useAttendance() {
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [roster, setRoster] = useState<Booking[]>([]);
+  const [guestRoster, setGuestRoster] = useState<GuestBooking[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +32,7 @@ export function useAttendance() {
     setLoadingClasses(true);
     setSelectedClassId(null);
     setRoster([]);
+    setGuestRoster([]);
     
     try {
       const data = await classService.getClassesByDate(selectedDate);
@@ -71,11 +74,26 @@ export function useAttendance() {
   const fetchRoster = useCallback(async (classId: string) => {
     setLoadingRoster(true);
     try {
-      const bookings = await classService.getRoster(classId);
-      setRoster(bookings);
-    } catch (error) {
-      console.error('Fetch roster error:', error);
-      toast(t('Failed to load roster'), 'error');
+      const [bookingsResult, guestsResult] = await Promise.allSettled([
+        classService.getRoster(classId),
+        guestService.listForClass(classId),
+      ]);
+
+      if (bookingsResult.status === 'fulfilled') {
+        setRoster(bookingsResult.value);
+      } else {
+        console.error('Fetch roster error:', bookingsResult.reason);
+        setRoster([]);
+        toast(t('Failed to load roster'), 'error');
+      }
+
+      if (guestsResult.status === 'fulfilled') {
+        setGuestRoster(guestsResult.value);
+      } else {
+        console.error('Fetch guest roster error:', guestsResult.reason);
+        setGuestRoster([]);
+        // Don't block member roster on guest failures.
+      }
     } finally {
       setLoadingRoster(false);
     }
@@ -186,9 +204,82 @@ export function useAttendance() {
     setDate(currentDate.toISOString().split('T')[0]);
   };
 
+  const updateGuestStatus = async (guestBookingId: string, newStatus: BookingStatus) => {
+    const previous = [...guestRoster];
+    const previousStatus = guestRoster.find((g) => g.id === guestBookingId)?.status;
+    setGuestRoster((prev) =>
+      prev.map((g) => (g.id === guestBookingId ? { ...g, status: newStatus } : g)),
+    );
+
+    // Capacity: booked/attended occupy; transitioning into/out of occupying statuses adjusts count.
+    const wasOccupying = previousStatus === 'booked' || previousStatus === 'attended';
+    const nowOccupying = newStatus === 'booked' || newStatus === 'attended';
+    if (selectedClassId && wasOccupying !== nowOccupying) {
+      updateClassBookingCount(selectedClassId, nowOccupying ? 1 : -1);
+    }
+
+    try {
+      await guestService.updateStatus(guestBookingId, newStatus);
+    } catch (error) {
+      console.error(error);
+      setGuestRoster(previous);
+      if (selectedClassId && wasOccupying !== nowOccupying) {
+        updateClassBookingCount(selectedClassId, wasOccupying ? 1 : -1);
+      }
+      toast(t('Failed to update status'), 'error');
+    }
+  };
+
+  const addGuest = async (input: {
+    fullName?: string;
+    whatsapp?: string;
+    instagram?: string;
+    guestAthleteId?: string;
+  }) => {
+    if (!selectedClassId) return;
+    const selectedClass = classes.find((c) => c.id === selectedClassId);
+    const count = selectedClass?.bookings[0]?.count ?? roster.length + guestRoster.filter((g) => g.status === 'booked' || g.status === 'attended').length;
+    if (selectedClass && count >= selectedClass.max_capacity) {
+      toast(t('Class is at full capacity'), 'error');
+      return;
+    }
+    try {
+      const guest = await guestService.addToClass({ classId: selectedClassId, ...input });
+      setGuestRoster((prev) => [...prev, guest]);
+      updateClassBookingCount(selectedClassId, 1);
+      toast(t('Guest added to class'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(error instanceof Error ? error.message : t('Failed to add guest'), 'error');
+      throw error;
+    }
+  };
+
+  const removeGuest = async (guestBookingId: string) => {
+    if (!selectedClassId) return;
+    const previous = [...guestRoster];
+    const removed = guestRoster.find((g) => g.id === guestBookingId);
+    setGuestRoster((prev) => prev.filter((g) => g.id !== guestBookingId));
+    try {
+      await guestService.remove(guestBookingId);
+      if (removed && (removed.status === 'booked' || removed.status === 'attended')) {
+        updateClassBookingCount(selectedClassId, -1);
+      }
+      toast(t('Guest removed from class'), 'success');
+    } catch (error) {
+      console.error(error);
+      setGuestRoster(previous);
+      toast(t('Failed to remove guest'), 'error');
+    }
+  };
+
   // Filtered Roster
+  const term = searchTerm.toLowerCase();
   const filteredRoster = roster.filter(b => 
-    b.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    b.profiles.full_name.toLowerCase().includes(term)
+  );
+  const filteredGuestRoster = guestRoster.filter((g) =>
+    g.full_name.toLowerCase().includes(term)
   );
 
   return {
@@ -199,13 +290,18 @@ export function useAttendance() {
     selectedClassId,
     setSelectedClassId,
     roster,
+    guestRoster,
     loadingRoster,
     searchTerm,
     setSearchTerm,
     filteredRoster,
+    filteredGuestRoster,
     updateStatus,
+    updateGuestStatus,
     addAthlete,
+    addGuest,
     removeAthlete,
+    removeGuest,
     markRemaining,
     nextDay,
     prevDay
