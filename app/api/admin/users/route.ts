@@ -4,6 +4,7 @@ import {
   canAssignProfileRole,
   getMemberInviteRedirectUrl,
 } from '@/lib/auth';
+import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildPlanChangeFields } from '@/lib/plan-period';
@@ -141,8 +142,7 @@ export async function POST(request: Request) {
       if (linkError) throw linkError;
       if (!linkData.user) throw new Error('Failed to create user object');
 
-      memberInviteLink = linkData.properties?.action_link;
-      if (!memberInviteLink) throw new Error('Failed to generate invite link');
+      memberInviteLink = buildMemberInviteEmailLink(linkData.properties, request);
 
       authUserId = linkData.user.id;
 
