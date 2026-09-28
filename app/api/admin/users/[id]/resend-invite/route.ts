@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getMemberInviteRedirectUrl } from '@/lib/auth';
+import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
@@ -80,10 +81,7 @@ export async function POST(
 
     if (linkError) throw linkError;
 
-    const inviteLink = linkData.properties?.action_link;
-    if (!inviteLink) {
-      throw new Error('Failed to generate invite link');
-    }
+    const inviteLink = buildMemberInviteEmailLink(linkData.properties, request);
 
     let emailWarning: string | undefined;
     let whatsappWarning: string | undefined;

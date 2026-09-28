@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { establishAuthSessionFromUrl } from '@/lib/establish-auth-session';
+import { establishSessionFromAuthCallbackUrl } from '@/lib/auth-callback';
 
 export function useAuthHashSession() {
   const [checkingSession, setCheckingSession] = useState(true);
@@ -11,7 +11,7 @@ export function useAuthHashSession() {
     let cancelled = false;
 
     async function checkSession() {
-      const sessionOk = await establishAuthSessionFromUrl();
+      const sessionOk = await establishSessionFromAuthCallbackUrl();
       if (cancelled) return;
       setHasSession(sessionOk);
       setCheckingSession(false);

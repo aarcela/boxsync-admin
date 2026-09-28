@@ -1,4 +1,5 @@
 import { getMemberInviteRedirectUrl } from '@/lib/auth';
+import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -103,12 +104,13 @@ export async function commitMemberRows(
 
       ids.push(userId);
 
-      if (sendInvites && linkData.properties?.action_link) {
+      if (sendInvites) {
         try {
+          const inviteLink = buildMemberInviteEmailLink(linkData.properties, request);
           await sendMemberInviteEmail({
             to: row.email,
             fullName: row.full_name,
-            inviteLink: linkData.properties.action_link,
+            inviteLink,
             language: row.language,
           });
         } catch (emailError) {

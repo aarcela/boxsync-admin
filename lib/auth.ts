@@ -1,26 +1,23 @@
 import type { TranslationKey } from './translations';
 import { MOBILE_RESET_PASSWORD_DEEP_LINK } from '@/lib/constants/app-links';
+import { buildHqUrl } from '@/lib/tenant-host';
 
 export const STAFF_ROLES = ['admin', 'manager'] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const MIN_RESET_PASSWORD_LENGTH = 8;
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
-
-/** Public site origin for auth links in emails — never use request origin (localhost in dev). */
-function getPublicSiteOrigin(): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-  if (siteUrl) return siteUrl;
-  return `https://hq.${ROOT_DOMAIN}`;
-}
-
 const AUTH_CALLBACK_NEXT_PATHS = ['/reset-password', '/welcome'] as const;
 type AuthCallbackNextPath = (typeof AUTH_CALLBACK_NEXT_PATHS)[number];
 
+/**
+ * Auth email callbacks (/auth/callback, /welcome, /reset-password) are hosted on
+ * the admin app (hq.*), not the marketing site. Never use NEXT_PUBLIC_SITE_URL
+ * here — that points at getwodus.com, which has no /auth/callback or /welcome.
+ */
 function getAuthCallbackRedirectUrl(nextPath: AuthCallbackNextPath): string {
   const next = encodeURIComponent(nextPath);
-  return `${getPublicSiteOrigin()}/auth/callback?next=${next}`;
+  return `${buildHqUrl('/auth/callback')}?next=${next}`;
 }
 
 export function getPasswordResetRedirectUrl(_request: Request): string {
