@@ -359,6 +359,9 @@ export const translations = {
     'Weekly attendance': 'Weekly attendance',
     'Module attendance desc':
       'Attendance card and streak on the athlete home.',
+    'Coach payments': 'Coach payroll',
+    'Module coach payments desc':
+      'Coaches can see the status of their own payroll in the app. Turn off to hide that page.',
     'Modules saved': 'Modules saved. Members will see the change in the app.',
     'Failed to save modules': 'Could not save modules.',
     'Failed to load modules': 'Could not load modules.',
@@ -2017,6 +2020,9 @@ export const translations = {
     'Weekly attendance': 'Asistencia semanal',
     'Module attendance desc':
       'Tarjeta de asistencia y racha en el home del atleta.',
+    'Coach payments': 'Nómina del coach',
+    'Module coach payments desc':
+      'Los coaches ven el estado de su propia nómina en la app. Apágalo para ocultar esa página.',
     'Modules saved': 'Módulos guardados. Los miembros verán el cambio en la app.',
     'Failed to save modules': 'No se pudieron guardar los módulos.',
     'Failed to load modules': 'No se pudieron cargar los módulos.',

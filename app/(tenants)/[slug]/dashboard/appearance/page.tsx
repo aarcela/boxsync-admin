@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy } from 'lucide-react';
+import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Wallet } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
@@ -54,6 +54,12 @@ const MODULE_COPY: {
     icon: ClipboardCheck,
     label: 'Weekly attendance',
     desc: 'Module attendance desc',
+  },
+  {
+    id: 'coachPayments',
+    icon: Wallet,
+    label: 'Coach payments',
+    desc: 'Module coach payments desc',
   },
 ];
 

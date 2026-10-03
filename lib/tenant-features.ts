@@ -5,6 +5,7 @@ export const TENANT_FEATURE_IDS = [
   'personalRecords',
   'community',
   'attendance',
+  'coachPayments',
 ] as const;
 export type TenantFeatureId = (typeof TENANT_FEATURE_IDS)[number];
 
@@ -16,6 +17,7 @@ export const DEFAULT_TENANT_FEATURES: TenantFeatures = {
   personalRecords: true,
   community: true,
   attendance: true,
+  coachPayments: true,
 };
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -34,6 +36,7 @@ export function parseTenantFeatures(settings: unknown): TenantFeatures {
     personalRecords: boolFlag(bag?.personalRecords, DEFAULT_TENANT_FEATURES.personalRecords),
     community: boolFlag(bag?.community, DEFAULT_TENANT_FEATURES.community),
     attendance: boolFlag(bag?.attendance, DEFAULT_TENANT_FEATURES.attendance),
+    coachPayments: boolFlag(bag?.coachPayments, DEFAULT_TENANT_FEATURES.coachPayments),
   };
 }
 
