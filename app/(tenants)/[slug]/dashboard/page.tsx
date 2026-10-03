@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, ExternalLink, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
-  Calendar, Clock
+  Calendar, Clock, Sparkles
 } from 'lucide-react';
 import DashboardDetailModal from './components/DashboardDetailModal';
 import type { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
@@ -15,6 +15,7 @@ import type { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/s
 type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PaymentProofReader from '@/components/PaymentProofReader';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { currencySymbol } from '@/lib/currency';
@@ -101,13 +102,13 @@ export default function DashboardPage() {
     return `${currencySymbol(currencies.reference)}${amount.toLocaleString()}`;
   };
 
-  const requestReject = (payment: DashboardPayment) => {
+  const requestPaymentAction = (payment: DashboardPayment, action: 'approve' | 'reject') => {
     setConfirmConfig({
       isOpen: true,
       paymentId: payment.id,
-      action: 'reject',
+      action,
       userId: payment.user_id,
-      athleteName: payment.profiles?.full_name || t('Unknown Athlete')
+      athleteName: payment.profiles?.full_name || t('Unknown Athlete'),
     });
   };
 
@@ -130,20 +131,22 @@ export default function DashboardPage() {
         !compact && <span className="text-[10px] font-black uppercase text-pits-dim">—</span>
       )}
       <button
-        onClick={() => requestReject(payment)}
+        onClick={() => requestPaymentAction(payment, 'reject')}
         className="inline-flex items-center justify-center shrink-0 h-9 w-9 rounded-xl text-pits-error hover:bg-red-50 hover:text-pits-dark-text transition-all border hover:border-red-200 shadow-sm"
         title={t('Dismiss Payment')}
       >
         <XCircle size={16} />
       </button>
       <button
-        onClick={() => handleApprove(payment.id, payment.user_id)}
+        onClick={() => requestPaymentAction(payment, 'approve')}
+        title={t('Proof reader')}
         className={`inline-flex items-center justify-center rounded-xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft font-black text-[10px] tracking-[0.05em] transition-all shadow-sm active:scale-95 ${
           compact ? 'h-9 flex-1 px-3' : 'h-9 px-3'
         }`}
       >
         <CheckCircle size={14} className="mr-1.5 text-pits-success shrink-0" />
         <span className="truncate">{t('VERIFY & UNLOCK')}</span>
+        <Sparkles size={12} className="ml-1.5 shrink-0 opacity-80" aria-hidden />
       </button>
     </div>
   );
@@ -401,14 +404,35 @@ export default function DashboardPage() {
 
       <ConfirmDialog
         isOpen={confirmConfig.isOpen}
-        title={t('Reject Payment')}
-        message={t("This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?", { name: confirmConfig.athleteName })}
-        confirmLabel={t('Confirm Rejection')}
+        title={confirmConfig.action === 'reject' ? t('Reject Payment') : t('Protocol: Verify')}
+        message={
+          confirmConfig.action === 'reject'
+            ? t(
+                "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?",
+                { name: confirmConfig.athleteName },
+              )
+            : t('Confirm status update message', { name: confirmConfig.athleteName })
+        }
+        confirmLabel={confirmConfig.action === 'reject' ? t('Confirm Rejection') : t('VERIFY')}
+        confirmIcon={
+          confirmConfig.action === 'approve' ? (
+            <Sparkles size={12} className="shrink-0 opacity-80" aria-hidden />
+          ) : undefined
+        }
         cancelLabel={t('Discard')}
-        variant="danger"
+        variant={confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
-      />
+      >
+        {confirmConfig.action === 'approve' && confirmConfig.paymentId ? (
+          <PaymentProofReader
+            paymentId={confirmConfig.paymentId}
+            proofHref={
+              stats.pendingPayments.find((p) => p.id === confirmConfig.paymentId)?.proof_image_url
+            }
+          />
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
