@@ -6,7 +6,7 @@ import {
   ExternalLink, RefreshCw, Clock, 
   TrendingUp, AlertTriangle, CreditCard,
   Download, BarChart3, ChevronLeft, ChevronRight,
-  Zap, Info, Wallet, Calendar
+  Zap, Info, Wallet, Calendar, Sparkles
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -441,8 +441,12 @@ export default function FinancialsPage() {
                                 ><XCircle size={18}/></button>
                                 <button 
                                   onClick={() => setConfirmConfig({ isOpen: true, action: 'approve', paymentId: p.id, userId: p.user_id, athleteName: p.profiles?.full_name || t('Unknown') })}
-                                  className="bg-pits-success text-pits-dark-text px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 active:scale-95 transition-all"
-                                >{t('Approve')}</button>
+                                  title={t('Proof reader')}
+                                  className="inline-flex items-center gap-1.5 bg-pits-success text-pits-dark-text px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 active:scale-95 transition-all"
+                                >
+                                  {t('Approve')}
+                                  <Sparkles size={12} className="shrink-0 opacity-80" aria-hidden />
+                                </button>
                               </>
                             ) : (
                               <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-primary-soft text-pits-error border-pits-edge'}`}>
@@ -607,6 +611,11 @@ export default function FinancialsPage() {
             : t('Confirm status update message', { name: confirmConfig.athleteName })
         }
         confirmLabel={confirmConfig.action === 'expiry' ? t('Lock access') : confirmConfig.action === 'reject' ? t('REJECT') : t('VERIFY')}
+        confirmIcon={
+          confirmConfig.action === 'approve' ? (
+            <Sparkles size={12} className="shrink-0 opacity-80" aria-hidden />
+          ) : undefined
+        }
         variant={confirmConfig.action === 'expiry' ? 'warning' : confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
         onCancel={() => {

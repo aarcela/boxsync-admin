@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 interface ConfirmDialogProps {
@@ -9,6 +9,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  confirmIcon?: ReactNode;
   variant?: 'danger' | 'warning' | 'default';
   onConfirm: () => void;
   onCancel: () => void;
@@ -36,6 +37,7 @@ export default function ConfirmDialog({
   message,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  confirmIcon,
   variant = 'default',
   onConfirm,
   onCancel,
@@ -77,9 +79,10 @@ export default function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 ${styles.button}`}
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 ${styles.button}`}
           >
             {confirmLabel}
+            {confirmIcon}
           </button>
         </div>
       </div>

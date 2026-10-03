@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, ExternalLink, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
-  Calendar, Clock
+  Calendar, Clock, Sparkles
 } from 'lucide-react';
 import DashboardDetailModal from './components/DashboardDetailModal';
 import type { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
@@ -139,12 +139,14 @@ export default function DashboardPage() {
       </button>
       <button
         onClick={() => requestPaymentAction(payment, 'approve')}
+        title={t('Proof reader')}
         className={`inline-flex items-center justify-center rounded-xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft font-black text-[10px] tracking-[0.05em] transition-all shadow-sm active:scale-95 ${
           compact ? 'h-9 flex-1 px-3' : 'h-9 px-3'
         }`}
       >
         <CheckCircle size={14} className="mr-1.5 text-pits-success shrink-0" />
         <span className="truncate">{t('VERIFY & UNLOCK')}</span>
+        <Sparkles size={12} className="ml-1.5 shrink-0 opacity-80" aria-hidden />
       </button>
     </div>
   );
@@ -412,6 +414,11 @@ export default function DashboardPage() {
             : t('Confirm status update message', { name: confirmConfig.athleteName })
         }
         confirmLabel={confirmConfig.action === 'reject' ? t('Confirm Rejection') : t('VERIFY')}
+        confirmIcon={
+          confirmConfig.action === 'approve' ? (
+            <Sparkles size={12} className="shrink-0 opacity-80" aria-hidden />
+          ) : undefined
+        }
         cancelLabel={t('Discard')}
         variant={confirmConfig.action === 'reject' ? 'danger' : 'default'}
         onConfirm={handleConfirmAction}
