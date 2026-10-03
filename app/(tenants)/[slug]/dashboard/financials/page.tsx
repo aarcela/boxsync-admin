@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PaymentProofReader from '@/components/PaymentProofReader';
 import Tooltip from '@/components/Tooltip';
 import { useFinancials } from './hooks/useFinancials';
 import { CurrencyStats, CurrencyType } from '@/lib/types/gym';
@@ -626,6 +627,14 @@ export default function FinancialsPage() {
             />
           </div>
         )}
+        {confirmConfig.action === 'approve' && confirmConfig.paymentId ? (
+          <PaymentProofReader
+            paymentId={confirmConfig.paymentId}
+            proofHref={
+              filteredPayments.find((p) => p.id === confirmConfig.paymentId)?.proof_image_url
+            }
+          />
+        ) : null}
       </ConfirmDialog>
     </div>
   );

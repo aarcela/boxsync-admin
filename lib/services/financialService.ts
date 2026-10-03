@@ -12,7 +12,7 @@ import { getCachedFxRate, setCachedFxRate } from '@/lib/fx-cache';
 const PAYMENT_PROOFS_BUCKET = 'payment-proofs';
 const SIGNED_URL_TTL_SECONDS = 60 * 10;
 
-function getPaymentProofPath(value: string): string {
+export function getPaymentProofPath(value: string): string {
   if (!value.startsWith('http')) return value.replace(/^payment-proofs\//, '');
 
   const decoded = decodeURIComponent(value);

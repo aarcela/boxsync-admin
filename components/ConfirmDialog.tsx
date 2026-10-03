@@ -51,7 +51,9 @@ export default function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="bg-pits-surface-elevated border border-pits-edge rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+        className={`bg-pits-surface-elevated border border-pits-edge rounded-2xl shadow-2xl w-full overflow-hidden ${
+          children ? 'max-w-md' : 'max-w-sm'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 text-center">

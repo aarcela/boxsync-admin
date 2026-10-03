@@ -12,6 +12,7 @@ export interface DashboardProfile {
 export interface DashboardPayment {
   id: string;
   amount: number;
+  currency?: string | null;
   method: string;
   proof_image_url: string;
   created_at: string;
@@ -46,7 +47,7 @@ export const dashboardService = {
     const { data, error } = await supabase
       .from('payments')
       .select(`
-        id, amount, method, proof_image_url, created_at, user_id,
+        id, amount, currency, method, proof_image_url, created_at, user_id,
         profiles ( full_name )
       `)
       .eq('status', 'pending')
