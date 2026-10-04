@@ -13,10 +13,10 @@ import {
 } from '@/lib/platform-plans';
 import type { PlatformHqOverview, TenantWithHqStats } from '@/lib/types/gym';
 
-const PLAN_HINT: Record<PlatformPlanId, 'Founding trial (30 days)' | '$59 · up to 60 members' | '$89 · up to 150 members' | '$129 · unlimited members'> = {
+const PLAN_HINT: Record<PlatformPlanId, 'Founding trial (30 days)' | '$59 · up to 100 members' | '$89 · up to 300 members' | '$129 · unlimited members'> = {
   trial: 'Founding trial (30 days)',
-  starter: '$59 · up to 60 members',
-  growth: '$89 · up to 150 members',
+  starter: '$59 · up to 100 members',
+  growth: '$89 · up to 300 members',
   pro: '$129 · unlimited members',
 };
 
