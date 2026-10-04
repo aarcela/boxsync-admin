@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { TenantProvider } from '@/components/TenantContext';
 import { parseTenantCurrencyConfig } from '@/lib/currency';
+import { parsePlatformPlanId } from '@/lib/platform-plans';
 import { tenantService } from '@/lib/services/tenantService';
 import { parseTenantFeatures } from '@/lib/tenant-features';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -25,7 +26,7 @@ export default async function TenantLayout({
         tenantId: tenant.id,
         slug: tenant.slug,
         name: tenant.name,
-        platformPlan: tenant.platform_plan,
+        platformPlan: parsePlatformPlanId(tenant.platform_plan),
         trialEndsAt: tenant.trial_ends_at ?? null,
         currencies: parseTenantCurrencyConfig(tenant.settings),
         features: parseTenantFeatures(tenant.settings),
