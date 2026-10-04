@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Ban, ExternalLink, Loader2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, Ban, ExternalLink, KeyRound, Loader2, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -13,6 +13,7 @@ import {
   type PlatformPlanId,
 } from '@/lib/platform-plans';
 import { defaultAiMonthlyQuestions } from '@/lib/ai/quota';
+import { MIN_RESET_PASSWORD_LENGTH } from '@/lib/auth';
 import { buildTenantDashboardUrl } from '@/lib/tenant-host';
 import type { TenantWithHqStats } from '@/lib/types/gym';
 import TenantImportPanel from '@/components/hq/TenantImportPanel';
@@ -39,7 +40,7 @@ const PLAN_HINT: Record<
 };
 
 export default function SuperAdminTenantDetailPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const params = useParams();
   const router = useRouter();
@@ -66,6 +67,11 @@ export default function SuperAdminTenantDetailPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetAdmin, setResetAdmin] = useState<TenantAdmin | null>(null);
+  const [resetMode, setResetMode] = useState<'email' | 'set'>('email');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const loadAdmins = useCallback(async () => {
     if (!tenantId) return;
@@ -247,6 +253,73 @@ export default function SuperAdminTenantDetailPage() {
       toast(message, 'error');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openResetPassword = (admin: TenantAdmin) => {
+    setResetAdmin(admin);
+    setResetMode('email');
+    setResetPassword('');
+    setResetPasswordConfirm('');
+  };
+
+  const closeResetPassword = () => {
+    if (resettingPassword) return;
+    setResetAdmin(null);
+    setResetPassword('');
+    setResetPasswordConfirm('');
+  };
+
+  const handleResetPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!resetAdmin) return;
+
+    if (resetMode === 'set') {
+      if (resetPassword.length < MIN_RESET_PASSWORD_LENGTH) {
+        toast(t('Password must be at least 8 characters.'), 'error');
+        return;
+      }
+      if (resetPassword !== resetPasswordConfirm) {
+        toast(t('Passwords do not match.'), 'error');
+        return;
+      }
+    }
+
+    setResettingPassword(true);
+    try {
+      const res = await fetch(
+        `/api/admin/hq/tenants/${tenantId}/admins/${resetAdmin.id}/reset-password`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            resetMode === 'email'
+              ? { mode: 'email', language: lang }
+              : { mode: 'set', password: resetPassword }
+          ),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'reset_failed');
+
+      toast(
+        resetMode === 'email'
+          ? t('Password reset email sent.')
+          : t('Password updated.'),
+        'success'
+      );
+      setResetAdmin(null);
+      setResetPassword('');
+      setResetPasswordConfirm('');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message && !err.message.includes('reset_failed')
+          ? err.message
+          : t('Could not reset admin password.');
+      toast(message, 'error');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -650,6 +723,7 @@ export default function SuperAdminTenantDetailPage() {
                 <th className="px-4 py-3">{t('Full name')}</th>
                 <th className="px-4 py-3">{t('Email')}</th>
                 <th className="px-4 py-3">{t('Created')}</th>
+                <th className="px-4 py-3 text-right">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -666,12 +740,141 @@ export default function SuperAdminTenantDetailPage() {
                       ? new Date(admin.created_at).toLocaleDateString()
                       : '—'}
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openResetPassword(admin)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-pits-edge bg-pits-surface-muted text-pits-ink text-xs font-bold uppercase tracking-widest hover:border-pits-primary/50"
+                    >
+                      <KeyRound size={14} />
+                      {t('Reset password')}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {resetAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-pits-edge bg-pits-surface-elevated shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-pits-edge px-5 py-4">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-pits-ink">
+                  {t('Reset admin password')}
+                </h2>
+                <p className="mt-1 text-sm text-pits-ink-muted">
+                  {resetAdmin.full_name ?? resetAdmin.email ?? '—'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeResetPassword}
+                disabled={resettingPassword}
+                className="rounded-lg p-2 text-pits-ink-muted hover:bg-pits-surface-muted disabled:opacity-60"
+                aria-label={t('Cancel')}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4 p-5">
+              <p className="text-sm text-pits-ink-muted">{t('Reset admin password help')}</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResetMode('email')}
+                  disabled={resettingPassword}
+                  className={`rounded-lg px-3 py-3 text-xs font-bold uppercase tracking-widest ${
+                    resetMode === 'email'
+                      ? 'bg-pits-primary text-pits-dark-text'
+                      : 'border border-pits-edge bg-pits-surface-muted text-pits-ink'
+                  }`}
+                >
+                  {t('Send reset email')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResetMode('set')}
+                  disabled={resettingPassword}
+                  className={`rounded-lg px-3 py-3 text-xs font-bold uppercase tracking-widest ${
+                    resetMode === 'set'
+                      ? 'bg-pits-primary text-pits-dark-text'
+                      : 'border border-pits-edge bg-pits-surface-muted text-pits-ink'
+                  }`}
+                >
+                  {t('Set password directly')}
+                </button>
+              </div>
+
+              {resetMode === 'set' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-pits-ink-muted">
+                      {t('New password')}
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={MIN_RESET_PASSWORD_LENGTH}
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      disabled={resettingPassword}
+                      className="w-full rounded-lg border border-pits-edge bg-pits-surface-muted p-3 font-medium text-pits-ink outline-none focus:border-pits-primary focus:ring-2 focus:ring-pits-primary/40 disabled:opacity-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-pits-ink-muted">
+                      {t('Confirm password')}
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={MIN_RESET_PASSWORD_LENGTH}
+                      value={resetPasswordConfirm}
+                      onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                      disabled={resettingPassword}
+                      className="w-full rounded-lg border border-pits-edge bg-pits-surface-muted p-3 font-medium text-pits-ink outline-none focus:border-pits-primary focus:ring-2 focus:ring-pits-primary/40 disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={closeResetPassword}
+                  disabled={resettingPassword}
+                  className="rounded-lg border border-pits-edge px-4 py-3 text-sm font-bold uppercase tracking-widest text-pits-ink disabled:opacity-60"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={resettingPassword || (resetMode === 'email' && !resetAdmin.email)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-pits-primary px-4 py-3 text-sm font-bold uppercase tracking-widest text-pits-dark-text disabled:opacity-60"
+                >
+                  {resettingPassword ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <KeyRound size={16} />
+                  )}
+                  {resetMode === 'email'
+                    ? t('Send reset email')
+                    : t('Set password directly')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <section className="border border-red-200 bg-red-50/40 rounded-2xl p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

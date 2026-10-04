@@ -765,7 +765,7 @@ export default function WodEditorPage() {
                 ) : (
                   <Save size={18} className="mr-2" />
                 )}
-                {saving ? t('Publishing...') : isLocked ? t('Edit published workout btn') : t('Publish to PITS App')}
+                {saving ? t('Publishing...') : isLocked ? t('Edit published workout btn') : t('Publish to App')}
               </button>
 
               {wodId && (

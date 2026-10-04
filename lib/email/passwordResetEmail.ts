@@ -5,15 +5,21 @@ function buildPasswordResetEmailHtml(params: {
   fullName: string;
   resetLink: string;
   language: Language;
+  audience?: 'app' | 'staff';
 }): string {
   const firstName = params.fullName.trim().split(/\s+/)[0] || params.fullName;
   const isEs = params.language === 'es';
+  const isStaff = params.audience === 'staff';
 
   const title = isEs ? 'Restablece tu contraseña' : 'Reset your password';
   const greeting = isEs ? `Hola ${firstName},` : `Hi ${firstName},`;
-  const body = isEs
-    ? 'Haz clic abajo para abrir WODUS y elegir una nueva contraseña.'
-    : 'Tap below to open WODUS and choose a new password.';
+  const body = isStaff
+    ? isEs
+      ? 'Haz clic abajo para restablecer la contraseña de tu panel de administración WODUS.'
+      : 'Click below to reset your WODUS staff dashboard password.'
+    : isEs
+      ? 'Haz clic abajo para abrir WODUS y elegir una nueva contraseña.'
+      : 'Tap below to open WODUS and choose a new password.';
   const note = isEs
     ? 'Este enlace expira pronto por seguridad.'
     : 'This link expires soon for your security.';
@@ -63,12 +69,26 @@ export async function sendPasswordResetEmail(params: {
   fullName: string;
   resetLink: string;
   language: Language;
+  audience?: 'app' | 'staff';
 }): Promise<void> {
   const isEs = params.language === 'es';
+  const isStaff = params.audience === 'staff';
   const subject = isEs ? 'Restablece tu contraseña de WODUS' : 'Reset your WODUS password';
-  const textBody = isEs
-    ? `${params.fullName ? `Hola ${params.fullName.trim().split(/\s+/)[0] || params.fullName},` : 'Hola,'}\n\nHaz clic en este enlace para abrir WODUS y restablecer tu contraseña:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
-    : `${params.fullName ? `Hi ${params.fullName.trim().split(/\s+/)[0] || params.fullName},` : 'Hi,'}\n\nTap this link to open WODUS and reset your password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`;
+  const firstName = params.fullName.trim().split(/\s+/)[0] || params.fullName;
+  const greeting = params.fullName
+    ? isEs
+      ? `Hola ${firstName},`
+      : `Hi ${firstName},`
+    : isEs
+      ? 'Hola,'
+      : 'Hi,';
+  const textBody = isStaff
+    ? isEs
+      ? `${greeting}\n\nHaz clic en este enlace para restablecer la contraseña de tu panel de administración WODUS:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
+      : `${greeting}\n\nClick this link to reset your WODUS staff dashboard password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`
+    : isEs
+      ? `${greeting}\n\nHaz clic en este enlace para abrir WODUS y restablecer tu contraseña:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
+      : `${greeting}\n\nTap this link to open WODUS and reset your password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`;
 
   await sendEmail({
     to: params.to,
