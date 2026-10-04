@@ -25,6 +25,8 @@ export default async function TenantLayout({
         tenantId: tenant.id,
         slug: tenant.slug,
         name: tenant.name,
+        platformPlan: tenant.platform_plan,
+        trialEndsAt: tenant.trial_ends_at ?? null,
         currencies: parseTenantCurrencyConfig(tenant.settings),
         features: parseTenantFeatures(tenant.settings),
       }}

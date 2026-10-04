@@ -277,7 +277,29 @@ export default function SuperAdminTenantDetailPage() {
             {tenant?.name ?? '…'}
           </h1>
           {tenant && (
-            <p className="text-sm text-pits-ink-muted font-mono mt-1">{tenant.slug}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-sm text-pits-ink-muted font-mono">{tenant.slug}</p>
+              <span className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+                {t(plan?.nameKey ?? 'Trial')}
+              </span>
+              {tenant.platform_plan === 'trial' && tenant.trial_ends_at && (
+                <span
+                  className={`text-[10px] font-black uppercase tracking-wider ${
+                    tenant.stats.trialExpired
+                      ? 'text-red-600'
+                      : tenant.stats.trialEndsSoon
+                        ? 'text-orange-600'
+                        : 'text-pits-ink-muted'
+                  }`}
+                >
+                  {tenant.stats.trialExpired
+                    ? t('Trial ended')
+                    : t('Trial ends {{date}}', {
+                        date: new Date(tenant.trial_ends_at).toLocaleDateString(),
+                      })}
+                </span>
+              )}
+            </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">

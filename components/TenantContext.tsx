@@ -3,6 +3,11 @@
 import { createContext, useCallback, useContext, useState } from 'react';
 import type { TenantCurrencyConfig } from '@/lib/currency';
 import { DEFAULT_TENANT_CURRENCIES } from '@/lib/currency';
+import {
+  DEFAULT_PLATFORM_PLAN,
+  parsePlatformPlanId,
+  type PlatformPlanId,
+} from '@/lib/platform-plans';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
 import {
   DEFAULT_TENANT_FEATURES,
@@ -13,6 +18,8 @@ export type TenantContextValue = {
   tenantId: string;
   slug: string;
   name: string;
+  platformPlan: PlatformPlanId;
+  trialEndsAt: string | null;
   currencies: TenantCurrencyConfig;
   setCurrencies: (next: TenantCurrencyConfig) => void;
   refreshCurrencies: () => Promise<TenantCurrencyConfig>;
@@ -29,6 +36,8 @@ export function TenantProvider({
   value: Omit<TenantContextValue, 'setCurrencies' | 'refreshCurrencies' | 'setFeatures'> & {
     currencies?: TenantCurrencyConfig;
     features?: TenantFeatures;
+    platformPlan?: PlatformPlanId;
+    trialEndsAt?: string | null;
   };
   children: React.ReactNode;
 }) {
@@ -51,6 +60,8 @@ export function TenantProvider({
         tenantId: value.tenantId,
         slug: value.slug,
         name: value.name,
+        platformPlan: parsePlatformPlanId(value.platformPlan ?? DEFAULT_PLATFORM_PLAN),
+        trialEndsAt: value.trialEndsAt ?? null,
         currencies,
         setCurrencies,
         refreshCurrencies,

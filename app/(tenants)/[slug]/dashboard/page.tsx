@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { financialService } from '@/lib/services/financialService';
 import {
-  CheckCircle, XCircle, ExternalLink, RefreshCw,
+  CheckCircle, XCircle, Eye, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
   Calendar, Clock, Sparkles
@@ -16,6 +16,7 @@ type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PaymentProofReader from '@/components/PaymentProofReader';
+import PaymentProofPreviewModal from '@/components/PaymentProofPreviewModal';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { currencySymbol } from '@/lib/currency';
@@ -45,6 +46,11 @@ export default function DashboardPage() {
     type: 'athletes',
     data: []
   });
+
+  const [proofPreview, setProofPreview] = useState<{
+    url: string;
+    athleteName: string;
+  } | null>(null);
 
   const openModal = (title: string, type: 'athletes' | 'classes' | 'payments', data: DashboardModalItem[]) => {
     setModalConfig({ isOpen: true, title, type, data });
@@ -115,18 +121,22 @@ export default function DashboardPage() {
   const renderPaymentActions = (payment: DashboardPayment, compact = false) => (
     <div className={`flex items-center ${compact ? 'gap-1.5 w-full' : 'flex-wrap justify-end gap-2'}`}>
       {payment.proof_image_url ? (
-        <a
-          href={payment.proof_image_url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() =>
+            setProofPreview({
+              url: payment.proof_image_url,
+              athleteName: payment.profiles?.full_name || t('Unknown Athlete'),
+            })
+          }
           className={`inline-flex items-center justify-center shrink-0 font-black uppercase tracking-tighter text-blue-600 hover:text-pits-dark-text transition-all ${
             compact ? 'h-9 w-9 rounded-xl border bg-pits-surface-elevated' : 'text-[10px] hover:translate-y-px'
           }`}
           title={t('Audit Proof')}
         >
-          <ExternalLink size={14} className={compact ? '' : 'mr-1.5'} />
+          <Eye size={14} className={compact ? '' : 'mr-1.5'} />
           {!compact && t('Audit Proof')}
-        </a>
+        </button>
       ) : (
         !compact && <span className="text-[10px] font-black uppercase text-pits-dim">—</span>
       )}
@@ -324,10 +334,10 @@ export default function DashboardPage() {
                 <div key={payment.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-black text-pits-text uppercase tracking-tighter italic text-sm truncate">
+                      <p className="font-black text-pits-text uppercase tracking-tighter text-sm truncate">
                         {payment.profiles?.full_name || t('Unknown Athlete')}
                       </p>
-                      <p className="text-[10px] font-bold text-pits-dim uppercase italic mt-0.5 flex items-center gap-1.5">
+                      <p className="text-[10px] font-bold text-pits-dim uppercase mt-0.5 flex items-center gap-1.5">
                         <Calendar size={11} className="opacity-40 shrink-0" />
                         <span className="truncate">
                           {new Date(payment.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
@@ -336,7 +346,7 @@ export default function DashboardPage() {
                         </span>
                       </p>
                     </div>
-                    <span className="text-lg font-black text-pits-text italic tracking-tighter shrink-0">
+                    <span className="text-lg font-black text-pits-text tracking-tighter shrink-0">
                       {formatCurrency(payment.amount)}
                     </span>
                   </div>
@@ -367,10 +377,10 @@ export default function DashboardPage() {
                          </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4 min-w-0">
-                        <div className="font-black text-pits-text uppercase tracking-tighter italic text-sm truncate max-w-[180px] lg:max-w-none">
+                        <div className="font-black text-pits-text uppercase tracking-tighter text-sm truncate max-w-[180px] lg:max-w-none">
                           {payment.profiles?.full_name || t('Unknown Athlete')}
                         </div>
-                        <div className="text-[10px] font-bold text-pits-dim uppercase italic mt-0.5">{t('Verification Pending')}</div>
+                        <div className="text-[10px] font-bold text-pits-dim uppercase mt-0.5">{t('Verification Pending')}</div>
                       </td>
                       <td className="px-4 lg:px-6 py-4">
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-pits-surface-elevated border text-pits-dim shadow-sm group-hover:border-pits-text group-hover:text-pits-text transition-all whitespace-nowrap">
@@ -378,7 +388,7 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="px-4 lg:px-6 py-4">
-                        <span className="text-lg font-black text-pits-text italic tracking-tighter whitespace-nowrap">
+                        <span className="text-lg font-black text-pits-text tracking-tighter whitespace-nowrap">
                           {formatCurrency(payment.amount)}
                         </span>
                       </td>
@@ -400,6 +410,12 @@ export default function DashboardPage() {
         title={modalConfig.title}
         type={modalConfig.type}
         data={modalConfig.data}
+      />
+
+      <PaymentProofPreviewModal
+        url={proofPreview?.url ?? null}
+        athleteName={proofPreview?.athleteName}
+        onClose={() => setProofPreview(null)}
       />
 
       <ConfirmDialog

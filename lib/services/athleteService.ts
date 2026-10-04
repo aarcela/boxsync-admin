@@ -1,9 +1,53 @@
+import { addWeeks, format, parseISO } from 'date-fns';
 import { supabase } from '../supabase';
-import { Profile, AthletePlan } from '../types/gym';
-import { buildMembershipActivationFields, buildPlanChangeFields } from '../plan-period';
+import { Profile, AthletePlan, PlanLimitType } from '../types/gym';
+import { buildMembershipActivationFields, buildPlanChangeFields, getPlanLimitType } from '../plan-period';
 import { financialService } from './financialService';
 import { membershipPlanService } from './membershipPlanService';
 import { renewDateToIso } from '../renew-date';
+
+export type PlanSessionUsage = {
+  limitType: PlanLimitType;
+  used: number;
+  limit: number;
+  offset: number;
+  bookingsUsed: number;
+  remaining: number;
+  weekStart: string | null;
+};
+
+/** Monday date matching Postgres `date_trunc('week', timestamptz)::date` (UTC session). */
+function mondayDateString(reference = new Date()): string {
+  const day = reference.getUTCDay(); // 0 Sun .. 6 Sat
+  const daysFromMonday = (day + 6) % 7;
+  const monday = new Date(
+    Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate() - daysFromMonday)
+  );
+  return format(monday, 'yyyy-MM-dd');
+}
+
+async function countActiveBookingsInRange(
+  userId: string,
+  tenantId: string | undefined,
+  rangeStartIso: string,
+  rangeEndIso: string
+): Promise<number> {
+  let query = supabase
+    .from('bookings')
+    .select('status, classes!inner(start_time, tenant_id)')
+    .eq('user_id', userId)
+    .neq('status', 'no_show')
+    .gte('classes.start_time', rangeStartIso)
+    .lt('classes.start_time', rangeEndIso);
+
+  if (tenantId) {
+    query = query.eq('classes.tenant_id', tenantId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).length;
+}
 
 export const athleteService = {
   /**
@@ -108,6 +152,126 @@ export const athleteService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  /**
+   * Current weekly/period session usage including staff offset.
+   * Returns null for unlimited plans or members without a limited plan.
+   */
+  async getPlanSessionUsage(id: string): Promise<PlanSessionUsage | null> {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select(
+        'plan, tenant_id, plan_period_start, plan_usage_offset, plan_usage_offset_week_start'
+      )
+      .eq('id', id)
+      .single();
+
+    if (profileError) throw profileError;
+    if (!profile?.plan) return null;
+
+    const { data: plan, error: planError } = await supabase
+      .from('membership_plans')
+      .select('limit_type, weekly_limit, session_limit, validity_days')
+      .eq('id', profile.plan)
+      .maybeSingle();
+
+    if (planError) throw planError;
+    if (!plan) return null;
+
+    const limitType =
+      (plan.limit_type as PlanLimitType | null) ??
+      (await getPlanLimitType(supabase, profile.plan, profile.tenant_id ?? undefined)) ??
+      'none';
+
+    if (limitType === 'weekly' && plan.weekly_limit != null && plan.weekly_limit > 0) {
+      const weekStart = mondayDateString();
+      const weekStartDate = parseISO(`${weekStart}T00:00:00.000Z`);
+      const nextWeekStart = addWeeks(weekStartDate, 1);
+      const bookingsUsed = await countActiveBookingsInRange(
+        id,
+        profile.tenant_id ?? undefined,
+        weekStartDate.toISOString(),
+        nextWeekStart.toISOString()
+      );
+      const storedOffset = Number(profile.plan_usage_offset) || 0;
+      const offset =
+        profile.plan_usage_offset_week_start === weekStart ? storedOffset : 0;
+      const used = Math.max(0, bookingsUsed + offset);
+      const limit = plan.weekly_limit;
+      return {
+        limitType: 'weekly',
+        used,
+        limit,
+        offset,
+        bookingsUsed,
+        remaining: Math.max(0, limit - used),
+        weekStart,
+      };
+    }
+
+    if (
+      limitType === 'period' &&
+      plan.session_limit != null &&
+      plan.session_limit > 0 &&
+      plan.validity_days != null &&
+      plan.validity_days > 0
+    ) {
+      const periodStart = profile.plan_period_start
+        ? parseISO(profile.plan_period_start)
+        : new Date();
+      const periodEnd = new Date(periodStart);
+      periodEnd.setDate(periodEnd.getDate() + plan.validity_days);
+      const bookingsUsed = await countActiveBookingsInRange(
+        id,
+        profile.tenant_id ?? undefined,
+        periodStart.toISOString(),
+        periodEnd.toISOString()
+      );
+      const offset = Number(profile.plan_usage_offset) || 0;
+      const used = Math.max(0, bookingsUsed + offset);
+      const limit = plan.session_limit;
+      return {
+        limitType: 'period',
+        used,
+        limit,
+        offset,
+        bookingsUsed,
+        remaining: Math.max(0, limit - used),
+        weekStart: null,
+      };
+    }
+
+    return null;
+  },
+
+  /**
+   * Sets displayed sessions used for the current weekly/period window.
+   * Persists as plan_usage_offset = desiredUsed - bookingsInWindow.
+   */
+  async updatePlanSessionsUsed(id: string, desiredUsed: number): Promise<PlanSessionUsage> {
+    const usage = await this.getPlanSessionUsage(id);
+    if (!usage) {
+      throw new Error('Athlete plan has no session limit');
+    }
+
+    const clamped = Math.max(0, Math.min(usage.limit, Math.round(desiredUsed)));
+    const offset = clamped - usage.bookingsUsed;
+    const weekStart = usage.limitType === 'weekly' ? mondayDateString() : null;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        plan_usage_offset: offset,
+        plan_usage_offset_week_start: weekStart,
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    const refreshed = await this.getPlanSessionUsage(id);
+    if (!refreshed) throw new Error('Athlete plan has no session limit');
+    return refreshed;
   },
 
   /**

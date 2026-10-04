@@ -8,7 +8,7 @@ import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 import { Profile, MembershipPlan } from '@/lib/types/gym';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
@@ -36,6 +36,10 @@ export default function AthletesPage() {
     setSearchTerm,
     roleFilter,
     setRoleFilter,
+    solvencyFilter,
+    setSolvencyFilter,
+    planFilter,
+    setPlanFilter,
     sortKey,
     sortDir,
     handleSort,
@@ -55,6 +59,12 @@ export default function AthletesPage() {
     sendingReminderId,
     deleteAthlete,
     deletingId,
+    bulkBusy,
+    bulkChangePlan,
+    bulkUpdateRenewDate,
+    bulkResendInvites,
+    bulkSendPasswordResets,
+    bulkSendExpiryReminders,
     refresh
   } = useAthletes();
 
@@ -62,6 +72,9 @@ export default function AthletesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const isAdmin = callerRole === 'admin';
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPlanId, setBulkPlanId] = useState('');
+  const [bulkRenewDate, setBulkRenewDate] = useState('');
 
   useEffect(() => {
     const loadContext = async () => {
@@ -210,8 +223,99 @@ export default function AthletesPage() {
     newPlanId: string;
   }>({ isOpen: false, profileId: '', profileName: '', currentPlanId: '', newPlanId: '' });
 
+  const [bulkConfirm, setBulkConfirm] = useState<{
+    isOpen: boolean;
+    action: 'plan' | 'renew' | 'invite' | 'reset' | 'reminder' | null;
+  }>({ isOpen: false, action: null });
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [currentPage, searchTerm, roleFilter, solvencyFilter, planFilter, sortKey, sortDir]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = profiles.length > 0 && selectedIds.size === profiles.length;
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(profiles.map((p) => p.id)));
+  };
+
+  const selectedProfiles = profiles.filter((p) => selectedIds.has(p.id));
+  const selectedMemberCount = selectedProfiles.filter((p) => p.role === 'member').length;
+  const selectedInviteCount = selectedProfiles.filter(
+    (p) => p.role === 'member' && p.invite_pending
+  ).length;
+  const selectedResetCount = selectedProfiles.filter(
+    (p) => p.role === 'member' && !p.invite_pending && !!p.email
+  ).length;
+  const selectedReminderCount = selectedProfiles.filter(
+    (p) => p.role === 'member' && !!p.phone?.trim()
+  ).length;
+
   const planLabel = (planId: string) =>
     membershipPlans.find((p) => p.id === planId)?.name ?? planId.replace(/_/g, ' ');
+
+  const bulkConfirmCopy = () => {
+    const count = selectedIds.size;
+    switch (bulkConfirm.action) {
+      case 'plan':
+        return {
+          title: t('Apply plan to selected'),
+          message: t('Apply plan {{plan}} to {{count}} selected athletes? Non-members are skipped.', {
+            plan: planLabel(bulkPlanId),
+            count,
+          }),
+          confirmLabel: t('Apply plan'),
+        };
+      case 'renew':
+        return {
+          title: t('Set renew date for selected'),
+          message: t('Set renew date {{date}} for {{count}} selected athletes? Non-members are skipped.', {
+            date: bulkRenewDate,
+            count,
+          }),
+          confirmLabel: t('Set renew date'),
+        };
+      case 'invite':
+        return {
+          title: t('Resend welcome invite'),
+          message: t('Resend welcome invites to {{eligible}} of {{count}} selected? Others are skipped.', {
+            eligible: selectedInviteCount,
+            count,
+          }),
+          confirmLabel: t('Resend'),
+        };
+      case 'reset':
+        return {
+          title: t('Send password reset'),
+          message: t('Send password resets to {{eligible}} of {{count}} selected? Others are skipped.', {
+            eligible: selectedResetCount,
+            count,
+          }),
+          confirmLabel: t('Send reset link'),
+        };
+      case 'reminder':
+        return {
+          title: t('Send expiry reminder'),
+          message: t('Send expiry reminders to {{eligible}} of {{count}} selected? Others are skipped.', {
+            eligible: selectedReminderCount,
+            count,
+          }),
+          confirmLabel: t('Send Reminder'),
+        };
+      default:
+        return { title: '', message: '', confirmLabel: t('Confirm') };
+    }
+  };
 
   // TOGGLE SOLVENCY — with confirmation
   const executeSolvencyToggle = async () => {
@@ -252,48 +356,94 @@ export default function AthletesPage() {
     }
   };
 
+  const executeBulkAction = async () => {
+    const action = bulkConfirm.action;
+    const ids = Array.from(selectedIds);
+    setBulkConfirm({ isOpen: false, action: null });
+    if (!action || ids.length === 0) return;
+
+    if (action === 'plan') {
+      if (!bulkPlanId) return;
+      await bulkChangePlan(ids, bulkPlanId);
+    } else if (action === 'renew') {
+      if (!bulkRenewDate) return;
+      await bulkUpdateRenewDate(ids, bulkRenewDate);
+    } else if (action === 'invite') {
+      await bulkResendInvites(ids);
+    } else if (action === 'reset') {
+      await bulkSendPasswordResets(ids);
+    } else if (action === 'reminder') {
+      await bulkSendExpiryReminders(ids);
+    }
+
+    setSelectedIds(new Set());
+  };
+
   return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
-            {t('Roster')} <span className="text-pits-dim">/ {t('Athletes')}</span>
-          </h2>
-          <p className="text-pits-dim font-medium text-sm">
-            {t('Retention & Revenue Command Center.')}
-            <span className="ml-2 text-xs text-pits-red font-bold animate-pulse">
-              ● {t('{{count}} Unpaid', { count: unpaidCount })}
+    <div className="space-y-5 animate-in fade-in duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-black text-pits-text tracking-tight">
+            {t('Roster')}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-pits-dim">
+            <span>
+              {t('Showing {{count}} of {{total}} entries', {
+                count: loading ? '…' : profiles.length,
+                total: totalCount,
+              })}
             </span>
-          </p>
+            {unpaidCount > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSolvencyFilter((prev) => (prev === 'unpaid' ? 'all' : 'unpaid'))
+                }
+                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border transition-colors ${
+                  solvencyFilter === 'unpaid'
+                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                {t('{{count}} Unpaid', { count: unpaidCount })}
+              </button>
+            )}
+          </div>
         </div>
-        <button 
+        <button
+          type="button"
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center px-4 py-3 bg-pits-primary text-pits-dark-text rounded-xl font-bold uppercase text-xs tracking-widest shadow-xl hover:bg-pits-primary-dark transition-all active:scale-95">
-          <UserPlus size={18} className="mr-2" />
+          className="inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg bg-pits-text text-white text-xs font-bold hover:bg-black transition-colors"
+        >
+          <UserPlus size={16} aria-hidden />
           {t('Add Athlete')}
         </button>
       </div>
 
-      {/* FILTERS & SEARCH */}
-      <div className="bg-pits-surface-elevated p-4 rounded-xl border border-pits-edge shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pits-dim" size={20} />
-          <input 
-            type="text" 
-            placeholder={t('Search by name...')} 
+      <div className="bg-pits-surface-elevated p-3 sm:p-4 rounded-xl border border-pits-edge space-y-3">
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim pointer-events-none"
+            size={16}
+            aria-hidden
+          />
+          <input
+            type="search"
+            placeholder={t('Search by name...')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium focus:ring-2 focus:ring-pits-red focus:border-transparent outline-none transition-all"
+            className="w-full min-h-10 pl-9 pr-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none"
           />
         </div>
-        
-        <div className="flex items-center space-x-2 w-full md:w-auto">
-          <Filter size={20} className="text-pits-dim" />
-          <select 
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="hidden sm:flex items-center text-pits-dim shrink-0 px-1">
+            <Filter size={16} aria-hidden />
+          </div>
+          <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="flex-1 md:w-48 p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:border-pits-red"
+            aria-label={t('All Roles')}
+            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
           >
             <option value="all">{t('All Roles')}</option>
             <option value="member">{t('Members')}</option>
@@ -301,318 +451,474 @@ export default function AthletesPage() {
             <option value="manager">{t('Managers')}</option>
             <option value="admin">{t('Admins')}</option>
           </select>
+          <select
+            value={solvencyFilter}
+            onChange={(e) =>
+              setSolvencyFilter(e.target.value as 'all' | 'solvent' | 'unpaid')
+            }
+            aria-label={t('All statuses')}
+            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
+          >
+            <option value="all">{t('All statuses')}</option>
+            <option value="solvent">{t('Solvent / Paid')}</option>
+            <option value="unpaid">{t('Debt / Unpaid')}</option>
+          </select>
+          <select
+            value={planFilter}
+            onChange={(e) => setPlanFilter(e.target.value)}
+            aria-label={t('All plans')}
+            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
+          >
+            <option value="all">{t('All plans')}</option>
+            {membershipPlans.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
+      {someSelected && (
+        <div className="flex flex-col gap-3 bg-pits-surface-elevated p-3 sm:p-4 rounded-xl border border-pits-primary/30 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black text-pits-dim uppercase tracking-wider">
+              {t('{{count}} selected', { count: selectedIds.size })}
+              {selectedMemberCount < selectedIds.size
+                ? ` · ${t('{{count}} members', { count: selectedMemberCount })}`
+                : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={bulkBusy}
+              className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted disabled:opacity-50"
+            >
+              {t('Clear selection')}
+            </button>
+          </div>
+          <div className="flex flex-col lg:flex-row flex-wrap gap-2 lg:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={bulkPlanId}
+                onChange={(e) => setBulkPlanId(e.target.value)}
+                disabled={bulkBusy || membershipPlans.length === 0}
+                aria-label={t('Apply plan')}
+                className="min-h-9 px-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 disabled:opacity-50"
+              >
+                <option value="">{t('Select plan')}</option>
+                {membershipPlans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={bulkBusy || !bulkPlanId || selectedMemberCount === 0}
+                onClick={() => setBulkConfirm({ isOpen: true, action: 'plan' })}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
+              >
+                {t('Apply plan')}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={bulkRenewDate}
+                onChange={(e) => setBulkRenewDate(e.target.value)}
+                disabled={bulkBusy}
+                aria-label={t('Renew date')}
+                className="min-h-9 px-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 disabled:opacity-50 max-w-[148px]"
+              />
+              <button
+                type="button"
+                disabled={bulkBusy || !bulkRenewDate || selectedMemberCount === 0}
+                onClick={() => setBulkConfirm({ isOpen: true, action: 'renew' })}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+              >
+                {t('Set renew date')}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={bulkBusy || selectedInviteCount === 0}
+                onClick={() => setBulkConfirm({ isOpen: true, action: 'invite' })}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+              >
+                {t('Resend invites')} ({selectedInviteCount})
+              </button>
+              <button
+                type="button"
+                disabled={bulkBusy || selectedResetCount === 0}
+                onClick={() => setBulkConfirm({ isOpen: true, action: 'reset' })}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+              >
+                {t('Send password resets')} ({selectedResetCount})
+              </button>
+              <button
+                type="button"
+                disabled={bulkBusy || selectedReminderCount === 0}
+                onClick={() => setBulkConfirm({ isOpen: true, action: 'reminder' })}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-orange-100 text-orange-700 border-orange-300 hover:opacity-90 disabled:opacity-50"
+              >
+                {t('Send expiry reminders')} ({selectedReminderCount})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-pits-dim">{t('Loading roster page...')}</div>
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-pits-dim">
+            <Loader2 size={28} className="animate-spin text-pits-red" aria-hidden />
+            <p className="text-xs font-bold uppercase tracking-widest">
+              {t('Loading roster page...')}
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-pits-dim uppercase bg-pits-surface-elevated font-bold tracking-wider border-b border-pits-edge">
+              <thead className="text-[10px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
                 <tr>
-                  <th className="px-6 py-4">
-                    <button onClick={() => handleSort('full_name')} className="flex items-center hover:text-pits-red transition-colors">
-                      {t('Athlete / Contact')} <MessageCircle size={10} className="ml-1" /> <SortIcon column="full_name" sortKey={sortKey} sortDir={sortDir} />
+                  <th className="px-3 sm:px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected && !allSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      aria-label={t('Select all')}
+                      className="rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                    />
+                  </th>
+                  <th className="px-4 sm:px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('full_name')}
+                      className="inline-flex items-center hover:text-pits-text transition-colors"
+                    >
+                      {t('Athlete / Contact')}
+                      <SortIcon column="full_name" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
-                  <th className="px-6 py-4">
-                     <button onClick={() => handleSort('plan')} className="flex items-center hover:text-pits-red transition-colors">
-                      {t('Plan')} <SortIcon column="plan" sortKey={sortKey} sortDir={sortDir} />
+                  <th className="px-4 sm:px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('plan')}
+                      className="inline-flex items-center hover:text-pits-text transition-colors"
+                    >
+                      {t('Plan')}
+                      <SortIcon column="plan" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
-                  <th className="px-6 py-4">
-                    <button onClick={() => handleSort('is_solvent')} className="flex items-center hover:text-pits-red transition-colors">
-                      {t('Status')} <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
+                  <th className="px-4 sm:px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('is_solvent')}
+                      className="inline-flex items-center hover:text-pits-text transition-colors"
+                    >
+                      {t('Status')}
+                      <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
-                  <th className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleSort('created_at')} className="flex items-center hover:text-pits-red transition-colors">
-                      {t('Registered')} <SortIcon column="created_at" sortKey={sortKey} sortDir={sortDir} />
-                    </button>
-                  </th>
-                  <th className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleSort('last_payment_date')} className="flex items-center hover:text-pits-red transition-colors">
-                      {t('Last Payment')} <SortIcon column="last_payment_date" sortKey={sortKey} sortDir={sortDir} />
-                    </button>
-                  </th>
-                  <th className="px-6 py-4 whitespace-nowrap">{t('Renew date')}</th>
-                  <th className="px-6 py-4">{t('Utilization')}</th>
-                  <th className="px-6 py-4">{t('Last Visit')}</th>
-                  <th className="px-6 py-4 text-right">{t('Actions')}</th>
+                  <th className="px-4 sm:px-5 py-3 whitespace-nowrap">{t('Renew date')}</th>
+                  <th className="px-4 sm:px-5 py-3 whitespace-nowrap">{t('Activity')}</th>
+                  <th className="px-4 sm:px-5 py-3 text-right">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-pits-edge">
                 {profiles.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-pits-dim italic">
+                    <td colSpan={7} className="px-5 py-14 text-center text-pits-dim">
                       {t('No records found.')}
                     </td>
                   </tr>
-                ) : profiles.map((profile) => (
-                  <tr 
-                    key={profile.id} 
-                    onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
-                    className={`transition-colors border-l-4 cursor-pointer ${!profile.is_solvent ? 'border-l-pits-red bg-pits-primary-soft/30 font-medium' : 'border-l-transparent hover:bg-pits-surface-muted'}`}
-                  >
-                    
-                    {/* NAME + CONTACT */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="relative">
-                          <div className="w-10 h-10 rounded-full bg-pits-surface-muted flex items-center justify-center text-pits-dim font-bold text-sm mr-3 overflow-hidden border border-pits-edge">
-                             <ProfileAvatar
-                               url={profile.avatar_url}
-                               name={profile.full_name}
-                             />
-                          </div>
-                          {profile.role !== 'member' && (
-                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-black border-2 border-white rounded-full flex items-center justify-center">
-                               <div className="w-1.5 h-1.5 bg-pits-surface-elevated rounded-full" />
-                             </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-pits-text">{profile.full_name || t('Unnamed')}</span>
-                            <a 
-                              href={`https://wa.me/${profile.phone?.replace(/[^0-9]/g, '')}`} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="p-1 text-pits-success hover:bg-pits-primary-soft rounded-md transition-colors"
-                              title={t('Text on WhatsApp')}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MessageCircle size={14} />
-                            </a>
-                          </div>
-                          {profile.email ? (
-                            <div className="text-[10px] text-pits-dim truncate max-w-[220px]">
-                              {profile.email}
-                            </div>
-                          ) : null}
-                          <div className="text-[10px] text-pits-dim font-mono tracking-tighter uppercase whitespace-nowrap">
-                            {profile.role} • ID: {profile.id.slice(0, 5)}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
+                ) : (
+                  profiles.map((profile) => {
+                    const phoneDigits = profile.phone?.replace(/[^0-9]/g, '') || '';
+                    const attended =
+                      profile.bookings?.filter((b) => b.status === 'attended').length || 0;
+                    const lastVisit = profile.bookings
+                      ?.filter((b) => b.status === 'attended')
+                      .sort(
+                        (a, b) =>
+                          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                      )[0];
+                    const lastVisitDate = lastVisit ? new Date(lastVisit.created_at) : null;
+                    const inactiveDays = lastVisitDate
+                      ? Math.floor(
+                          (Date.now() - lastVisitDate.getTime()) / (1000 * 3600 * 24)
+                        )
+                      : null;
+                    const isSelected = selectedIds.has(profile.id);
 
-                    {/* PLAN */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <select
-                          value={profile.plan || ''}
-                          disabled={membershipPlans.length === 0}
-                          onChange={(e) => {
-                            const newPlanId = e.target.value;
-                            if (!newPlanId || newPlanId === profile.plan) return;
-                            setPlanConfirm({
-                              isOpen: true,
-                              profileId: profile.id,
-                              profileName: profile.full_name || t('Unnamed'),
-                              currentPlanId: profile.plan || '',
-                              newPlanId,
-                            });
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="bg-transparent border-none text-pits-text text-xs font-black p-0 focus:ring-0 uppercase cursor-pointer hover:text-pits-red transition-colors max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {profile.plan && !membershipPlans.some((p) => p.id === profile.plan) && (
-                            <option value={profile.plan}>{planLabel(profile.plan)}</option>
-                          )}
-                          {membershipPlans.map((plan) => (
-                            <option key={plan.id} value={plan.id}>
-                              {plan.name}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="flex items-center gap-1">
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
-                            profile.inscription_paid ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-primary border-pits-edge'
-                          }`}>
-                            {profile.inscription_plan || 'standard'}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* STATUS (Solvency) */}
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => setConfirmConfig({
-                          isOpen: true,
-                          profileId: profile.id,
-                          profileName: profile.full_name || t('this athlete'),
-                          currentSolvency: profile.is_solvent
-                        })}
-                        className={`group relative flex items-center justify-center w-full max-w-[100px] px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all border-2 ${
-                          profile.is_solvent 
-                            ? 'bg-pits-surface-elevated border-pits-success text-pits-success hover:bg-pits-success hover:text-pits-text' 
-                            : 'bg-pits-primary border-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:border-pits-primary-dark'
+                    return (
+                      <tr
+                        key={profile.id}
+                        onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected ? 'ring-1 ring-inset ring-pits-primary ' : ''
+                        }${
+                          profile.is_solvent
+                            ? 'hover:bg-pits-surface-muted/70'
+                            : 'bg-amber-50/40 hover:bg-amber-50/70'
                         }`}
                       >
-                        {profile.is_solvent ? t('Solvent / Paid') : t('Debt / Unpaid')}
-                      </button>
-                    </td>
-
-                    {/* REGISTERED */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-pits-text">
-                          {profile.created_at ? format(new Date(profile.created_at), 'dd/MM/yyyy') : '-'}
-                        </span>
-                        <span className="text-[10px] text-pits-dim">
-                          {profile.created_at ? formatDistanceToNow(new Date(profile.created_at), { addSuffix: true }) : ''}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* LAST PAYMENT */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {profile.last_payment_date ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-pits-text">
-                              {format(new Date(profile.last_payment_date), 'dd/MM/yyyy')}
-                            </span>
-                            <span className="text-[10px] text-pits-dim capitalize">
-                              {formatDistanceToNow(new Date(profile.last_payment_date), { addSuffix: true })}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-pits-dim italic">{t('No payments')}</span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* RENEW DATE */}
-                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {profile.role === 'member' ? (
-                        <input
-                          type="date"
-                          value={getRenewDateInputValue(profile)}
-                          onChange={(e) => {
-                            const value = e.target.value || null;
-                            void updateRenewDate(profile.id, value);
-                          }}
-                          className="bg-transparent border border-pits-edge rounded-lg px-2 py-1.5 text-xs font-bold text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none hover:border-pits-red transition-colors max-w-[140px]"
-                          title={t('Renew date')}
-                        />
-                      ) : (
-                        <span className="text-xs text-pits-dim">—</span>
-                      )}
-                    </td>
-
-                    {/* UTILIZATION / ATTENDANCE */}
-                    <td className="px-6 py-4">
-                      {(() => {
-                        const attended = profile.bookings?.filter(b => b.status === 'attended').length || 0;
-                        const noShow = profile.bookings?.filter(b => b.status === 'no_show').length || 0;
-                        const isRisk = attended === 0 && (profile.bookings?.length || 0) > 0;
-                        
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4].map(idx => (
-                                <div 
-                                  key={idx} 
-                                  className={`w-2.5 h-2.5 rounded-full ${
-                                    idx <= attended ? 'bg-pits-success' : 
-                                    (idx <= (attended + noShow) ? 'bg-pits-error' : 'bg-pits-surface-muted')
-                                  }`} 
-                                />
-                              ))}
-                            </div>
-                            <span className={`text-[10px] font-bold ${isRisk ? 'text-pits-error animate-pulse' : 'text-pits-dim'}`}>
-                              {t('{{count}} Visits (30d)', { count: attended })}
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </td>
-
-                    {/* LAST VISIT */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {(() => {
-                        const lastVisit = profile.bookings
-                          ?.filter(b => b.status === 'attended')
-                          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-                        
-                        if (!lastVisit) return <span className="text-pits-dim text-xs italic">{t('Never')}</span>;
-                        
-                        const date = new Date(lastVisit.created_at);
-                        const days = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 3600 * 24));
-                        
-                        return (
-                          <div className="flex items-center text-xs font-bold text-pits-text">
-                             <Calendar size={12} className="mr-1.5 text-pits-dim" />
-                             {formatDistanceToNow(date, { addSuffix: true })}
-                             {days > 10 && <span className="ml-2 w-2 h-2 bg-pits-error rounded-full" title={t('Inactive > 10 days')} />}
-                          </div>
-                        );
-                      })()}
-                    </td>
-
-                    {/* ACTIONS */}
-                    <td className="px-6 py-4 text-right">
-                      <div
-                        className="inline-flex items-center justify-end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          ref={(element) => {
-                            menuButtonRefs.current[profile.id] = element;
-                          }}
-                          onClick={() => toggleMenu(profile.id)}
-                          className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
-                          title={t('More actions')}
-                          aria-label={t('More actions')}
-                          aria-expanded={openMenuId === profile.id}
+                        <td
+                          className="px-3 sm:px-4 py-3.5"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreVertical size={18} />
-                        </button>
-                      </div>
-                    </td>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelected(profile.id)}
+                            aria-label={t('Select athlete')}
+                            className="rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                          />
+                        </td>
+                        <td className="px-4 sm:px-5 py-3.5">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-pits-surface-muted border border-pits-edge overflow-hidden shrink-0 flex items-center justify-center">
+                              <ProfileAvatar
+                                url={profile.avatar_url}
+                                name={profile.full_name}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-bold text-pits-text truncate">
+                                  {profile.full_name || t('Unnamed')}
+                                </span>
+                                {phoneDigits && (
+                                  <a
+                                    href={`https://wa.me/${phoneDigits}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors shrink-0"
+                                    title={t('Text on WhatsApp')}
+                                    aria-label={t('Text on WhatsApp')}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MessageCircle size={14} />
+                                  </a>
+                                )}
+                              </div>
+                              {profile.email && (
+                                <p className="text-[11px] text-pits-dim truncate max-w-[220px]">
+                                  {profile.email}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                                  {profile.role}
+                                </span>
+                                {profile.created_at && (
+                                  <span className="text-[10px] text-pits-dim">
+                                    {formatDistanceToNow(new Date(profile.created_at), {
+                                      addSuffix: true,
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
 
-                  </tr>
-                ))}
+                        <td className="px-4 sm:px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <div className="space-y-1.5 min-w-[140px]">
+                            <select
+                              value={profile.plan || ''}
+                              disabled={
+                                membershipPlans.length === 0 || profile.role !== 'member'
+                              }
+                              onChange={(e) => {
+                                const newPlanId = e.target.value;
+                                if (!newPlanId || newPlanId === profile.plan) return;
+                                setPlanConfirm({
+                                  isOpen: true,
+                                  profileId: profile.id,
+                                  profileName: profile.full_name || t('Unnamed'),
+                                  currentPlanId: profile.plan || '',
+                                  newPlanId,
+                                });
+                              }}
+                              className="w-full min-h-9 bg-pits-surface-muted border border-pits-edge rounded-lg px-2 text-xs font-bold text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none disabled:opacity-50"
+                            >
+                              {profile.plan &&
+                                !membershipPlans.some((p) => p.id === profile.plan) && (
+                                  <option value={profile.plan}>
+                                    {planLabel(profile.plan)}
+                                  </option>
+                                )}
+                              {membershipPlans.map((plan) => (
+                                <option key={plan.id} value={plan.id}>
+                                  {plan.name}
+                                </option>
+                              ))}
+                            </select>
+                            <span
+                              className={`inline-flex text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                profile.inscription_paid
+                                  ? 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              {profile.inscription_plan || 'standard'}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <div className="space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setConfirmConfig({
+                                  isOpen: true,
+                                  profileId: profile.id,
+                                  profileName: profile.full_name || t('this athlete'),
+                                  currentSolvency: profile.is_solvent,
+                                })
+                              }
+                              className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border transition-colors ${
+                                profile.is_solvent
+                                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                              }`}
+                            >
+                              {profile.is_solvent ? t('Solvent / Paid') : t('Debt / Unpaid')}
+                            </button>
+                            <p className="text-[10px] text-pits-dim">
+                              {profile.last_payment_date
+                                ? formatDistanceToNow(new Date(profile.last_payment_date), {
+                                    addSuffix: true,
+                                  })
+                                : t('No payments')}
+                            </p>
+                          </div>
+                        </td>
+
+                        <td
+                          className="px-4 sm:px-5 py-3.5 whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {profile.role === 'member' ? (
+                            <input
+                              type="date"
+                              value={getRenewDateInputValue(profile)}
+                              onChange={(e) => {
+                                const value = e.target.value || null;
+                                void updateRenewDate(profile.id, value);
+                              }}
+                              className="min-h-9 bg-pits-surface-muted border border-pits-edge rounded-lg px-2 text-xs font-bold text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none max-w-[148px]"
+                              title={t('Renew date')}
+                            />
+                          ) : (
+                            <span className="text-xs text-pits-dim">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap">
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-pits-text">
+                              {t('{{count}} Visits (30d)', { count: attended })}
+                            </p>
+                            <p
+                              className={`inline-flex items-center gap-1 text-[11px] ${
+                                inactiveDays != null && inactiveDays > 10
+                                  ? 'text-red-600 font-bold'
+                                  : 'text-pits-dim'
+                              }`}
+                            >
+                              <Calendar size={12} aria-hidden />
+                              {lastVisitDate
+                                ? formatDistanceToNow(lastVisitDate, { addSuffix: true })
+                                : t('Never')}
+                            </p>
+                          </div>
+                        </td>
+
+                        <td className="px-4 sm:px-5 py-3.5 text-right">
+                          <div
+                            className="inline-flex items-center justify-end gap-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedUserId(profile.id);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-2 min-h-9 min-w-9 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
+                              title={t('Edit athlete')}
+                              aria-label={t('Edit athlete')}
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              ref={(element) => {
+                                menuButtonRefs.current[profile.id] = element;
+                              }}
+                              onClick={() => toggleMenu(profile.id)}
+                              className="p-2 min-h-9 min-w-9 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
+                              title={t('More actions')}
+                              aria-label={t('More actions')}
+                              aria-expanded={openMenuId === profile.id}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         )}
 
         {!loading && totalCount > 0 && (
-          <div className="p-4 bg-pits-surface-muted border-t border-pits-edge flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest italic">
-              {t('Showing {{count}} of {{total}} entries', { count: profiles.length, total: totalCount })}
+          <div className="px-4 sm:px-5 py-3.5 bg-pits-surface-muted/50 border-t border-pits-edge flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[11px] font-bold text-pits-dim">
+              {t('Showing {{count}} of {{total}} entries', {
+                count: profiles.length,
+                total: totalCount,
+              })}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1 || loading}
-                className="p-2 bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-primary-dark hover:text-pits-text text-pits-text transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                className="p-2 min-h-9 min-w-9 inline-flex items-center justify-center bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-surface-muted text-pits-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label={t('Previous')}
               >
                 <ChevronLeft size={16} />
               </button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = currentPage <= 3
-                    ? i + 1
-                    : currentPage >= totalPages - 2
-                      ? totalPages - 4 + i
-                      : currentPage - 2 + i;
+                  const pageNum =
+                    currentPage <= 3
+                      ? i + 1
+                      : currentPage >= totalPages - 2
+                        ? totalPages - 4 + i
+                        : currentPage - 2 + i;
                   if (pageNum <= 0 || pageNum > totalPages) return null;
                   return (
                     <button
+                      type="button"
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`w-9 h-9 rounded-lg text-xs font-black transition-all ${
+                      className={`w-9 h-9 rounded-lg text-xs font-bold transition-colors ${
                         currentPage === pageNum
-                          ? 'bg-pits-primary text-pits-dark-text shadow-lg rotate-1'
-                          : 'bg-pits-surface-elevated border border-pits-edge text-pits-dim hover:border-black hover:text-pits-text'
+                          ? 'bg-pits-text text-white'
+                          : 'bg-pits-surface-elevated border border-pits-edge text-pits-dim hover:text-pits-text'
                       }`}
                     >
                       {pageNum}
@@ -621,9 +927,11 @@ export default function AthletesPage() {
                 })}
               </div>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages || loading}
-                className="p-2 bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-primary-dark hover:text-pits-text text-pits-text transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                className="p-2 min-h-9 min-w-9 inline-flex items-center justify-center bg-pits-surface-elevated border border-pits-edge rounded-lg hover:bg-pits-surface-muted text-pits-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label={t('Next')}
               >
                 <ChevronRight size={16} />
               </button>
@@ -720,6 +1028,20 @@ export default function AthletesPage() {
         onConfirm={executePlanChange}
         onCancel={() => setPlanConfirm((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {(() => {
+        const bulkCopy = bulkConfirmCopy();
+        return (
+          <ConfirmDialog
+            isOpen={bulkConfirm.isOpen}
+            title={bulkCopy.title}
+            message={bulkCopy.message}
+            confirmLabel={bulkCopy.confirmLabel}
+            onConfirm={executeBulkAction}
+            onCancel={() => setBulkConfirm({ isOpen: false, action: null })}
+          />
+        );
+      })()}
 
       {openMenuProfile && menuPosition && typeof document !== 'undefined' && createPortal(
         <div

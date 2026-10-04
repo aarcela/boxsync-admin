@@ -34,7 +34,10 @@ import {
   Rocket,
   Sparkles,
   Palette,
-  ClipboardList
+  ClipboardList,
+  CalendarClock,
+  Settings,
+  QrCode,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -43,6 +46,11 @@ import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Tooltip from '@/components/Tooltip';
 import { financialService } from '@/lib/services/financialService';
+import {
+  getPlatformPlan,
+  isTrialEndingSoon,
+  isTrialExpired,
+} from '@/lib/platform-plans';
 import Image from 'next/image';
 
 type NavSubItem = {
@@ -81,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Always start closed so SSR + first client paint match (avoid hydration mismatch).
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
-  const { name: boxName, features } = useTenant();
+  const { name: boxName, features, platformPlan, trialEndsAt } = useTenant();
   const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -167,7 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         items: [
           { name: t('Home'), href: '/dashboard', icon: LayoutDashboard, tip: t('Nav tip Home') },
           { name: t('Nav Check-in'), href: '/dashboard/attendance', icon: ClipboardCheck, tip: t('Nav tip Check-in') },
-          { name: t('Athletes'), href: '/dashboard/athletes', icon: Users, tip: t('Nav tip Athletes') },
+          { name: t('Users'), href: '/dashboard/athletes', icon: Users, tip: t('Nav tip Users') },
         ],
       },
       {
@@ -224,26 +232,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ],
       },
       {
+        id: 'settings',
+        label: '',
+        items: [
+          {
+            name: t('Settings'),
+            icon: Settings,
+            tip: t('Nav tip Settings'),
+            subItems: [
+              {
+                name: t('Athlete join QR'),
+                href: '/dashboard/profile',
+                icon: QrCode,
+                tip: t('Nav tip Athlete join QR'),
+              },
+              ...(userRole === 'admin'
+                ? [
+                    {
+                      name: t('Onboarding'),
+                      href: '/dashboard/onboarding',
+                      icon: ClipboardList,
+                      tip: t('Nav tip Onboarding'),
+                    },
+                    {
+                      name: t('Booking'),
+                      href: '/dashboard/booking',
+                      icon: CalendarClock,
+                      tip: t('Nav tip Booking'),
+                    },
+                    {
+                      name: t('Appearance'),
+                      href: '/dashboard/appearance',
+                      icon: Palette,
+                      tip: t('Nav tip Appearance'),
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ],
+      },
+      {
         id: 'special',
         label: t('Special'),
         items: [
           { name: t('Founding Pilot'), href: '/dashboard/pilot', icon: Rocket, tip: t('Nav tip Founding Pilot') },
-          ...(userRole === 'admin'
-            ? [
-                {
-                  name: t('Appearance'),
-                  href: '/dashboard/appearance',
-                  icon: Palette,
-                  tip: t('Nav tip Appearance'),
-                },
-                {
-                  name: t('Onboarding'),
-                  href: '/dashboard/onboarding',
-                  icon: ClipboardList,
-                  tip: t('Nav tip Onboarding'),
-                },
-              ]
-            : []),
         ],
       },
     ];
@@ -495,9 +528,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {boxName && (
-              <span className="font-black text-sm sm:text-base uppercase tracking-tight text-pits-shell-ink truncate max-w-[32vw] sm:max-w-xs">
-                {boxName}
-              </span>
+              <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-3">
+                <span className="font-black text-sm sm:text-base uppercase tracking-tight text-pits-shell-ink truncate max-w-[32vw] sm:max-w-xs">
+                  {boxName}
+                </span>
+                <span
+                  className={`text-[10px] font-black uppercase tracking-wider truncate ${
+                    platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt)
+                      ? 'text-red-400'
+                      : platformPlan === 'trial' && isTrialEndingSoon(platformPlan, trialEndsAt)
+                        ? 'text-orange-300'
+                        : 'text-pits-shell-ink-muted'
+                  }`}
+                >
+                  {t(getPlatformPlan(platformPlan).nameKey)}
+                  {platformPlan === 'trial' && trialEndsAt
+                    ? ` · ${
+                        isTrialExpired(platformPlan, trialEndsAt)
+                          ? t('Trial ended')
+                          : t('Trial ends {{date}}', {
+                              date: new Date(trialEndsAt).toLocaleDateString(),
+                            })
+                      }`
+                    : ''}
+                </span>
+              </div>
             )}
           </div>
 

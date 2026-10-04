@@ -109,7 +109,12 @@ export async function buildMembershipActivationFields(
   supabase: SupabaseClient,
   userId: string,
   tenantId?: string
-): Promise<{ is_solvent: true; plan_period_start: string }> {
+): Promise<{
+  is_solvent: true;
+  plan_period_start: string;
+  plan_usage_offset: 0;
+  plan_usage_offset_week_start: null;
+}> {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan, tenant_id, plan_period_start')
@@ -124,12 +129,19 @@ export async function buildMembershipActivationFields(
     : 'none';
 
   if (limitType === 'period') {
-    return { is_solvent: true, plan_period_start: new Date().toISOString() };
+    return {
+      is_solvent: true,
+      plan_period_start: new Date().toISOString(),
+      plan_usage_offset: 0,
+      plan_usage_offset_week_start: null,
+    };
   }
 
   return {
     is_solvent: true,
     plan_period_start: renewDateToIso(nextMonthlyRenewDate(profile?.plan_period_start)),
+    plan_usage_offset: 0,
+    plan_usage_offset_week_start: null,
   };
 }
 
@@ -137,8 +149,22 @@ export async function buildPlanChangeFields(
   supabase: SupabaseClient,
   newPlanId: string,
   tenantId?: string
-): Promise<{ plan: string; plan_period_start?: string }> {
-  const fields: { plan: string; plan_period_start?: string } = { plan: newPlanId };
+): Promise<{
+  plan: string;
+  plan_period_start?: string;
+  plan_usage_offset: 0;
+  plan_usage_offset_week_start: null;
+}> {
+  const fields: {
+    plan: string;
+    plan_period_start?: string;
+    plan_usage_offset: 0;
+    plan_usage_offset_week_start: null;
+  } = {
+    plan: newPlanId,
+    plan_usage_offset: 0,
+    plan_usage_offset_week_start: null,
+  };
   const limitType = await getPlanLimitType(supabase, newPlanId, tenantId);
   if (limitType === 'period') {
     fields.plan_period_start = new Date().toISOString();

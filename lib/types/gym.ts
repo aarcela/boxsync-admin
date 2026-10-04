@@ -352,6 +352,10 @@ export interface Profile {
   is_solvent: boolean;
   plan: AthletePlan;
   plan_period_start?: string | null;
+  /** Sessions already used outside tracked bookings (added to weekly/period usage). */
+  plan_usage_offset?: number;
+  /** Monday date for which plan_usage_offset applies on weekly plans. */
+  plan_usage_offset_week_start?: string | null;
   plan_name?: string;
   inscription_plan: InscriptionPlan;
   inscription_paid: boolean;

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, Loader2, Sparkles } from 'lucide-react';
+import { Eye, Loader2, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
+import PaymentProofPreviewModal from '@/components/PaymentProofPreviewModal';
 import type { AmountMatch, PaymentProofExtraction } from '@/lib/ai/payment-proof-extract';
 
 type Comparison = {
@@ -69,6 +70,7 @@ export default function PaymentProofReader({
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ApiResponse | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,14 +133,13 @@ export default function PaymentProofReader({
           {t('Proof reader')}
         </div>
         {proofUrl ? (
-          <a
-            href={proofUrl}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
             className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-blue-500 hover:underline"
           >
-            {t('Check Proof')} <ExternalLink size={10} />
-          </a>
+            {t('Check Proof')} <Eye size={10} />
+          </button>
         ) : null}
       </div>
 
@@ -195,6 +196,13 @@ export default function PaymentProofReader({
           ) : null}
         </div>
       )}
+
+      {previewOpen ? (
+        <PaymentProofPreviewModal
+          url={proofUrl}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

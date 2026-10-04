@@ -213,12 +213,13 @@ export default function SuperAdminTenantsPage() {
           <p className="p-8 text-center text-sm text-pits-ink-muted">{t('No tenants yet.')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[860px]">
+            <table className="w-full text-left min-w-[960px]">
               <thead className="bg-pits-surface-muted text-xs font-bold uppercase tracking-wider text-pits-ink-muted">
                 <tr>
                   <th className="px-4 py-3">{t('Tenant name')}</th>
                 <th className="px-4 py-3">{t('Status')}</th>
                   <th className="px-4 py-3">{t('Platform plan')}</th>
+                  <th className="px-4 py-3">{t('Plan expires')}</th>
                   <th className="px-4 py-3">{t('Users')}</th>
                   <th className="px-4 py-3">{t('Active members')}</th>
                   <th className="px-4 py-3">{t('Pending payments')}</th>
@@ -283,6 +284,23 @@ export default function SuperAdminTenantsPage() {
                           <p className="text-[10px] font-bold uppercase tracking-wider text-orange-600 mt-1">
                             {t('Trial ending soon')}
                           </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {tenant.platform_plan === 'trial' && tenant.trial_ends_at ? (
+                          <span
+                            className={`font-bold ${
+                              tenant.stats.trialExpired
+                                ? 'text-red-700'
+                                : tenant.stats.trialEndsSoon
+                                  ? 'text-orange-700'
+                                  : 'text-pits-ink'
+                            }`}
+                          >
+                            {new Date(tenant.trial_ends_at).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          <span className="text-pits-ink-muted">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-pits-ink">

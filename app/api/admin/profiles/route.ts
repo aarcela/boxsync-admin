@@ -72,16 +72,35 @@ async function enrichWithEmails(ids: string[]) {
   return { emails, invitePending };
 }
 
+type SolvencyFilter = 'all' | 'solvent' | 'unpaid';
+
 /** Shallow filter surface — documents the methods this helper uses on Supabase builders. */
 type ProfileFilterQuery = {
   eq(col: string, val: unknown): ProfileFilterQuery;
   ilike(col: string, val: string): ProfileFilterQuery;
 };
 
+function parseSolvencyFilter(value: string | null): SolvencyFilter {
+  if (value === 'solvent' || value === 'unpaid') return value;
+  return 'all';
+}
+
 function applyProfileFilters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: any,
-  { tenantId, search, role }: { tenantId: string | null; search: string; role: string }
+  {
+    tenantId,
+    search,
+    role,
+    solvency,
+    plan,
+  }: {
+    tenantId: string | null;
+    search: string;
+    role: string;
+    solvency: SolvencyFilter;
+    plan: string;
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   let filtered: ProfileFilterQuery = query;
@@ -92,6 +111,16 @@ function applyProfileFilters(
 
   if (role !== 'all') {
     filtered = filtered.eq('role', role);
+  }
+
+  if (solvency === 'solvent') {
+    filtered = filtered.eq('is_solvent', true);
+  } else if (solvency === 'unpaid') {
+    filtered = filtered.eq('is_solvent', false);
+  }
+
+  if (plan !== 'all') {
+    filtered = filtered.eq('plan', plan);
   }
 
   if (search) {
@@ -114,6 +143,8 @@ export async function GET(request: NextRequest) {
     );
     const search = (searchParams.get('search') ?? '').trim();
     const role = searchParams.get('role') ?? 'all';
+    const solvency = parseSolvencyFilter(searchParams.get('solvency'));
+    const plan = (searchParams.get('plan') ?? 'all').trim() || 'all';
     const sortKey = parseSortKey(searchParams.get('sortKey'));
     const sortDir = parseSortDir(searchParams.get('sortDir'));
     const tenantId = (staffAuth.profile.tenant_id as string | null) ?? null;
@@ -123,7 +154,7 @@ export async function GET(request: NextRequest) {
 
     const { count: unpaidCount, error: unpaidError } = await applyProfileFilters(
       staffAuth.supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      { tenantId, search: '', role: 'member' }
+      { tenantId, search: '', role: 'member', solvency: 'all', plan: 'all' }
     ).eq('is_solvent', false);
 
     if (unpaidError) throw unpaidError;
@@ -134,7 +165,7 @@ export async function GET(request: NextRequest) {
     if (sortKey === 'last_payment_date') {
       const { data: idRows, error: idError, count } = await applyProfileFilters(
         staffAuth.supabase.from('profiles').select('id', { count: 'exact' }),
-        { tenantId, search, role }
+        { tenantId, search, role, solvency, plan }
       );
 
       if (idError) throw idError;
@@ -171,7 +202,7 @@ export async function GET(request: NextRequest) {
         staffAuth.supabase
           .from('profiles')
           .select('*, bookings!left(status, created_at)', { count: 'exact' }),
-        { tenantId, search, role }
+        { tenantId, search, role, solvency, plan }
       )
         .order(sortColumn, { ascending: sortDir === 'asc' })
         .range(from, to);

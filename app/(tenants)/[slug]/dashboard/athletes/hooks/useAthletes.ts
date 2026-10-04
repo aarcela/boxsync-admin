@@ -22,9 +22,12 @@ export function useAthletes() {
   const [sendingResetId, setSendingResetId] = useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [solvencyFilter, setSolvencyFilter] = useState<'all' | 'solvent' | 'unpaid'>('all');
+  const [planFilter, setPlanFilter] = useState<string>('all');
 
   const [sortKey, setSortKey] = useState<SortKey>('full_name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -38,7 +41,7 @@ export function useAthletes() {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [debouncedSearch, roleFilter, sortKey, sortDir]);
+  }, [debouncedSearch, roleFilter, solvencyFilter, planFilter, sortKey, sortDir]);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -48,6 +51,8 @@ export function useAthletes() {
         pageSize: String(ITEMS_PER_PAGE),
         search: debouncedSearch,
         role: roleFilter,
+        solvency: solvencyFilter,
+        plan: planFilter,
         sortKey,
         sortDir,
       });
@@ -68,7 +73,16 @@ export function useAthletes() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, roleFilter, sortKey, sortDir, toast]);
+  }, [
+    currentPage,
+    debouncedSearch,
+    roleFilter,
+    solvencyFilter,
+    planFilter,
+    sortKey,
+    sortDir,
+    toast,
+  ]);
 
   useEffect(() => {
     fetchProfiles();
@@ -345,6 +359,191 @@ export function useAthletes() {
     }
   };
 
+  type BulkSummary = { done: number; skipped: number; failed: number };
+
+  const summarizeBulk = (summary: BulkSummary) => {
+    const { done, skipped, failed } = summary;
+    const tone = failed > 0 ? 'warning' : done > 0 ? 'success' : 'info';
+    toast(
+      t('{{done}} done, {{skipped}} skipped, {{failed}} failed', {
+        done,
+        skipped,
+        failed,
+      }),
+      tone
+    );
+  };
+
+  const profilesByIds = (ids: string[]) => {
+    const idSet = new Set(ids);
+    return profiles.filter((p) => idSet.has(p.id));
+  };
+
+  const bulkChangePlan = async (ids: string[], newPlanId: string): Promise<BulkSummary> => {
+    setBulkBusy(true);
+    const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
+    try {
+      for (const profile of profilesByIds(ids)) {
+        if (profile.role !== 'member' || !newPlanId || profile.plan === newPlanId) {
+          summary.skipped += 1;
+          continue;
+        }
+        try {
+          await athleteService.updatePlan(profile.id, newPlanId);
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === profile.id ? { ...p, plan: newPlanId as AthletePlan } : p
+            )
+          );
+          summary.done += 1;
+        } catch {
+          summary.failed += 1;
+        }
+      }
+      summarizeBulk(summary);
+      return summary;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkUpdateRenewDate = async (
+    ids: string[],
+    renewDate: string | null
+  ): Promise<BulkSummary> => {
+    setBulkBusy(true);
+    const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
+    const nextIso = renewDate ? renewDateToIso(renewDate) : null;
+    try {
+      for (const profile of profilesByIds(ids)) {
+        if (profile.role !== 'member') {
+          summary.skipped += 1;
+          continue;
+        }
+        try {
+          await athleteService.updatePlanPeriodStart(profile.id, renewDate);
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === profile.id ? { ...p, plan_period_start: nextIso } : p
+            )
+          );
+          summary.done += 1;
+        } catch {
+          summary.failed += 1;
+        }
+      }
+      summarizeBulk(summary);
+      return summary;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkResendInvites = async (ids: string[]): Promise<BulkSummary> => {
+    setBulkBusy(true);
+    const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
+    try {
+      for (const profile of profilesByIds(ids)) {
+        if (profile.role !== 'member' || !profile.invite_pending) {
+          summary.skipped += 1;
+          continue;
+        }
+        try {
+          const response = await fetch(`/api/admin/users/${profile.id}/resend-invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language: lang }),
+          });
+          const data = await response.json();
+          if (!response.ok || !data.inviteSent) {
+            if (response.status === 400) summary.skipped += 1;
+            else summary.failed += 1;
+            continue;
+          }
+          summary.done += 1;
+        } catch {
+          summary.failed += 1;
+        }
+      }
+      summarizeBulk(summary);
+      return summary;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkSendPasswordResets = async (ids: string[]): Promise<BulkSummary> => {
+    setBulkBusy(true);
+    const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
+    try {
+      for (const profile of profilesByIds(ids)) {
+        if (profile.role !== 'member' || profile.invite_pending || !profile.email) {
+          summary.skipped += 1;
+          continue;
+        }
+        try {
+          const response = await fetch(
+            `/api/admin/users/${profile.id}/send-password-reset`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ language: lang }),
+            }
+          );
+          const data = await response.json();
+          if (!response.ok || !data.resetSent) {
+            if (response.status === 400) summary.skipped += 1;
+            else summary.failed += 1;
+            continue;
+          }
+          summary.done += 1;
+        } catch {
+          summary.failed += 1;
+        }
+      }
+      summarizeBulk(summary);
+      return summary;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkSendExpiryReminders = async (ids: string[]): Promise<BulkSummary> => {
+    setBulkBusy(true);
+    const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
+    try {
+      for (const profile of profilesByIds(ids)) {
+        if (profile.role !== 'member' || !profile.phone?.trim()) {
+          summary.skipped += 1;
+          continue;
+        }
+        try {
+          const response = await fetch(
+            `/api/admin/users/${profile.id}/send-expiry-reminder`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ language: lang }),
+            }
+          );
+          const data = await response.json();
+          if (!response.ok || !data.reminderSent) {
+            if (response.status === 400) summary.skipped += 1;
+            else summary.failed += 1;
+            continue;
+          }
+          summary.done += 1;
+        } catch {
+          summary.failed += 1;
+        }
+      }
+      summarizeBulk(summary);
+      return summary;
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -361,6 +560,10 @@ export function useAthletes() {
     setSearchTerm,
     roleFilter,
     setRoleFilter,
+    solvencyFilter,
+    setSolvencyFilter,
+    planFilter,
+    setPlanFilter,
     sortKey,
     sortDir,
     handleSort,
@@ -381,6 +584,12 @@ export function useAthletes() {
     sendingReminderId,
     deleteAthlete,
     deletingId,
+    bulkBusy,
+    bulkChangePlan,
+    bulkUpdateRenewDate,
+    bulkResendInvites,
+    bulkSendPasswordResets,
+    bulkSendExpiryReminders,
     refresh: fetchProfiles
   };
 }
