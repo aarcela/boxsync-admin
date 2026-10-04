@@ -149,6 +149,10 @@ export default function PersonalRecordsPage() {
           await updatePrMovementAction(editingMovement.slug, form);
           toast(t('PR movement updated'), 'success');
         } else {
+          if (movements.some((m) => m.slug === formData.slug)) {
+            toast(t('A movement with this slug already exists'), 'error');
+            return;
+          }
           await createPrMovementAction(form);
           toast(t('PR movement created'), 'success');
         }
@@ -157,7 +161,14 @@ export default function PersonalRecordsPage() {
         if (tenantId) fetchMovements(tenantId);
       } catch (error) {
         console.error(error);
-        toast(t('Action failed'), 'error');
+        const message =
+          error instanceof Error ? error.message : t('Action failed');
+        toast(
+          message.includes('slug already exists')
+            ? t('A movement with this slug already exists')
+            : t('Action failed'),
+          'error'
+        );
       }
     });
   };

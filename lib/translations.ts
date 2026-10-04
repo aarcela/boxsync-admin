@@ -541,6 +541,8 @@ export const translations = {
     'PR movement updated': 'PR movement updated',
     'PR movement created': 'PR movement created',
     'PR movement deleted': 'PR movement deleted',
+    'A movement with this slug already exists':
+      'A movement with this slug already exists',
     'Delete failed — movement may be linked to athlete records':
       'Delete failed — movement may be linked to athlete records',
     'Search movements...': 'Search movements...',
@@ -2293,6 +2295,8 @@ export const translations = {
     'PR movement updated': 'Movimiento PR actualizado',
     'PR movement created': 'Movimiento PR creado',
     'PR movement deleted': 'Movimiento PR eliminado',
+    'A movement with this slug already exists':
+      'Ya existe un movimiento con este slug',
     'Delete failed — movement may be linked to athlete records':
       'Error al eliminar — el movimiento puede estar vinculado a records de atletas',
     'Search movements...': 'Buscar movimientos...',

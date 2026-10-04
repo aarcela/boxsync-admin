@@ -6,6 +6,15 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { prMovementService } from '@/lib/services/prMovementService';
 import type { PrCategory, PrRecordType } from '@/lib/types/pr';
 
+function isUniqueViolation(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === '23505'
+  );
+}
+
 function parseMovementForm(formData: FormData) {
   const slug = (formData.get('slug') as string)?.trim().toLowerCase();
   const name = (formData.get('name') as string)?.trim();
@@ -26,14 +35,21 @@ export async function createPrMovementAction(formData: FormData) {
     throw new Error('Missing required fields');
   }
 
-  await prMovementService.createPrMovement(supabaseAdmin, tenantId, {
-    slug,
-    name,
-    category,
-    record_type,
-    sort_order,
-    is_active,
-  });
+  try {
+    await prMovementService.createPrMovement(supabaseAdmin, tenantId, {
+      slug,
+      name,
+      category,
+      record_type,
+      sort_order,
+      is_active,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Error('A movement with this slug already exists');
+    }
+    throw error;
+  }
 
   revalidatePath('/dashboard/personal_records');
 }
