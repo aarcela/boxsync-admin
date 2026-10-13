@@ -166,7 +166,10 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const { error } = await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
-    if (error) throw error;
+    if (error) {
+      console.error('Tenant delete failed', error);
+      return NextResponse.json({ error: error.message || 'Tenant delete failed.' }, { status: 500 });
+    }
     return NextResponse.json({ deleted: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
