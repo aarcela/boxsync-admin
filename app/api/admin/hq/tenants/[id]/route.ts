@@ -160,7 +160,8 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const body = await request.json() as { confirm_name?: unknown };
-    if (body.confirm_name !== tenant.name) {
+    const confirmName = typeof body.confirm_name === 'string' ? body.confirm_name.trim() : '';
+    if (!confirmName || confirmName !== tenant.name.trim()) {
       return NextResponse.json({ error: 'Tenant name confirmation does not match.' }, { status: 400 });
     }
 
