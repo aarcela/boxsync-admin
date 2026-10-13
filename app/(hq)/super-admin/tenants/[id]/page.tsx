@@ -211,7 +211,7 @@ export default function SuperAdminTenantDetailPage() {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm_name: deleteConfirmation }),
+        body: JSON.stringify({ confirm_slug: deleteConfirmation }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'delete_failed');
@@ -962,7 +962,7 @@ export default function SuperAdminTenantDetailPage() {
         onConfirm={handleDelete}
       >
         <label className="block text-xs font-bold uppercase tracking-wider text-pits-ink-muted mb-2">
-          {t('Type tenant name to confirm', { name: tenant?.name ?? '' })}
+          {t('Type tenant slug to confirm', { slug: tenant?.slug ?? '' })}
         </label>
         <input
           value={deleteConfirmation}

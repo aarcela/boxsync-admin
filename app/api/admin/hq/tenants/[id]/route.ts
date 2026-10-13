@@ -159,10 +159,10 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Tenant not found.' }, { status: 404 });
     }
 
-    const body = await request.json() as { confirm_name?: unknown };
-    const confirmName = typeof body.confirm_name === 'string' ? body.confirm_name.trim() : '';
-    if (!confirmName || confirmName !== tenant.name.trim()) {
-      return NextResponse.json({ error: 'Tenant name confirmation does not match.' }, { status: 400 });
+    const body = await request.json() as { confirm_slug?: unknown };
+    const confirmSlug = typeof body.confirm_slug === 'string' ? body.confirm_slug.trim() : '';
+    if (!confirmSlug || confirmSlug !== tenant.slug.trim()) {
+      return NextResponse.json({ error: 'Tenant slug confirmation does not match.' }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
