@@ -1479,8 +1479,6 @@ export const translations = {
       'This reference was already used in another payment.',
     'AI assist only — confirm before approving.':
       'AI assist only — confirm before approving.',
-    Bank: 'Bank',
-    Expected: 'Expected',
     'Proof reader unavailable. Review the image manually.':
       'Proof reader unavailable. Review the image manually.',
     'Proof reader is unavailable.': 'Proof reader is unavailable.',
@@ -3251,8 +3249,6 @@ export const translations = {
       'Esta referencia ya fue usada en otro pago.',
     'AI assist only — confirm before approving.':
       'Solo asistencia de IA — confirma antes de aprobar.',
-    Bank: 'Banco',
-    Expected: 'Esperado',
     'Proof reader unavailable. Review the image manually.':
       'Lector no disponible. Revisa la imagen manualmente.',
     'Proof reader is unavailable.': 'El lector de comprobante no está disponible.',
