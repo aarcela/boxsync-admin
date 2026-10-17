@@ -165,12 +165,26 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Tenant slug confirmation does not match.' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
+    const { data: memberIds, error } = await supabaseAdmin.rpc('hq_delete_tenant', {
+      p_tenant_id: tenantId,
+    });
     if (error) {
       console.error('Tenant delete failed', error);
       return NextResponse.json({ error: error.message || 'Tenant delete failed.' }, { status: 500 });
     }
-    return NextResponse.json({ deleted: true });
+
+    const failedAuthDeletes: string[] = [];
+    const ids = Array.isArray(memberIds) ? memberIds : [];
+    for (const memberId of ids) {
+      if (typeof memberId !== 'string') continue;
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(memberId);
+      if (authError && authError.code !== 'user_not_found') {
+        console.error('Tenant delete: auth user removal failed', memberId, authError);
+        failedAuthDeletes.push(memberId);
+      }
+    }
+
+    return NextResponse.json({ deleted: true, auth_users_failed: failedAuthDeletes.length });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });

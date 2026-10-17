@@ -376,6 +376,16 @@ export const translations = {
     'Coach payments': 'Coach payroll',
     'Module coach payments desc':
       'Coaches can see the status of their own payroll in the app. Turn off to hide that page.',
+    Milestones: 'Milestones',
+    'Milestone settings help':
+      'Track and celebrate athlete achievements: class counts, birthdays, and membership anniversaries.',
+    'Enable milestones': 'Enable milestones',
+    'Milestone enabled desc':
+      'Track class counts, birthdays, and membership anniversaries for athletes.',
+    'Milestone push notifications': 'Push notifications',
+    'Milestone push desc': 'Send push notifications when milestones are achieved.',
+    'Milestones saved': 'Milestones saved',
+    'Failed to save milestones': 'Failed to save milestones',
     'Modules saved': 'Modules saved. Members will see the change in the app.',
     'Failed to save modules': 'Could not save modules.',
     'Failed to load modules': 'Could not load modules.',
@@ -2136,6 +2146,16 @@ export const translations = {
     'Coach payments': 'Nómina del coach',
     'Module coach payments desc':
       'Los coaches ven el estado de su propia nómina en la app. Apágalo para ocultar esa página.',
+    Milestones: 'Logros',
+    'Milestone settings help':
+      'Rastrea y celebra logros de atletas: conteo de clases, cumpleaños y aniversarios de membresía.',
+    'Enable milestones': 'Habilitar logros',
+    'Milestone enabled desc':
+      'Rastrea conteos de clases, cumpleaños y aniversarios de membresía para atletas.',
+    'Milestone push notifications': 'Notificaciones push',
+    'Milestone push desc': 'Envía notificaciones push cuando se alcanzan logros.',
+    'Milestones saved': 'Logros guardados',
+    'Failed to save milestones': 'No se pudieron guardar logros',
     'Modules saved': 'Módulos guardados. Los miembros verán el cambio en la app.',
     'Failed to save modules': 'No se pudieron guardar los módulos.',
     'Failed to load modules': 'No se pudieron cargar los módulos.',
