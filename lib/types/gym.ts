@@ -282,6 +282,9 @@ export interface PaymentRecord {
   exchange_rate_source?: string | null;
   reference_currency_amount?: number | null;
   plan_period_start?: string | null;
+  ai_extracted_bank?: string | null;
+  ai_extracted_reference?: string | null;
+  tenant_id?: string | null;
   profiles: {
     full_name: string | null;
   } | null;
