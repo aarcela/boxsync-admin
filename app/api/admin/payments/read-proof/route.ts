@@ -4,8 +4,11 @@ import {
   PAYMENT_PROOF_EXTRACT_SYSTEM,
   buildPaymentProofUserPrompt,
   compareClaimedAmount,
+  compareToPlanPrice,
   parsePaymentProofExtraction,
+  type PlanPriceComparison,
 } from '@/lib/ai/payment-proof-extract';
+import { DEFAULT_TENANT_CURRENCIES, parseTenantCurrencyConfig } from '@/lib/currency';
 import { getMemberPeriodBalance } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { getPaymentProofPath } from '@/lib/services/financialService';
@@ -220,6 +223,66 @@ export async function POST(request: Request) {
       }
 
       const extraction = parsePaymentProofExtraction(result.text);
+
+      // Check for duplicate references in this tenant
+      let duplicatePayment: { id: string; created_at: string; user_id: string } | null = null;
+      if (extraction.reference && extraction.reference.trim()) {
+        const { data: dupPayment } = await staffAuth.supabase
+          .from('payments')
+          .select('id, created_at, user_id')
+          .eq('tenant_id', tenantId)
+          .eq('ai_extracted_reference', extraction.reference)
+          .neq('id', paymentId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        duplicatePayment = dupPayment || null;
+      }
+
+      // Store extracted bank and reference
+      if (extraction.bank || extraction.reference) {
+        await staffAuth.supabase
+          .from('payments')
+          .update({
+            ai_extracted_bank: extraction.bank,
+            ai_extracted_reference: extraction.reference,
+            tenant_id: tenantId,
+          })
+          .eq('id', paymentId);
+      }
+
+      // Get BCV rate for plan price comparison
+      let bcvRate: number | null = null;
+      const currencyConfig = parseTenantCurrencyConfig(tenant.settings);
+      const localCurrency = currencyConfig.local || DEFAULT_TENANT_CURRENCIES.local;
+
+      if (extraction.currency === 'VES' && localCurrency === 'VES') {
+        try {
+          const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+          const data = await response.json();
+          bcvRate = Number(data.promedio);
+          if (!Number.isFinite(bcvRate) || bcvRate <= 0) {
+            bcvRate = null;
+          }
+        } catch (error) {
+          console.error('Failed to fetch BCV rate:', error);
+        }
+      }
+
+      // Compare to expected plan price
+      let planComparison: PlanPriceComparison | null = null;
+      if (profile?.plan) {
+        const { data: plan } = await staffAuth.supabase
+          .from('membership_plans')
+          .select('price_usd')
+          .eq('id', profile.plan)
+          .maybeSingle();
+        const planPriceUsd = Number(plan?.price_usd) || 0;
+        if (planPriceUsd > 0) {
+          planComparison = compareToPlanPrice(extraction, planPriceUsd, bcvRate, localCurrency);
+        }
+      }
+
       const nextQuota = await tenantAiService.getQuota(tenantId, supabaseAdmin, tenant);
 
       return NextResponse.json({
@@ -230,6 +293,8 @@ export async function POST(request: Request) {
           amountMatch: compareClaimedAmount(extraction.amount, claimedAmount),
           periodRemaining,
         },
+        planComparison,
+        duplicatePayment,
         proofUrl,
         quota: nextQuota,
       });

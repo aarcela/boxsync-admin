@@ -5,6 +5,7 @@ export type PaymentProofExtraction = {
   currency: string | null;
   paid_at: string | null;
   reference: string | null;
+  bank: string | null;
   confidence: ProofConfidence;
   raw_notes: string | null;
 };
@@ -19,6 +20,7 @@ Return ONLY valid JSON with this shape:
   "currency": string | null,
   "paid_at": string | null,
   "reference": string | null,
+  "bank": string | null,
   "confidence": "high" | "medium" | "low",
   "raw_notes": string | null
 }
@@ -28,8 +30,9 @@ Rules:
 - currency: ISO-like code when clear (USD, EUR, VES, COP, MXN, …). Use VES for Venezuelan bolívares / Bs. Null if unclear.
 - paid_at: payment date as YYYY-MM-DD when visible. Null if missing.
 - reference: transfer / operation / confirmation / reference number if present. Null if none.
+- bank: bank or payment service name when visible (e.g. Banesco, Mercantil, Provincial, BNC, Venezuela, Zelle, PayPal). Normalize to common short names. Null if unclear.
 - confidence: high when amount is clear; medium if partially readable; low if guessy or unreadable.
-- raw_notes: one short English note (max 120 chars), e.g. bank name or why a field is null.
+- raw_notes: one short English note (max 120 chars) for additional context or why a field is null.
 - Do not invent values. Use null when not visible.
 - No markdown, no code fences, JSON only.`;
 
@@ -69,6 +72,7 @@ export function parsePaymentProofExtraction(text: string): PaymentProofExtractio
     currency: null,
     paid_at: null,
     reference: null,
+    bank: null,
     confidence: 'low',
     raw_notes: null,
   };
@@ -84,6 +88,7 @@ export function parsePaymentProofExtraction(text: string): PaymentProofExtractio
       currency: asNullableString(raw.currency)?.toUpperCase() ?? null,
       paid_at: asPaidAt(raw.paid_at),
       reference: asNullableString(raw.reference),
+      bank: asNullableString(raw.bank),
       confidence: asConfidence(raw.confidence),
       raw_notes: asNullableString(raw.raw_notes),
     };
@@ -108,10 +113,76 @@ export function buildPaymentProofUserPrompt(input: {
   method: string | null;
 }): string {
   return [
-    'Extract amount, date, and reference from this payment proof image.',
+    'Extract amount, date, reference, and bank from this payment proof image.',
     `Athlete claimed amount: ${input.claimedAmount}`,
     `Athlete claimed currency: ${input.claimedCurrency}`,
     `Payment method label: ${input.method || 'unknown'}`,
     'Prefer the amount actually shown on the receipt over the claimed values.',
   ].join('\n');
+}
+
+export type PlanPriceComparison = {
+  expectedAmount: number;
+  expectedCurrency: string;
+  paidAmount: number | null;
+  paidCurrency: string | null;
+  match: AmountMatch;
+  conversionRate?: number | null;
+  conversionApplied: boolean;
+};
+
+export function compareToPlanPrice(
+  extraction: PaymentProofExtraction,
+  planPriceUsd: number,
+  bcvRate: number | null,
+  localCurrency: string
+): PlanPriceComparison {
+  const paidAmount = extraction.amount;
+  const paidCurrency = extraction.currency;
+
+  if (paidAmount == null || !paidCurrency) {
+    return {
+      expectedAmount: planPriceUsd,
+      expectedCurrency: 'USD',
+      paidAmount,
+      paidCurrency,
+      match: 'unknown',
+      conversionApplied: false,
+    };
+  }
+
+  let expectedAmount = planPriceUsd;
+  let expectedCurrency = 'USD';
+  let conversionApplied = false;
+  let conversionRate: number | null = null;
+
+  if (paidCurrency === localCurrency && localCurrency === 'VES' && bcvRate && bcvRate > 0) {
+    expectedAmount = planPriceUsd * bcvRate;
+    expectedCurrency = 'VES';
+    conversionApplied = true;
+    conversionRate = bcvRate;
+  } else if (paidCurrency !== 'USD') {
+    return {
+      expectedAmount: planPriceUsd,
+      expectedCurrency: 'USD',
+      paidAmount,
+      paidCurrency,
+      match: 'unknown',
+      conversionApplied: false,
+    };
+  }
+
+  const absDiff = Math.abs(paidAmount - expectedAmount);
+  const tolerance = Math.max(1, Math.abs(expectedAmount) * 0.05);
+  const match = absDiff <= tolerance ? 'match' : 'mismatch';
+
+  return {
+    expectedAmount,
+    expectedCurrency,
+    paidAmount,
+    paidCurrency,
+    match,
+    conversionRate,
+    conversionApplied,
+  };
 }
