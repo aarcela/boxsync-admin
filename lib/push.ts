@@ -16,6 +16,15 @@ const COPY = {
     expiryToday: 'Your membership expires today. Renew to keep booking classes.',
     expirySoon: (daysLeft: number) =>
       `Your membership expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew to keep booking classes.`,
+    milestoneClassCountTitle: 'Achievement unlocked!',
+    milestoneClassCountBody: (count: number) =>
+      `Congratulations! You've completed ${count} ${count === 1 ? 'class' : 'classes'}. Keep it up!`,
+    milestoneBirthdayTitle: 'Happy Birthday!',
+    milestoneBirthdayBody: (age?: number) =>
+      age ? `Happy Birthday! Today you turn ${age}. Have a great day!` : 'Happy Birthday! Have a great day!',
+    milestoneAnniversaryTitle: 'Anniversary!',
+    milestoneAnniversaryBody: (years: number) =>
+      `Congratulations! Today marks ${years} ${years === 1 ? 'year' : 'years'} training with us. Thanks for your commitment!`,
   },
   es: {
     paymentApprovedTitle: 'Pago aprobado',
@@ -28,6 +37,15 @@ const COPY = {
     expiryToday: 'Tu membresía vence hoy. Renueva para seguir reservando clases.',
     expirySoon: (daysLeft: number) =>
       `Tu membresía vence en ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'}. Renueva para seguir reservando clases.`,
+    milestoneClassCountTitle: '¡Logro desbloqueado!',
+    milestoneClassCountBody: (count: number) =>
+      `¡Felicidades! Has completado ${count} ${count === 1 ? 'clase' : 'clases'}. ¡Sigue así!`,
+    milestoneBirthdayTitle: '¡Feliz cumpleaños!',
+    milestoneBirthdayBody: (age?: number) =>
+      age ? `¡Feliz cumpleaños! Hoy cumples ${age} años. ¡Que tengas un gran día!` : '¡Feliz cumpleaños! ¡Que tengas un gran día!',
+    milestoneAnniversaryTitle: '¡Aniversario!',
+    milestoneAnniversaryBody: (years: number) =>
+      `¡Felicidades! Hoy cumples ${years} ${years === 1 ? 'año' : 'años'} entrenando con nosotros. ¡Gracias por tu compromiso!`,
   },
 };
 
@@ -270,5 +288,35 @@ export async function sendExpiryReminderPush(userId: string, daysLeft: number): 
     copy.expiryTitle,
     daysLeft <= 0 ? copy.expiryToday : copy.expirySoon(daysLeft),
     { type: 'expiry_reminder', daysLeft }
+  );
+}
+
+export async function sendMilestoneClassCountPush(userId: string, count: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneClassCountTitle,
+    copy.milestoneClassCountBody(count),
+    { type: 'milestone_class_count', count, screen: 'achievements' }
+  );
+}
+
+export async function sendMilestoneBirthdayPush(userId: string, age?: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneBirthdayTitle,
+    copy.milestoneBirthdayBody(age),
+    { type: 'milestone_birthday', age, screen: 'achievements' }
+  );
+}
+
+export async function sendMilestoneAnniversaryPush(userId: string, years: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneAnniversaryTitle,
+    copy.milestoneAnniversaryBody(years),
+    { type: 'milestone_anniversary', years, screen: 'achievements' }
   );
 }

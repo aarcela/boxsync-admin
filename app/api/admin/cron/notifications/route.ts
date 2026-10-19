@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendWaitlistPromotedPush } from '@/lib/push';
+import { 
+  sendWaitlistPromotedPush,
+  sendMilestoneClassCountPush,
+  sendMilestoneBirthdayPush,
+  sendMilestoneAnniversaryPush
+} from '@/lib/push';
 
 /**
  * Drains `notification_outbox` — currently only populated by the
@@ -53,6 +58,18 @@ async function drain(request: Request) {
       if (row.kind === 'waitlist_promoted') {
         const classId = (row.payload as { class_id?: string })?.class_id || '';
         await sendWaitlistPromotedPush(row.user_id, classId);
+        sent++;
+      } else if (row.kind === 'milestone_class_count') {
+        const count = (row.payload as { count?: number })?.count || 0;
+        await sendMilestoneClassCountPush(row.user_id, count);
+        sent++;
+      } else if (row.kind === 'milestone_birthday') {
+        const age = (row.payload as { age?: number })?.age;
+        await sendMilestoneBirthdayPush(row.user_id, age);
+        sent++;
+      } else if (row.kind === 'milestone_anniversary') {
+        const years = (row.payload as { years?: number })?.years || 1;
+        await sendMilestoneAnniversaryPush(row.user_id, years);
         sent++;
       }
     }

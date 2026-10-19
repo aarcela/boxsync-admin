@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Wallet } from 'lucide-react';
+import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Wallet, Award } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
@@ -15,7 +15,9 @@ import {
 import { tenantPaletteService } from '@/lib/services/tenantPaletteService';
 import type { TenantFeatureId, TenantFeatures } from '@/lib/tenant-features';
 import type { TranslationKey } from '@/lib/translations';
-import { saveTenantFeaturesAction, saveTenantPaletteAction } from './actions';
+import type { MilestoneSettings } from '@/lib/types/milestone';
+import { DEFAULT_MILESTONE_SETTINGS } from '@/lib/types/milestone';
+import { saveTenantFeaturesAction, saveTenantPaletteAction, saveMilestoneSettingsAction, getMilestoneSettingsAction } from './actions';
 
 function paletteNameKey(id: PaletteId): TranslationKey {
   return `Palette ${id}` as TranslationKey;
@@ -177,9 +179,11 @@ export default function AppearancePage() {
   const { tenantId, features, setFeatures } = useTenant();
   const [isPending, startTransition] = useTransition();
   const [isFeaturePending, startFeatureTransition] = useTransition();
+  const [isMilestonePending, startMilestoneTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [savedId, setSavedId] = useState<PaletteId>('default');
   const [selectedId, setSelectedId] = useState<PaletteId>('default');
+  const [milestoneSettings, setMilestoneSettings] = useState<MilestoneSettings>(DEFAULT_MILESTONE_SETTINGS);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,6 +205,24 @@ export default function AppearancePage() {
       cancelled = true;
     };
   }, [tenantId, t, toast]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const settings = await getMilestoneSettingsAction();
+        if (cancelled) return;
+        setMilestoneSettings(settings);
+      } catch {
+        if (!cancelled) console.error('Failed to load milestone settings');
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const selected = PALETTES[selectedId] ?? PALETTES[DEFAULT_PALETTE_ID];
   const dirty = selectedId !== savedId;
@@ -239,6 +261,22 @@ export default function AppearancePage() {
       } catch {
         setFeatures(previous);
         toast(t('Failed to save modules'), 'error');
+      }
+    });
+  };
+
+  const handleMilestoneToggle = (field: keyof MilestoneSettings, value: boolean) => {
+    const previous = milestoneSettings;
+    const next = { ...milestoneSettings, [field]: value };
+    setMilestoneSettings(next);
+    startMilestoneTransition(async () => {
+      try {
+        const saved = await saveMilestoneSettingsAction({ [field]: value });
+        setMilestoneSettings(saved);
+        toast(t('Milestones saved'), 'success');
+      } catch {
+        setMilestoneSettings(previous);
+        toast(t('Failed to save milestones'), 'error');
       }
     });
   };
@@ -314,7 +352,96 @@ export default function AppearancePage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
+                {t('Milestones')}
+              </h2>
+              <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                {t('Milestone settings help')}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={milestoneSettings.enabled}
+                disabled={isMilestonePending}
+                onClick={() => handleMilestoneToggle('enabled', !milestoneSettings.enabled)}
+                className={`w-full text-left rounded-2xl border-2 p-4 bg-pits-surface transition-colors disabled:opacity-60 ${
+                  milestoneSettings.enabled ? 'border-pits-primary' : 'border-pits-edge'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
+                      <Award size={16} className={milestoneSettings.enabled ? 'text-pits-primary' : 'text-pits-ink-muted'} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-black text-pits-ink">{t('Enable milestones')}</p>
+                      <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                        {t('Milestone enabled desc')}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
+                      milestoneSettings.enabled
+                        ? 'border-pits-primary bg-pits-primary'
+                        : 'border-pits-edge bg-pits-surface'
+                    }`}
+                  >
+                    {milestoneSettings.enabled && <Check size={12} className="text-pits-black" strokeWidth={3} />}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={milestoneSettings.pushEnabled}
+                disabled={isMilestonePending || !milestoneSettings.enabled}
+                onClick={() => handleMilestoneToggle('pushEnabled', !milestoneSettings.pushEnabled)}
+                className={`w-full text-left rounded-2xl border-2 p-4 bg-pits-surface transition-colors disabled:opacity-60 ${
+                  milestoneSettings.pushEnabled && milestoneSettings.enabled ? 'border-pits-primary' : 'border-pits-edge'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
+                      <ClipboardCheck size={16} className={milestoneSettings.pushEnabled && milestoneSettings.enabled ? 'text-pits-primary' : 'text-pits-ink-muted'} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-black text-pits-ink">{t('Milestone push notifications')}</p>
+                      <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                        {t('Milestone push desc')}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
+                      milestoneSettings.pushEnabled && milestoneSettings.enabled
+                        ? 'border-pits-primary bg-pits-primary'
+                        : 'border-pits-edge bg-pits-surface'
+                    }`}
+                  >
+                    {milestoneSettings.pushEnabled && milestoneSettings.enabled && <Check size={12} className="text-pits-black" strokeWidth={3} />}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
+                {t('App color palette')}
+              </h2>
+              <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                {t('App color palette help')}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
             {swatches.map(({ id, palette }) => {
               const active = selectedId === id;
               const isSaved = savedId === id;
@@ -354,6 +481,7 @@ export default function AppearancePage() {
                 </button>
               );
             })}
+          </div>
           </div>
         </div>
 
