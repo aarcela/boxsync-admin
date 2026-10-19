@@ -407,11 +407,16 @@ export default function AppearancePage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-black text-pits-ink">{t('Milestone push notifications')}</p>
-                    <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                      {t('Milestone push desc')}
-                    </p>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
+                      <ClipboardCheck size={16} className={milestoneSettings.pushEnabled && milestoneSettings.enabled ? 'text-pits-primary' : 'text-pits-ink-muted'} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-black text-pits-ink">{t('Milestone push notifications')}</p>
+                      <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                        {t('Milestone push desc')}
+                      </p>
+                    </div>
                   </div>
                   <span
                     className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
@@ -430,7 +435,7 @@ export default function AppearancePage() {
           <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
             <div>
               <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
-                {t('Color palette')}
+                {t('App color palette')}
               </h2>
               <p className="mt-1 text-xs font-bold text-pits-ink-muted">
                 {t('App color palette help')}
@@ -476,6 +481,7 @@ export default function AppearancePage() {
                 </button>
               );
             })}
+          </div>
           </div>
         </div>
 

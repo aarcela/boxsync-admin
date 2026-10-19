@@ -297,7 +297,7 @@ export async function sendMilestoneClassCountPush(userId: string, count: number)
     userId,
     copy.milestoneClassCountTitle,
     copy.milestoneClassCountBody(count),
-    { type: 'milestone_class_count', count }
+    { type: 'milestone_class_count', count, screen: 'achievements' }
   );
 }
 
@@ -307,7 +307,7 @@ export async function sendMilestoneBirthdayPush(userId: string, age?: number): P
     userId,
     copy.milestoneBirthdayTitle,
     copy.milestoneBirthdayBody(age),
-    { type: 'milestone_birthday', age }
+    { type: 'milestone_birthday', age, screen: 'achievements' }
   );
 }
 
@@ -317,6 +317,6 @@ export async function sendMilestoneAnniversaryPush(userId: string, years: number
     userId,
     copy.milestoneAnniversaryTitle,
     copy.milestoneAnniversaryBody(years),
-    { type: 'milestone_anniversary', years }
+    { type: 'milestone_anniversary', years, screen: 'achievements' }
   );
 }
