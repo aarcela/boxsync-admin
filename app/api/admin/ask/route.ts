@@ -1,6 +1,7 @@
 import { generateText } from 'ai';
 import { NextResponse } from 'next/server';
 import { ASK_AI_SYSTEM_KNOWLEDGE } from '@/lib/ai/system-knowledge';
+import { buildAskAiTenantSnapshot } from '@/lib/ai/tenant-snapshot';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { tenantAiService } from '@/lib/services/tenantAiService';
 import { tenantService } from '@/lib/services/tenantService';
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     const question =
       typeof body.question === 'string' ? body.question.trim().slice(0, MAX_QUESTION) : '';
     if (!question) {
-      return NextResponse.json({ error: 'Ask a question about how Wodus works.' }, { status: 400 });
+      return NextResponse.json({ error: 'Ask a question about this gym.' }, { status: 400 });
     }
 
     const tenant = await tenantService.getTenantById(tenantId, supabaseAdmin);
@@ -92,13 +93,23 @@ export async function POST(request: Request) {
     const history = parseHistory(body.history);
     const language = body.language === 'es' ? 'Spanish' : body.language === 'en' ? 'English' : null;
 
+    let snapshot = '';
+    try {
+      snapshot = await buildAskAiTenantSnapshot(tenantId, tenant, supabaseAdmin);
+    } catch {
+      snapshot = '';
+    }
+
     try {
       const result = await generateText({
         model: ASK_MODEL,
         system: [
           ASK_AI_SYSTEM_KNOWLEDGE,
           language ? `Reply in ${language}.` : '',
-          `Answer the staff question using the product rules. Do not mention tenant ids. Do not refuse how-it-works questions.`,
+          snapshot
+            ? `LIVE SNAPSHOT for gym "${tenant.name}" (use these numbers; do not mention tenant ids):\n${snapshot}`
+            : 'LIVE SNAPSHOT unavailable. Answer how-it-works from the product rules. For current attendance, classes, or money, say the live numbers could not be loaded and point staff to Check-in or Money.',
+          'Answer this gym’s operations first (attendance, classes, earnings, members). Product-rule questions are allowed. Do not refuse live-number questions when the snapshot is present.',
         ]
           .filter(Boolean)
           .join('\n\n'),
