@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './supabase-admin';
+import { getCaracasTimeLabel } from './utils/date';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -25,6 +26,9 @@ const COPY = {
     milestoneAnniversaryTitle: 'Anniversary!',
     milestoneAnniversaryBody: (years: number) =>
       `Congratulations! Today marks ${years} ${years === 1 ? 'year' : 'years'} training with us. Thanks for your commitment!`,
+    classReminderTitle: 'Class starting soon',
+    classReminderBody: (classType: string, time: string) =>
+      `Your ${classType} starts at ${time}.`,
   },
   es: {
     paymentApprovedTitle: 'Pago aprobado',
@@ -46,7 +50,17 @@ const COPY = {
     milestoneAnniversaryTitle: '¡Aniversario!',
     milestoneAnniversaryBody: (years: number) =>
       `¡Felicidades! Hoy cumples ${years} ${years === 1 ? 'año' : 'años'} entrenando con nosotros. ¡Gracias por tu compromiso!`,
+    classReminderTitle: 'Tu clase empieza pronto',
+    classReminderBody: (classType: string, time: string) =>
+      `Tu ${classType} empieza a las ${time}.`,
   },
+};
+
+export type ClassReminderPayload = {
+  booking_id?: string;
+  class_id?: string;
+  class_type?: string;
+  start_time?: string;
 };
 
 async function getTokensForUser(userId: string): Promise<string[]> {
@@ -319,4 +333,59 @@ export async function sendMilestoneAnniversaryPush(userId: string, years: number
     copy.milestoneAnniversaryBody(years),
     { type: 'milestone_anniversary', years, screen: 'achievements' }
   );
+}
+
+type ReminderClassRow = {
+  is_cancelled: boolean | null;
+  start_time: string;
+  class_type: string | null;
+};
+
+function asReminderClass(value: unknown): ReminderClassRow | null {
+  const row = Array.isArray(value) ? value[0] : value;
+  if (!row || typeof row !== 'object') return null;
+  const cls = row as Record<string, unknown>;
+  if (typeof cls.start_time !== 'string') return null;
+  return {
+    is_cancelled: typeof cls.is_cancelled === 'boolean' ? cls.is_cancelled : null,
+    start_time: cls.start_time,
+    class_type: typeof cls.class_type === 'string' ? cls.class_type : null,
+  };
+}
+
+/** Sends at most once per booking. Returns false when the class is no longer due. */
+export async function sendClassReminderPush(
+  userId: string,
+  payload: ClassReminderPayload
+): Promise<boolean> {
+  const bookingId = payload.booking_id;
+  if (!bookingId) return false;
+
+  const { data, error } = await supabaseAdmin
+    .from('bookings')
+    .select('id, status, class_id, classes!inner(is_cancelled, start_time, class_type)')
+    .eq('id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to load class reminder booking:', error);
+    return false;
+  }
+  if (!data || data.status !== 'booked') return false;
+
+  const cls = asReminderClass(data.classes);
+  if (!cls || cls.is_cancelled === true) return false;
+  if (new Date(cls.start_time).getTime() <= Date.now()) return false;
+
+  const lang = await getUserPushLanguage(userId);
+  const fallbackType = lang === 'es' ? 'clase' : 'class';
+  const classType = (cls.class_type || payload.class_type || '').trim() || fallbackType;
+  const time = getCaracasTimeLabel(cls.start_time);
+  const copy = COPY[lang];
+  await sendExpoPush(userId, copy.classReminderTitle, copy.classReminderBody(classType, time), {
+    type: 'class_reminder',
+    classId: data.class_id,
+  });
+  return true;
 }

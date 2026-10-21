@@ -1,20 +1,27 @@
 /** Athlete booking windows in tenants.settings.booking.
- * Keep in sync with app/constants/bookingSettings.ts */
+ * book/cancel minutes stay in sync with app/constants/bookingSettings.ts.
+ * reminderMinutesBefore is admin-only (server push). */
 
 export type BookingSettings = {
   bookClosesMinutesBefore: number;
   cancelClosesMinutesBefore: number;
+  reminderMinutesBefore: number;
 };
 
 export const DEFAULT_BOOKING_SETTINGS: BookingSettings = {
   bookClosesMinutesBefore: 0,
   cancelClosesMinutesBefore: 60,
+  reminderMinutesBefore: 15,
 };
 
 /** Common presets shown in the admin UI (minutes). */
 export const BOOKING_CLOSE_PRESETS_MINUTES = [
   0, 15, 30, 60, 120, 180, 360, 720, 1440,
 ] as const;
+
+/** Class reminder lead time. 0 = off. Capped at 2 hours. */
+export const CLASS_REMINDER_PRESETS_MINUTES = [0, 5, 10, 15, 20, 30] as const;
+export const MAX_REMINDER_MINUTES = 120;
 
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -24,6 +31,10 @@ function asObject(value: unknown): Record<string, unknown> | null {
 function minutesFlag(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
   return Math.max(0, Math.floor(value));
+}
+
+function reminderMinutesFlag(value: unknown, fallback: number): number {
+  return Math.min(MAX_REMINDER_MINUTES, minutesFlag(value, fallback));
 }
 
 export function parseBookingSettings(settings: unknown): BookingSettings {
@@ -36,6 +47,10 @@ export function parseBookingSettings(settings: unknown): BookingSettings {
     cancelClosesMinutesBefore: minutesFlag(
       bag?.cancelClosesMinutesBefore,
       DEFAULT_BOOKING_SETTINGS.cancelClosesMinutesBefore
+    ),
+    reminderMinutesBefore: reminderMinutesFlag(
+      bag?.reminderMinutesBefore,
+      DEFAULT_BOOKING_SETTINGS.reminderMinutesBefore
     ),
   };
 }
@@ -61,6 +76,12 @@ export function patchBookingSettings(
     bag.cancelClosesMinutesBefore = minutesFlag(
       patch.cancelClosesMinutesBefore,
       DEFAULT_BOOKING_SETTINGS.cancelClosesMinutesBefore
+    );
+  }
+  if (typeof patch.reminderMinutesBefore === 'number') {
+    bag.reminderMinutesBefore = reminderMinutesFlag(
+      patch.reminderMinutesBefore,
+      DEFAULT_BOOKING_SETTINGS.reminderMinutesBefore
     );
   }
   const next = parseBookingSettings({ ...current, booking: bag });

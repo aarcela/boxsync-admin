@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   AlertTriangle,
+  Bell,
   CalendarClock,
   CalendarPlus,
   CalendarX2,
@@ -13,7 +14,9 @@ import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
 import {
   BOOKING_CLOSE_PRESETS_MINUTES,
+  CLASS_REMINDER_PRESETS_MINUTES,
   DEFAULT_BOOKING_SETTINGS,
+  MAX_REMINDER_MINUTES,
   isBookingWindowsValid,
   type BookingSettings,
 } from '@/lib/booking-settings';
@@ -25,6 +28,32 @@ const MAX_CUSTOM_MINUTES = 7 * 24 * 60;
 
 function isPresetMinutes(minutes: number): boolean {
   return (BOOKING_CLOSE_PRESETS_MINUTES as readonly number[]).includes(minutes);
+}
+
+function isReminderPresetMinutes(minutes: number): boolean {
+  return (CLASS_REMINDER_PRESETS_MINUTES as readonly number[]).includes(minutes);
+}
+
+function reminderPartsToMinutes(hours: number, minutes: number): number {
+  const h = Number.isFinite(hours) ? Math.max(0, Math.floor(hours)) : 0;
+  const m = Number.isFinite(minutes) ? Math.min(59, Math.max(0, Math.floor(minutes))) : 0;
+  return Math.min(MAX_REMINDER_MINUTES, h * 60 + m);
+}
+
+function reminderPresetLabel(
+  minutes: number,
+  t: (key: any, params?: Record<string, string | number>) => string
+) {
+  if (minutes === 0) return t('Class reminder off');
+  return shortPresetLabel(minutes, t);
+}
+
+function reminderFullLabel(
+  minutes: number,
+  t: (key: any, params?: Record<string, string | number>) => string
+) {
+  if (minutes === 0) return t('Class reminder summary off');
+  return t('Class reminder summary', { time: fullWindowLabel(minutes, t) });
 }
 
 function minutesToParts(total: number): { hours: number; minutes: number } {
@@ -192,6 +221,132 @@ function CloseWindowEditor({
   );
 }
 
+function ReminderEditor({
+  value,
+  disabled,
+  customActive,
+  onCustomActiveChange,
+  onChange,
+  t,
+}: {
+  value: number;
+  disabled: boolean;
+  customActive: boolean;
+  onCustomActiveChange: (active: boolean) => void;
+  onChange: (minutes: number) => void;
+  t: (key: any, params?: Record<string, string | number>) => string;
+}) {
+  const parts = minutesToParts(value);
+  const selectedPreset = !customActive && isReminderPresetMinutes(value) ? value : CUSTOM_SENTINEL;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-lg bg-pits-surface p-2 border border-pits-edge">
+          <Bell size={16} className="text-pits-primary" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-sm font-black text-pits-ink">{t('Class reminder')}</h2>
+          <p className="mt-0.5 text-xs font-bold text-pits-ink-muted leading-relaxed">
+            {t('Class reminder help')}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {CLASS_REMINDER_PRESETS_MINUTES.map((m) => {
+          const active = selectedPreset === m;
+          return (
+            <button
+              key={m}
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onCustomActiveChange(false);
+                onChange(m);
+              }}
+              className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+                active
+                  ? 'bg-pits-primary text-pits-dark-text'
+                  : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
+              }`}
+            >
+              {reminderPresetLabel(m, t)}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onCustomActiveChange(true)}
+          className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+            customActive
+              ? 'bg-pits-primary text-pits-dark-text'
+              : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
+          }`}
+        >
+          {t('Booking custom time')}
+        </button>
+      </div>
+
+      {customActive ? (
+        <div className="rounded-xl border border-pits-edge bg-pits-surface px-3 py-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                {t('Booking custom hours')}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={Math.floor(MAX_REMINDER_MINUTES / 60)}
+                  step={1}
+                  disabled={disabled}
+                  value={parts.hours}
+                  onChange={(e) =>
+                    onChange(reminderPartsToMinutes(Number(e.target.value), parts.minutes))
+                  }
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                />
+                <span className="text-xs font-bold text-pits-ink-muted">h</span>
+              </div>
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                {t('Booking custom minutes')}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={1}
+                  disabled={disabled}
+                  value={parts.minutes}
+                  onChange={(e) =>
+                    onChange(reminderPartsToMinutes(parts.hours, Number(e.target.value)))
+                  }
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                />
+                <span className="text-xs font-bold text-pits-ink-muted">m</span>
+              </div>
+            </label>
+            <p className="pb-2 text-xs font-bold text-pits-ink-muted">
+              {reminderFullLabel(value, t)}
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] font-bold text-pits-ink-muted">
+            {t('Class reminder custom max')}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs font-bold text-pits-ink-muted">{reminderFullLabel(value, t)}</p>
+      )}
+    </div>
+  );
+}
+
 export default function BookingSettingsPage() {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -201,6 +356,7 @@ export default function BookingSettingsPage() {
   const [draft, setDraft] = useState<BookingSettings>(DEFAULT_BOOKING_SETTINGS);
   const [bookCustom, setBookCustom] = useState(false);
   const [cancelCustom, setCancelCustom] = useState(false);
+  const [reminderCustom, setReminderCustom] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -214,6 +370,7 @@ export default function BookingSettingsPage() {
           setDraft(next);
           setBookCustom(!isPresetMinutes(next.bookClosesMinutesBefore));
           setCancelCustom(!isPresetMinutes(next.cancelClosesMinutesBefore));
+          setReminderCustom(!isReminderPresetMinutes(next.reminderMinutesBefore));
         }
       } catch {
         if (!cancelled) toast(t('Failed to load booking settings'), 'error');
@@ -231,7 +388,8 @@ export default function BookingSettingsPage() {
   const dirty = useMemo(
     () =>
       draft.bookClosesMinutesBefore !== saved.bookClosesMinutesBefore ||
-      draft.cancelClosesMinutesBefore !== saved.cancelClosesMinutesBefore,
+      draft.cancelClosesMinutesBefore !== saved.cancelClosesMinutesBefore ||
+      draft.reminderMinutesBefore !== saved.reminderMinutesBefore,
     [draft, saved]
   );
 
@@ -239,6 +397,7 @@ export default function BookingSettingsPage() {
     setDraft(saved);
     setBookCustom(!isPresetMinutes(saved.bookClosesMinutesBefore));
     setCancelCustom(!isPresetMinutes(saved.cancelClosesMinutesBefore));
+    setReminderCustom(!isReminderPresetMinutes(saved.reminderMinutesBefore));
   };
 
   const handleSave = () => {
@@ -253,6 +412,7 @@ export default function BookingSettingsPage() {
         setDraft(next);
         setBookCustom(!isPresetMinutes(next.bookClosesMinutesBefore));
         setCancelCustom(!isPresetMinutes(next.cancelClosesMinutesBefore));
+        setReminderCustom(!isReminderPresetMinutes(next.reminderMinutesBefore));
         toast(t('Booking settings saved'), 'success');
       } catch (err) {
         const message =
@@ -323,6 +483,19 @@ export default function BookingSettingsPage() {
               }
               t={t}
             />
+
+            <div className="border-t border-pits-edge" />
+
+            <ReminderEditor
+              value={draft.reminderMinutesBefore}
+              disabled={isPending}
+              customActive={reminderCustom}
+              onCustomActiveChange={setReminderCustom}
+              onChange={(minutes) =>
+                setDraft((prev) => ({ ...prev, reminderMinutesBefore: minutes }))
+              }
+              t={t}
+            />
           </div>
 
           <div className="border-t border-pits-edge bg-pits-surface/70 px-5 py-4 sm:px-6 space-y-3">
@@ -330,6 +503,7 @@ export default function BookingSettingsPage() {
               {t('Booking pair summary', {
                 book: fullWindowLabel(draft.bookClosesMinutesBefore, t),
                 cancel: fullWindowLabel(draft.cancelClosesMinutesBefore, t),
+                reminder: reminderFullLabel(draft.reminderMinutesBefore, t),
               })}
             </p>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">

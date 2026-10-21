@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { 
+import {
   sendWaitlistPromotedPush,
   sendMilestoneClassCountPush,
   sendMilestoneBirthdayPush,
-  sendMilestoneAnniversaryPush
+  sendMilestoneAnniversaryPush,
+  sendClassReminderPush,
+  type ClassReminderPayload,
 } from '@/lib/push';
 
 /**
- * Drains `notification_outbox` — currently only populated by the
- * `tr_waitlist_promotion_notify` trigger, since waitlist promotion itself
- * happens inside a DB function not tracked in this repo and we can't hook it
- * directly.
+ * Drains `notification_outbox` — waitlist/milestones enqueue from DB triggers;
+ * class reminders enqueue via `private.enqueue_class_reminders()` (pg_cron every 5 minutes).
  *
  * Hobby Vercel only allows a daily catch-up (`15 6 * * *`). Immediate drains
  * come from `tr_notification_outbox_drain` (pg_net POST with `{ id }`).
@@ -71,6 +71,12 @@ async function drain(request: Request) {
         const years = (row.payload as { years?: number })?.years || 1;
         await sendMilestoneAnniversaryPush(row.user_id, years);
         sent++;
+      } else if (row.kind === 'class_reminder') {
+        const sentOk = await sendClassReminderPush(
+          row.user_id,
+          (row.payload || {}) as ClassReminderPayload
+        );
+        if (sentOk) sent++;
       }
     }
 
