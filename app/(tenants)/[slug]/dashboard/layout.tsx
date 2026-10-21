@@ -346,7 +346,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       
       {/* SIDEBAR */}
       <aside 
-        className={`bg-pits-shell text-pits-shell-ink transition-all duration-300 ease-in-out flex flex-col
+        className={`bg-pits-shell text-pits-shell-ink transition-all duration-300 ease-in-out flex flex-col overflow-x-hidden
           fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
           ${isSidebarOpen 
             ? 'w-64 translate-x-0' 
@@ -378,7 +378,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
-        <nav className="flex-1 min-h-0 overflow-y-auto py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navSections.map((section) => (
             <div key={section.id} className="space-y-1">
               {isSidebarOpen && section.label && (
@@ -402,44 +402,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 return (
                   <div key={`${section.id}-${item.name}`} className="space-y-1">
                     {hasSubItems ? (
-                      <Tooltip content={item.tip} side="right" className="w-full">
+                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
                         <button
                           type="button"
                           onClick={() => toggleMenu(item.name)}
-                          className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
+                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                             ${isActive
                               ? 'border-pits-shell-accent text-pits-shell-ink'
                               : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                           `}
                         >
-                          <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
+                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
                           {isSidebarOpen && (
                             <>
-                              <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left">
+                              <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left min-w-0 break-words leading-tight">
                                 {item.name}
                               </span>
                               <ChevronDown
                                 size={16}
-                                className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
+                                className={`shrink-0 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
                               />
                             </>
                           )}
                         </button>
                       </Tooltip>
                     ) : 'href' in item ? (
-                      <Tooltip content={item.tip} side="right" className="w-full">
+                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
                         <Link
                           href={item.href}
                           onClick={closeSidebarOnMobile}
-                          className={`w-full flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
+                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
                             ${isActive
                               ? 'border-pits-shell-accent text-pits-shell-ink'
                               : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                           `}
                         >
-                          <item.icon size={20} className={isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
+                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
                           {isSidebarOpen && (
-                            <span className="ml-3 font-bold text-sm uppercase tracking-wide">
+                            <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
                               {item.name}
                             </span>
                           )}
@@ -448,22 +448,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     ) : null}
 
                     {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
-                      <div className="ml-4 space-y-1 border-l border-pits-shell-edge pl-2">
+                      <div className="ml-2 min-w-0 space-y-1 border-l border-pits-shell-edge pl-2">
                         {item.subItems.map((sub) => {
                           const isSubActive = pathname === sub.href;
                           return (
-                            <Tooltip key={sub.href} content={sub.tip} side="right" className="w-full">
+                            <Tooltip key={sub.href} content={sub.tip} side="right" className="w-full min-w-0">
                               <Link
                                 href={sub.href}
                                 onClick={closeSidebarOnMobile}
-                                className={`w-full flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
+                                className={`w-full min-w-0 flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
                                   ${isSubActive
                                     ? 'border-pits-shell-accent text-pits-shell-ink'
                                     : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
                                 `}
                               >
-                                <sub.icon size={16} className={isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'} />
-                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide">
+                                <sub.icon size={16} className={`shrink-0 ${isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
+                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide min-w-0 break-words leading-tight">
                                   {sub.name}
                                 </span>
                               </Link>
@@ -483,11 +483,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors"
+            className="flex items-center w-full min-w-0 p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors"
           >
-            <LogOut size={20} />
+            <LogOut size={20} className="shrink-0" />
             {isSidebarOpen && (
-              <span className="ml-3 font-bold text-sm uppercase tracking-wide">
+              <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
                 {t('Log Out')}
               </span>
             )}

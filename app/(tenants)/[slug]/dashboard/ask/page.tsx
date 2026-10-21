@@ -9,11 +9,30 @@ import type { AskAiQuota } from '@/lib/ai/quota';
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 const SUGGESTIONS = [
-  'Ask: How does membership expiry work?',
-  'Ask: When does a member become solvent?',
-  'Ask: How do partial payments work?',
-  'Ask: Who can book a class?',
+  'Ask: How many attended today?',
+  "Ask: How were today's classes?",
+  "Ask: How's this month's earnings?",
+  'Ask: Who still needs to pay?',
 ] as const;
+
+function AskAiMessageBody({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const bold = /^\*\*([^*]+)\*\*$/.exec(part);
+        if (bold) {
+          return (
+            <strong key={index} className="font-bold">
+              {bold[1]}
+            </strong>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+}
 
 export default function AskAiPage() {
   const { lang, t } = useLanguage();
@@ -210,7 +229,7 @@ export default function AskAiPage() {
                           : 'bg-pits-card border border-pits-border text-pits-text rounded-tl-md'
                       }`}
                     >
-                      {message.content}
+                      {isUser ? message.content : <AskAiMessageBody text={message.content} />}
                     </div>
                   </div>
                 </div>
@@ -244,6 +263,7 @@ export default function AskAiPage() {
             maxLength={1000}
             rows={1}
             disabled={sending || atLimit}
+            placeholder={t('Ask AI placeholder')}
             className="flex-1 min-h-12 resize-none overflow-y-auto px-4 py-3 rounded-xl border border-pits-border bg-pits-surface text-sm leading-6 text-pits-text placeholder:text-pits-dim focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none disabled:opacity-60"
           />
           <button
