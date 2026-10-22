@@ -120,7 +120,7 @@ function classStart(booking: BookingRow): string {
 }
 
 function memberFirstName(member: MemberRow): string {
-  return member.full_name?.trim().split(/\s+/)[0] || 'atleta';
+  return member.full_name?.trim().split(/\s+/)[0] || '';
 }
 
 function draftMessage(

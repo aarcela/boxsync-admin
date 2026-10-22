@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Wallet, Award } from 'lucide-react';
+import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Type, Wallet, Award } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenantTerms } from '@/components/useTenantTerms';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
 import {
@@ -14,10 +15,17 @@ import {
 } from '@/lib/constants/appPalettes';
 import { tenantPaletteService } from '@/lib/services/tenantPaletteService';
 import type { TenantFeatureId, TenantFeatures } from '@/lib/tenant-features';
+import {
+  MEMBER_TERM_PRESETS,
+  parseTenantTerms,
+  patchTenantTermsSettings,
+  type TenantMemberPresetId,
+  type TenantTerms,
+} from '@/lib/tenant-terms';
 import type { TranslationKey } from '@/lib/translations';
 import type { MilestoneSettings } from '@/lib/types/milestone';
 import { DEFAULT_MILESTONE_SETTINGS } from '@/lib/types/milestone';
-import { saveTenantFeaturesAction, saveTenantPaletteAction, saveMilestoneSettingsAction, getMilestoneSettingsAction } from './actions';
+import { saveTenantFeaturesAction, saveTenantPaletteAction, saveMilestoneSettingsAction, getMilestoneSettingsAction, saveTenantTermsAction } from './actions';
 
 function paletteNameKey(id: PaletteId): TranslationKey {
   return `Palette ${id}` as TranslationKey;
@@ -73,6 +81,7 @@ function AppPreview({
   features: TenantFeatures;
 }) {
   const { t } = useLanguage();
+  const terms = useTenantTerms();
   const showWod = features.wod;
   const showPr = features.personalRecords;
   const showCommunity = features.community;
@@ -91,7 +100,7 @@ function AppPreview({
           <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: colors.textSub }}>
             {t('App preview')}
           </p>
-          <p className="text-lg font-black italic leading-tight">{showWod ? 'WOD' : t('Home')}</p>
+          <p className="text-lg font-black italic leading-tight">{showWod ? t("Today's WOD") : t('Home')}</p>
         </div>
         <div className="px-3 pb-3 space-y-2 min-h-[148px]">
           {showWod ? (
@@ -119,7 +128,7 @@ function AppPreview({
               <p className="text-[10px] font-bold" style={{ color: colors.textSub }}>
                 {t('Schedule')}
               </p>
-              <p className="mt-1 text-xs font-black">18:00 — WOD</p>
+              <p className="mt-1 text-xs font-black">18:00 — {terms.workout}</p>
               <button
                 type="button"
                 className="mt-3 w-full rounded-xl py-2 text-[10px] font-black uppercase"
@@ -173,17 +182,37 @@ function AppPreview({
   );
 }
 
+const PRESET_COPY: { id: TenantMemberPresetId; label: TranslationKey }[] = [
+  { id: 'athletes', label: 'Term preset athletes' },
+  { id: 'students', label: 'Term preset students' },
+  { id: 'users', label: 'Term preset users' },
+  { id: 'clients', label: 'Term preset clients' },
+];
+
+const TERM_FIELDS: { key: 'venue' | 'session' | 'coach' | 'workout'; label: TranslationKey }[] = [
+  { key: 'venue', label: 'Term venue' },
+  { key: 'session', label: 'Term session' },
+  { key: 'coach', label: 'Term coach' },
+  { key: 'workout', label: 'Term workout' },
+];
+
 export default function AppearancePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
-  const { tenantId, features, setFeatures } = useTenant();
+  const { tenantId, features, setFeatures, settings, setSettings } = useTenant();
   const [isPending, startTransition] = useTransition();
   const [isFeaturePending, startFeatureTransition] = useTransition();
   const [isMilestonePending, startMilestoneTransition] = useTransition();
+  const [isTermsPending, startTermsTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [savedId, setSavedId] = useState<PaletteId>('default');
   const [selectedId, setSelectedId] = useState<PaletteId>('default');
   const [milestoneSettings, setMilestoneSettings] = useState<MilestoneSettings>(DEFAULT_MILESTONE_SETTINGS);
+  const [termsDraft, setTermsDraft] = useState<TenantTerms>(() => parseTenantTerms(settings, lang));
+
+  useEffect(() => {
+    setTermsDraft(parseTenantTerms(settings, lang));
+  }, [settings, lang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +292,32 @@ export default function AppearancePage() {
         toast(t('Failed to save modules'), 'error');
       }
     });
+  };
+
+  const persistTerms = (patch: Partial<TenantTerms>, nextDraft: TenantTerms) => {
+    const previousSettings = settings;
+    const previousDraft = termsDraft;
+    setTermsDraft(nextDraft);
+    setSettings(patchTenantTermsSettings(settings, patch));
+    startTermsTransition(async () => {
+      try {
+        await saveTenantTermsAction(patch);
+        toast(t('Terminology saved'), 'success');
+      } catch {
+        setTermsDraft(previousDraft);
+        setSettings(previousSettings);
+        toast(t('Failed to save terminology'), 'error');
+      }
+    });
+  };
+
+  const handlePreset = (id: TenantMemberPresetId) => {
+    const member = MEMBER_TERM_PRESETS[id][lang === 'en' ? 'en' : 'es'];
+    persistTerms({ member }, { ...termsDraft, member });
+  };
+
+  const handleSaveTerms = () => {
+    persistTerms(termsDraft, termsDraft);
   };
 
   const handleMilestoneToggle = (field: keyof MilestoneSettings, value: boolean) => {
@@ -350,6 +405,102 @@ export default function AppearancePage() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
+                <Type size={16} className="text-pits-primary" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
+                  {t('Terminology')}
+                </h2>
+                <p className="mt-1 text-xs font-bold text-pits-ink-muted">
+                  {t('Terminology help')}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COPY.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  disabled={isTermsPending}
+                  onClick={() => handlePreset(preset.id)}
+                  className="rounded-full border-2 border-pits-edge bg-pits-surface px-3 py-1.5 text-xs font-black uppercase tracking-wide text-pits-ink hover:border-pits-primary disabled:opacity-60"
+                >
+                  {t(preset.label)}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  {t('Term member singular')}
+                </span>
+                <input
+                  type="text"
+                  value={termsDraft.member.singular}
+                  disabled={isTermsPending}
+                  onChange={(e) =>
+                    setTermsDraft({
+                      ...termsDraft,
+                      member: { ...termsDraft.member, singular: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  {t('Term member plural')}
+                </span>
+                <input
+                  type="text"
+                  value={termsDraft.member.plural}
+                  disabled={isTermsPending}
+                  onChange={(e) =>
+                    setTermsDraft({
+                      ...termsDraft,
+                      member: { ...termsDraft.member, plural: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                />
+              </label>
+              {TERM_FIELDS.map((field) => (
+                <label key={field.key} className="block">
+                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                    {t(field.label)}
+                  </span>
+                  <input
+                    type="text"
+                    value={termsDraft[field.key]}
+                    disabled={isTermsPending}
+                    onChange={(e) =>
+                      setTermsDraft({ ...termsDraft, [field.key]: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={isTermsPending}
+              onClick={handleSaveTerms}
+              className="rounded-xl bg-pits-primary px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2"
+            >
+              {isTermsPending ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {t('Processing...')}
+                </>
+              ) : (
+                t('Save terminology')
+              )}
+            </button>
           </div>
 
           <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">

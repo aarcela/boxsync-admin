@@ -107,7 +107,7 @@ export default function AccountabilityPage() {
     : 0;
   const breakEvenGap = currentStats.outcome - currentStats.income;
 
-  // 5. Gasto por atleta: unique paying members this month
+  // 5. Cost per member: unique paying members this month
   const uniquePayingAthletes = new Set(
     payments.filter(p => p.status === 'approved').map(p => p.user_id)
   ).size;
@@ -524,7 +524,7 @@ export default function AccountabilityPage() {
         </div>
 
 
-        {/* ROW C: Gasto por Atleta — full width */}
+        {/* ROW C: cost per member — full width */}
         <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm p-6">
             <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 mb-6">
               <h3 className="text-xs font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">

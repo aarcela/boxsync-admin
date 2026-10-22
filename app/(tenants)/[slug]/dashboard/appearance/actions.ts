@@ -5,9 +5,11 @@ import { requireAdminTenantId } from '@/lib/require-admin-tenant';
 import { resolvePaletteId } from '@/lib/constants/appPalettes';
 import { tenantFeaturesService } from '@/lib/services/tenantFeaturesService';
 import { tenantPaletteService } from '@/lib/services/tenantPaletteService';
+import { tenantTermsService } from '@/lib/services/tenantTermsService';
 import { milestoneService } from '@/lib/services/milestoneService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { TenantFeatures } from '@/lib/tenant-features';
+import type { TenantTerms } from '@/lib/tenant-terms';
 import type { MilestoneSettings } from '@/lib/types/milestone';
 
 export async function saveTenantPaletteAction(paletteId: string) {
@@ -44,4 +46,16 @@ export async function saveMilestoneSettingsAction(patch: Partial<MilestoneSettin
 export async function getMilestoneSettingsAction() {
   const tenantId = await requireAdminTenantId();
   return await milestoneService.getTenantMilestoneSettings(tenantId);
+}
+
+export async function saveTenantTermsAction(patch: Partial<TenantTerms>) {
+  const tenantId = await requireAdminTenantId();
+  const saved = await tenantTermsService.updateForTenant(
+    tenantId,
+    patch,
+    supabaseAdmin
+  );
+  revalidatePath('/dashboard/appearance');
+  revalidatePath('/dashboard');
+  return saved;
 }
