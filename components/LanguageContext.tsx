@@ -8,6 +8,13 @@ import React, {
   useSyncExternalStore,
 } from 'react';
 import { translations, Language, TranslationKey } from '../lib/translations';
+import {
+  getPublishedTenantSettings,
+  getTenantTermsVersion,
+  interpolateTenantTerms,
+  parseTenantTerms,
+  subscribeTenantTerms,
+} from '../lib/tenant-terms';
 
 interface LanguageContextType {
   lang: Language;
@@ -60,6 +67,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     emitLanguageChange();
   }, []);
 
+  const termsVersion = useSyncExternalStore(
+    subscribeTenantTerms,
+    getTenantTermsVersion,
+    getTenantTermsVersion
+  );
+
   const t = useCallback(
     (key: TranslationKey, params?: Record<string, string | number>) => {
       let text = translations[lang][key] || translations.en[key] || key;
@@ -70,9 +83,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       }
 
-      return text;
+      return interpolateTenantTerms(text, parseTenantTerms(getPublishedTenantSettings(), lang));
     },
-    [lang]
+    [lang, termsVersion]
   );
 
   const value = useMemo(

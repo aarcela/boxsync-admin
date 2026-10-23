@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { TenantCurrencyConfig } from '@/lib/currency';
 import { DEFAULT_TENANT_CURRENCIES } from '@/lib/currency';
 import {
@@ -13,6 +13,7 @@ import {
   DEFAULT_TENANT_FEATURES,
   type TenantFeatures,
 } from '@/lib/tenant-features';
+import { publishTenantSettings } from '@/lib/tenant-terms';
 
 export type TenantContextValue = {
   tenantId: string;
@@ -25,6 +26,8 @@ export type TenantContextValue = {
   refreshCurrencies: () => Promise<TenantCurrencyConfig>;
   features: TenantFeatures;
   setFeatures: (next: TenantFeatures) => void;
+  settings: unknown;
+  setSettings: (next: unknown) => void;
 };
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -33,13 +36,17 @@ export function TenantProvider({
   value,
   children,
 }: {
-  value: Omit<TenantContextValue, 'setCurrencies' | 'refreshCurrencies' | 'setFeatures'> & {
+  value: Omit<
+    TenantContextValue,
+    'setCurrencies' | 'refreshCurrencies' | 'setFeatures' | 'setSettings'
+  > & {
     currencies?: TenantCurrencyConfig;
     features?: TenantFeatures;
     platformPlan?: PlatformPlanId;
     trialEndsAt?: string | null;
+    settings?: unknown;
   };
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [currencies, setCurrencies] = useState<TenantCurrencyConfig>(
     value.currencies ?? DEFAULT_TENANT_CURRENCIES
@@ -47,6 +54,17 @@ export function TenantProvider({
   const [features, setFeatures] = useState<TenantFeatures>(
     value.features ?? DEFAULT_TENANT_FEATURES
   );
+  const [settings, setSettings] = useState<unknown>(value.settings ?? null);
+
+  useLayoutEffect(() => {
+    publishTenantSettings(settings);
+  }, [settings]);
+
+  useEffect(() => {
+    return () => {
+      publishTenantSettings(null);
+    };
+  }, []);
 
   const refreshCurrencies = useCallback(async () => {
     const next = await tenantCurrencyService.getForTenant(value.tenantId);
@@ -67,6 +85,8 @@ export function TenantProvider({
         refreshCurrencies,
         features,
         setFeatures,
+        settings,
+        setSettings,
       }}
     >
       {children}

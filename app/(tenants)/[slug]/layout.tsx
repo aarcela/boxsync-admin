@@ -30,6 +30,7 @@ export default async function TenantLayout({
         trialEndsAt: tenant.trial_ends_at ?? null,
         currencies: parseTenantCurrencyConfig(tenant.settings),
         features: parseTenantFeatures(tenant.settings),
+        settings: tenant.settings,
       }}
     >
       {children}

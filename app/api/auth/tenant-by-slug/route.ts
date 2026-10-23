@@ -3,6 +3,7 @@ import { publicCorsHeaders } from '@/lib/public-cors';
 import { enforcePublicGetRateLimit } from '@/lib/rate-limit';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getRawTenantTerms } from '@/lib/tenant-terms';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
         id: tenant.id,
         slug: tenant.slug,
         name: tenant.name,
+        terms: getRawTenantTerms(tenant.settings),
       },
       200,
       request
