@@ -8,7 +8,9 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { bookingId, status } = body;
+    const { bookingId, status, override } = body;
+    const staffTenantId = staffAuth.profile.tenant_id as string | null;
+    const staffId = staffAuth.user.id;
 
     if (!bookingId || !status) {
       return NextResponse.json(
@@ -17,10 +19,53 @@ export async function PATCH(request: Request) {
       );
     }
 
+    if (!staffTenantId) {
+      return NextResponse.json(
+        { error: 'Missing tenant context.' },
+        { status: 400 }
+      );
+    }
+
+    const { data: booking, error: bookingError } = await supabaseAdmin
+      .from('bookings')
+      .select('id, user_id, tenant_id, status')
+      .eq('id', bookingId)
+      .maybeSingle();
+
+    if (bookingError) throw bookingError;
+    if (!booking || booking.tenant_id !== staffTenantId) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    if (status === 'attended' && booking.status !== 'attended') {
+      const { data: pay, error: payError } = await supabaseAdmin.rpc('member_payment_status', {
+        p_tenant: staffTenantId,
+        p_member: booking.user_id,
+      });
+      if (payError) throw payError;
+      const blocked = Boolean((pay as { checkin_blocked?: boolean } | null)?.checkin_blocked);
+      if (blocked && !override) {
+        return NextResponse.json(
+          { error: 'Membership overdue.', code: 'blocked_overdue', payment_status: pay },
+          { status: 409 }
+        );
+      }
+      if (blocked && override) {
+        const { error: overrideError } = await supabaseAdmin.from('checkin_overrides').insert({
+          tenant_id: staffTenantId,
+          booking_id: booking.id,
+          member_id: booking.user_id,
+          staff_id: staffId,
+        });
+        if (overrideError) throw overrideError;
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from('bookings')
       .update({ status })
-      .eq('id', bookingId);
+      .eq('id', bookingId)
+      .eq('tenant_id', staffTenantId);
 
     if (error) throw error;
 

@@ -113,17 +113,23 @@ export function useAttendance() {
     }));
   };
 
-  const updateStatus = async (bookingId: string, newStatus: BookingStatus) => {
+  const updateStatus = async (
+    bookingId: string,
+    newStatus: BookingStatus,
+    options?: { override?: boolean }
+  ) => {
     const previousRoster = [...roster];
     setRoster((prev: Booking[]) => prev.map((b: Booking) => 
       b.id === bookingId ? { ...b, status: newStatus } : b
     ));
 
     try {
-      await classService.updateBookingStatus(bookingId, newStatus);
+      await classService.updateBookingStatus(bookingId, newStatus, options);
     } catch (error) {
       console.error(error);
       setRoster(previousRoster);
+      const code = (error as { code?: string } | null)?.code;
+      if (code === 'blocked_overdue') throw error;
       toast(t('Failed to update status'), 'error');
     }
   };
@@ -168,23 +174,39 @@ export function useAttendance() {
   };
 
   const markRemaining = async (newStatus: Extract<BookingStatus, 'attended' | 'no_show'>) => {
-    const toUpdate = roster.filter(b => b.status === 'booked');
-    if (toUpdate.length === 0) {
+    const pending = roster.filter(b => b.status === 'booked');
+    const blocked = newStatus === 'attended'
+      ? pending.filter((b) => b.payment?.checkin_blocked)
+      : [];
+    const toUpdate = pending.filter((b) => !blocked.some((blockedRow) => blockedRow.id === b.id));
+    if (pending.length === 0) {
       toast(t('All athletes are already marked as {{status}}', { status: t(newStatus) }), 'info');
+      return;
+    }
+    if (toUpdate.length === 0) {
+      toast(t('Skipped overdue check-ins', { done: 0, skipped: blocked.length }), 'info');
       return;
     }
 
     const previousRoster = [...roster];
+    const updateIds = new Set(toUpdate.map((b) => b.id));
     setRoster((prev: Booking[]) => prev.map((b: Booking) =>
-      b.status === 'booked' ? { ...b, status: newStatus } : b
+      updateIds.has(b.id) ? { ...b, status: newStatus } : b
     ));
 
     try {
       await classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus);
-      toast(t('{{count}} athletes marked as {{status}}', {
-        count: toUpdate.length,
-        status: t(newStatus),
-      }), 'success');
+      if (blocked.length > 0) {
+        toast(t('Skipped overdue check-ins', {
+          done: toUpdate.length,
+          skipped: blocked.length,
+        }), 'success');
+      } else {
+        toast(t('{{count}} athletes marked as {{status}}', {
+          count: toUpdate.length,
+          status: t(newStatus),
+        }), 'success');
+      }
     } catch (error) {
       console.error(error);
       setRoster(previousRoster); // Rollback

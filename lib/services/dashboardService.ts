@@ -7,6 +7,10 @@ export interface DashboardProfile {
   avatar_url: string | null;
   plan?: string;
   is_solvent?: boolean;
+  days_overdue?: number;
+  has_booking_today?: boolean;
+  payment_status?: string;
+  has_pending_proof?: boolean;
 }
 
 export interface DashboardPayment {
@@ -34,6 +38,7 @@ export interface DashboardStats {
   pendingPayments: DashboardPayment[];
   inactiveAthletes: DashboardProfile[];
   unpaidMembers: DashboardProfile[];
+  overdueMembers: DashboardProfile[];
   totalMembers: DashboardProfile[];
   lowOccupancyClasses: DashboardClass[];
   dailyUsagePercent: number;
@@ -141,14 +146,45 @@ export const dashboardService = {
     };
   },
 
+  async getOverdueMembers(tenantId: string): Promise<DashboardProfile[]> {
+    const { data, error } = await supabase.rpc('overdue_members_today', {
+      p_tenant: tenantId,
+    });
+    if (error) {
+      console.error('overdue_members_today', error);
+      return [];
+    }
+    return (data || []).map((row: {
+      member_id: string;
+      full_name: string | null;
+      avatar_url: string | null;
+      plan_name: string | null;
+      days_overdue: number;
+      has_booking_today: boolean;
+      payment_status: string;
+      has_pending_proof: boolean;
+    }) => ({
+      id: row.member_id,
+      full_name: row.full_name || '',
+      avatar_url: row.avatar_url,
+      plan: row.plan_name || undefined,
+      days_overdue: row.days_overdue,
+      has_booking_today: row.has_booking_today,
+      payment_status: row.payment_status,
+      has_pending_proof: row.has_pending_proof,
+      is_solvent: false,
+    }));
+  },
+
   /**
    * Aggregates all dashboard data.
    */
-  async getAllDashboardData(): Promise<DashboardStats> {
-    const [pendingPayments, allMembers, { lowOccupancy, usagePercent }] = await Promise.all([
+  async getAllDashboardData(tenantId?: string): Promise<DashboardStats> {
+    const [pendingPayments, allMembers, { lowOccupancy, usagePercent }, overdueMembers] = await Promise.all([
       this.getPendingPayments(),
       this.getTotalMembers(),
-      this.getTodayUsageData()
+      this.getTodayUsageData(),
+      tenantId ? this.getOverdueMembers(tenantId) : Promise.resolve([] as DashboardProfile[]),
     ]);
 
     const inactiveAthletes = await this.getInactiveAthletes(allMembers);
@@ -158,6 +194,7 @@ export const dashboardService = {
       pendingPayments,
       inactiveAthletes,
       unpaidMembers,
+      overdueMembers,
       totalMembers: allMembers,
       lowOccupancyClasses: lowOccupancy,
       dailyUsagePercent: usagePercent

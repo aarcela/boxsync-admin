@@ -40,11 +40,13 @@ export default function DashboardPage() {
     title: string;
     type: 'athletes' | 'classes' | 'payments';
     data: DashboardModalItem[];
+    variant?: 'overdue' | null;
   }>({
     isOpen: false,
     title: '',
     type: 'athletes',
-    data: []
+    data: [],
+    variant: null,
   });
 
   const [proofPreview, setProofPreview] = useState<{
@@ -52,8 +54,13 @@ export default function DashboardPage() {
     athleteName: string;
   } | null>(null);
 
-  const openModal = (title: string, type: 'athletes' | 'classes' | 'payments', data: DashboardModalItem[]) => {
-    setModalConfig({ isOpen: true, title, type, data });
+  const openModal = (
+    title: string,
+    type: 'athletes' | 'classes' | 'payments',
+    data: DashboardModalItem[],
+    variant?: 'overdue' | null,
+  ) => {
+    setModalConfig({ isOpen: true, title, type, data, variant: variant ?? null });
   };
 
   const handleRefresh = async () => {
@@ -220,21 +227,21 @@ export default function DashboardPage() {
           </div>
         </button>
 
-        {/* Signal 2: Access Blocked (Unpaid) */}
+        {/* Signal 2: Overdue today */}
         <button 
-          onClick={() => openModal(t('Access Blocked'), 'athletes', stats.unpaidMembers)}
-          className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stats.unpaidMembers.length > 0 ? 'border-b-red-600' : 'border-b-green-500'}`}
+          onClick={() => openModal(t('Overdue today'), 'athletes', stats.overdueMembers, 'overdue')}
+          className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stats.overdueMembers.length > 0 ? 'border-b-red-600' : 'border-b-green-500'}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Blocked')}</p>
-            <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${stats.unpaidMembers.length > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
+            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Overdue today')}</p>
+            <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${stats.overdueMembers.length > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
               <ShieldAlert size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.unpaidMembers.length}</p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.overdueMembers.length}</p>
             <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-red-700">
-               <span className="truncate pr-1">{t('Action required')}</span>
+               <span className="truncate pr-1">{t('Overdue today help')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
           </div>
@@ -410,6 +417,7 @@ export default function DashboardPage() {
         title={modalConfig.title}
         type={modalConfig.type}
         data={modalConfig.data}
+        variant={modalConfig.variant}
       />
 
       <PaymentProofPreviewModal

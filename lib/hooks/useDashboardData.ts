@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTenant } from '@/components/TenantContext';
 import { dashboardService, DashboardStats, DashboardPayment, DashboardProfile, DashboardClass } from '../services/dashboardService';
 
 export function useDashboardData() {
+  const { tenantId } = useTenant();
   const [stats, setStats] = useState<DashboardStats>({
     pendingPayments: [],
     inactiveAthletes: [],
     unpaidMembers: [],
+    overdueMembers: [],
     totalMembers: [],
     lowOccupancyClasses: [],
     dailyUsagePercent: 0
@@ -17,7 +20,7 @@ export function useDashboardData() {
     setLoading(true);
     setError(null);
     try {
-      const data = await dashboardService.getAllDashboardData();
+      const data = await dashboardService.getAllDashboardData(tenantId);
       setStats(data);
     } catch (err) {
       setError(err as Error);
@@ -25,7 +28,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     fetchStats();

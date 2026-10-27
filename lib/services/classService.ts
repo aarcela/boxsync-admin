@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { parseMemberPaymentStatus } from '../member-payment-status';
 import { ClassSession, Booking, BookingStatus, CapacityInsight, WaitlistEntry } from '../types/gym';
 import { getCaracasDayRange, getCaracasDate } from '../utils/date';
 
@@ -117,11 +118,34 @@ export const classService = {
       .eq('class_id', classId);
 
     if (error) throw error;
-    
-    return (data || []).map((item) => ({
+
+    const rows = (data || []).map((item) => ({
       id: item.id,
       status: item.status as BookingStatus,
-      profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+      profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles,
+      payment: null as Booking['payment'],
+    }));
+
+    const memberIds = rows.map((row) => row.profiles?.id).filter(Boolean) as string[];
+    if (memberIds.length === 0) return rows;
+
+    const { data: payments, error: payError } = await supabase.rpc('members_payment_status', {
+      p_member_ids: memberIds,
+    });
+    if (payError) {
+      console.error('members_payment_status', payError);
+      return rows;
+    }
+
+    const byMember = new Map<string, Booking['payment']>();
+    for (const row of payments || []) {
+      const parsed = parseMemberPaymentStatus(row.payment);
+      if (parsed && row.member_id) byMember.set(row.member_id, parsed);
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      payment: byMember.get(row.profiles.id) ?? null,
     }));
   },
 
@@ -320,16 +344,22 @@ export const classService = {
    * Updates the status of a single booking via the Admin API
    * (Bypasses RLS using service role in API)
    */
-  async updateBookingStatus(bookingId: string, status: BookingStatus): Promise<void> {
+  async updateBookingStatus(
+    bookingId: string,
+    status: BookingStatus,
+    options?: { override?: boolean }
+  ): Promise<void> {
     const response = await fetch('/api/admin/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId, status }),
+      body: JSON.stringify({ bookingId, status, override: Boolean(options?.override) }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to update status');
+      const err = new Error(errorData.error || 'Failed to update status') as Error & { code?: string };
+      err.code = errorData.code;
+      throw err;
     }
   },
 

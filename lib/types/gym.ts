@@ -311,6 +311,19 @@ export interface FinancialStats {
 
 export type BookingStatus = 'booked' | 'attended' | 'no_show';
 
+export type MemberPaymentStatusKind = 'ok' | 'in_grace' | 'overdue' | 'no_plan';
+
+export interface MemberPaymentStatus {
+  status: MemberPaymentStatusKind;
+  reason?: string;
+  days_overdue: number;
+  expires_at?: string | null;
+  has_pending_proof: boolean;
+  plan_name?: string | null;
+  checkin_blocked: boolean;
+  booking_blocked?: boolean;
+}
+
 export interface Booking {
   id: string;
   status: BookingStatus;
@@ -319,6 +332,7 @@ export interface Booking {
     full_name: string;
     avatar_url: string | null;
   };
+  payment?: MemberPaymentStatus | null;
 }
 
 export interface WaitlistEntry {
