@@ -130,7 +130,7 @@ export default function AttendancePage() {
 
   const paymentBadge = (payment?: MemberPaymentStatus | null) => {
     if (!payment) return null;
-    if (payment.has_pending_proof) {
+    if (payment.has_pending_proof || payment.status === 'pending_review') {
       return (
         <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600">
           {t('Proof in review')}

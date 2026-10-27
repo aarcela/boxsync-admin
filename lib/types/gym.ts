@@ -311,7 +311,7 @@ export interface FinancialStats {
 
 export type BookingStatus = 'booked' | 'attended' | 'no_show';
 
-export type MemberPaymentStatusKind = 'ok' | 'in_grace' | 'overdue' | 'no_plan';
+export type MemberPaymentStatusKind = 'ok' | 'pending_review' | 'in_grace' | 'overdue' | 'no_plan';
 
 export interface MemberPaymentStatus {
   status: MemberPaymentStatusKind;

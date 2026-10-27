@@ -452,7 +452,7 @@ export const translations = {
     'Payments and access help':
       'Grace days and whether overdue {members} can check in or book. Warn lets them through with a message. Block refuses unless staff allows check-in.',
     'Grace days': 'Grace days',
-    'Grace days help': 'Days after the plan ends before the {member} is treated as overdue (red). Warn still lets them book during grace. Block refuses booking as soon as the plan ends. 0 means the same day.',
+    'Grace days help': 'Days after the plan ends before the {member} is treated as overdue (red). During grace they keep the amber badge and can still book and check in. Block only refuses after grace ends. A proof in review never blocks. 0 means the same day.',
     'Check-in when overdue': 'Check-in when overdue',
     'Booking when overdue': 'Booking when overdue',
     'Overdue mode allow': 'Allow (no {member} message)',
@@ -2281,7 +2281,7 @@ export const translations = {
     'Payments and access help':
       'Días de gracia y si un {member} vencido puede hacer check-in o reservar. Avisar deja pasar con un mensaje. Bloquear rechaza salvo que el staff permita el check-in.',
     'Grace days': 'Días de gracia',
-    'Grace days help': 'Días después de que vence el plan antes de tratar al {member} como vencido (rojo). Advertir aún deja reservar durante la gracia. Bloquear rechaza la reserva apenas vence el plan. 0 es el mismo día.',
+    'Grace days help': 'Días después de que vence el plan antes de tratar al {member} como vencido (rojo). Durante la gracia se muestra la insignia ámbar y aún pueden reservar y hacer check-in. Bloquear solo rechaza después de que termina la gracia. Un comprobante en revisión nunca bloquea. 0 es el mismo día.',
     'Check-in when overdue': 'Check-in si está vencido',
     'Booking when overdue': 'Reserva si está vencido',
     'Overdue mode allow': 'Permitir (sin aviso al {member})',

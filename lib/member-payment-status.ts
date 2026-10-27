@@ -1,6 +1,6 @@
-export type MemberPaymentStatusKind = 'ok' | 'in_grace' | 'overdue' | 'no_plan';
+export type MemberPaymentStatusKind = 'ok' | 'pending_review' | 'in_grace' | 'overdue' | 'no_plan';
 
-export type MemberPaymentReason = 'ok' | 'expired' | 'unpaid' | 'revoked' | 'no_plan';
+export type MemberPaymentReason = 'ok' | 'pending_review' | 'expired' | 'unpaid' | 'revoked' | 'no_plan';
 
 export type MemberPaymentStatus = {
   status: MemberPaymentStatusKind;
@@ -44,12 +44,19 @@ export function parseMemberPaymentStatus(value: unknown): MemberPaymentStatus | 
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const bag = value as Record<string, unknown>;
   const status = bag.status;
-  if (status !== 'ok' && status !== 'in_grace' && status !== 'overdue' && status !== 'no_plan') {
+  if (
+    status !== 'ok' &&
+    status !== 'pending_review' &&
+    status !== 'in_grace' &&
+    status !== 'overdue' &&
+    status !== 'no_plan'
+  ) {
     return null;
   }
   return {
     status,
     reason:
+      bag.reason === 'pending_review' ||
       bag.reason === 'expired' ||
       bag.reason === 'unpaid' ||
       bag.reason === 'revoked' ||
