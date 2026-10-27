@@ -15,7 +15,7 @@ import { useTenant } from '@/components/TenantContext';
 import { getCaracasDate } from '@/lib/utils/date';
 import { TranslationKey } from '@/lib/translations';
 import { classTypeService } from '@/lib/services/classTypeService';
-import { Booking, BookingStatus, ClassTypeRow } from '@/lib/types/gym';
+import { Booking, BookingStatus, ClassTypeRow, MemberPaymentStatus } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 
 const bookingStatusKey = (status: BookingStatus): TranslationKey =>
@@ -61,6 +61,7 @@ export default function AttendancePage() {
   const [addingAthlete, setAddingAthlete] = useState(false);
   const [addingGuest, setAddingGuest] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string; kind: 'member' | 'guest' } | null>(null);
+  const [overdueConfirm, setOverdueConfirm] = useState<Booking | null>(null);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
 
@@ -127,8 +128,59 @@ export default function AttendancePage() {
     else await removeAthlete(id);
   };
 
+  const paymentBadge = (payment?: MemberPaymentStatus | null) => {
+    if (!payment) return null;
+    if (payment.has_pending_proof || payment.status === 'pending_review') {
+      return (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600">
+          {t('Proof in review')}
+        </span>
+      );
+    }
+    if (payment.status === 'in_grace') {
+      return (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-500">
+          {t('Plan in grace', { days: payment.days_overdue })}
+        </span>
+      );
+    }
+    if (payment.status === 'no_plan') {
+      return (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-red-600">
+          {t('No plan')}
+        </span>
+      );
+    }
+    if (payment.status === 'overdue') {
+      return (
+        <span className="text-[10px] font-bold uppercase tracking-wide text-red-600">
+          {payment.reason === 'unpaid' || payment.reason === 'revoked'
+            ? t('Payment pending')
+            : t('Plan expired days', { days: payment.days_overdue })}
+        </span>
+      );
+    }
+    return null;
+  };
+
   const toggleAttendance = (booking: Booking) => {
-    updateStatus(booking.id, booking.status === 'attended' ? 'booked' : 'attended');
+    const next = booking.status === 'attended' ? 'booked' : 'attended';
+    if (next === 'attended' && booking.payment?.checkin_blocked) {
+      setOverdueConfirm(booking);
+      return;
+    }
+    void updateStatus(booking.id, next);
+  };
+
+  const handleOverdueConfirm = async () => {
+    if (!overdueConfirm) return;
+    const booking = overdueConfirm;
+    setOverdueConfirm(null);
+    try {
+      await updateStatus(booking.id, 'attended', { override: true });
+    } catch {
+      // toast handled in hook unless blocked again
+    }
   };
 
   const toggleMissed = (booking: Booking) => {
@@ -475,6 +527,7 @@ export default function AttendancePage() {
                           }`}>
                             {t(bookingStatusKey(booking.status))}
                           </p>
+                          {paymentBadge(booking.payment)}
                         </div>
                         <CheckCircle
                           size={22}
@@ -590,6 +643,20 @@ export default function AttendancePage() {
         onSubmit={handleAddGuest}
         adding={addingGuest}
         excludedGuestIds={rosterGuestIds}
+      />
+
+      <ConfirmDialog
+        isOpen={!!overdueConfirm}
+        title={t('Overdue check-in title')}
+        message={t('Overdue check-in message', {
+          name: overdueConfirm?.profiles.full_name ?? t('this athlete'),
+        })}
+        confirmLabel={t('Allow anyway')}
+        variant="warning"
+        onConfirm={() => {
+          void handleOverdueConfirm();
+        }}
+        onCancel={() => setOverdueConfirm(null)}
       />
 
       <ConfirmDialog

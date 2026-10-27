@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CalendarPlus,
   CalendarX2,
+  CreditCard,
   Loader2,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -20,8 +21,17 @@ import {
   isBookingWindowsValid,
   type BookingSettings,
 } from '@/lib/booking-settings';
+import {
+  DEFAULT_OVERDUE_SETTINGS,
+  OVERDUE_GRACE_MAX,
+  OVERDUE_GRACE_MIN,
+  OVERDUE_MODES,
+  type OverdueMode,
+  type OverdueSettings,
+} from '@/lib/overdue-settings';
 import { tenantBookingService } from '@/lib/services/tenantBookingService';
-import { saveBookingSettingsAction } from './actions';
+import { tenantOverdueService } from '@/lib/services/tenantOverdueService';
+import { saveBookingSettingsAction, saveOverdueSettingsAction } from './actions';
 
 const CUSTOM_SENTINEL = -1;
 const MAX_CUSTOM_MINUTES = 7 * 24 * 60;
@@ -354,20 +364,28 @@ export default function BookingSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<BookingSettings>(DEFAULT_BOOKING_SETTINGS);
   const [draft, setDraft] = useState<BookingSettings>(DEFAULT_BOOKING_SETTINGS);
+  const [overdueSaved, setOverdueSaved] = useState<OverdueSettings>(DEFAULT_OVERDUE_SETTINGS);
+  const [overdueDraft, setOverdueDraft] = useState<OverdueSettings>(DEFAULT_OVERDUE_SETTINGS);
   const [bookCustom, setBookCustom] = useState(false);
   const [cancelCustom, setCancelCustom] = useState(false);
   const [reminderCustom, setReminderCustom] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [overduePending, startOverdueTransition] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
-        const next = await tenantBookingService.getForTenant(tenantId);
+        const [next, overdue] = await Promise.all([
+          tenantBookingService.getForTenant(tenantId),
+          tenantOverdueService.getForTenant(tenantId),
+        ]);
         if (!cancelled) {
           setSaved(next);
           setDraft(next);
+          setOverdueSaved(overdue);
+          setOverdueDraft(overdue);
           setBookCustom(!isPresetMinutes(next.bookClosesMinutesBefore));
           setCancelCustom(!isPresetMinutes(next.cancelClosesMinutesBefore));
           setReminderCustom(!isReminderPresetMinutes(next.reminderMinutesBefore));
@@ -398,6 +416,30 @@ export default function BookingSettingsPage() {
     setBookCustom(!isPresetMinutes(saved.bookClosesMinutesBefore));
     setCancelCustom(!isPresetMinutes(saved.cancelClosesMinutesBefore));
     setReminderCustom(!isReminderPresetMinutes(saved.reminderMinutesBefore));
+  };
+
+  const overdueDirty =
+    overdueDraft.graceDays !== overdueSaved.graceDays ||
+    overdueDraft.checkinMode !== overdueSaved.checkinMode ||
+    overdueDraft.bookingMode !== overdueSaved.bookingMode;
+
+  const overdueModeLabel = (mode: OverdueMode) => {
+    if (mode === 'allow') return t('Overdue mode allow');
+    if (mode === 'block') return t('Overdue mode block');
+    return t('Overdue mode warn');
+  };
+
+  const handleSaveOverdue = () => {
+    startOverdueTransition(async () => {
+      try {
+        const next = await saveOverdueSettingsAction(overdueDraft);
+        setOverdueSaved(next);
+        setOverdueDraft(next);
+        toast(t('Overdue settings saved'), 'success');
+      } catch {
+        toast(t('Failed to save overdue settings'), 'error');
+      }
+    });
   };
 
   const handleSave = () => {
@@ -535,6 +577,126 @@ export default function BookingSettingsPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? null : (
+        <div className="rounded-2xl bg-pits-card border border-pits-edge overflow-hidden">
+          <div className="p-5 sm:p-6 space-y-6">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-lg bg-pits-surface p-2 border border-pits-edge">
+                <CreditCard size={16} className="text-pits-primary" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-black text-pits-ink">{t('Payments and access')}</h2>
+                <p className="mt-0.5 text-xs font-bold text-pits-ink-muted leading-relaxed">
+                  {t('Payments and access help')}
+                </p>
+              </div>
+            </div>
+
+            <label className="block space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                {t('Grace days')}
+              </span>
+              <input
+                type="number"
+                min={OVERDUE_GRACE_MIN}
+                max={OVERDUE_GRACE_MAX}
+                step={1}
+                disabled={overduePending}
+                value={overdueDraft.graceDays}
+                onChange={(e) =>
+                  setOverdueDraft((prev) => ({
+                    ...prev,
+                    graceDays: Math.min(
+                      OVERDUE_GRACE_MAX,
+                      Math.max(OVERDUE_GRACE_MIN, Number(e.target.value) || 0)
+                    ),
+                  }))
+                }
+                className="w-24 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+              />
+              <p className="text-xs font-bold text-pits-ink-muted">{t('Grace days help')}</p>
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  {t('Check-in when overdue')}
+                </span>
+                <select
+                  disabled={overduePending}
+                  value={overdueDraft.checkinMode}
+                  onChange={(e) =>
+                    setOverdueDraft((prev) => ({
+                      ...prev,
+                      checkinMode: e.target.value as OverdueMode,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink"
+                >
+                  {OVERDUE_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {overdueModeLabel(mode)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  {t('Booking when overdue')}
+                </span>
+                <select
+                  disabled={overduePending}
+                  value={overdueDraft.bookingMode}
+                  onChange={(e) =>
+                    setOverdueDraft((prev) => ({
+                      ...prev,
+                      bookingMode: e.target.value as OverdueMode,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink"
+                >
+                  {OVERDUE_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {overdueModeLabel(mode)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="border-t border-pits-edge bg-pits-surface/70 px-5 py-4 sm:px-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-pits-ink-muted">
+              {overdueDirty ? t('Booking unsaved changes') : t('Booking all saved')}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={overduePending || !overdueDirty}
+                onClick={() => setOverdueDraft(overdueSaved)}
+                className="rounded-xl border border-pits-edge bg-pits-card px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-ink disabled:opacity-40"
+              >
+                {t('Discard changes')}
+              </button>
+              <button
+                type="button"
+                disabled={overduePending || !overdueDirty}
+                onClick={handleSaveOverdue}
+                className="rounded-xl bg-pits-primary px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2 min-w-28"
+              >
+                {overduePending ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    {t('Saving...')}
+                  </>
+                ) : (
+                  t('Save booking settings')
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { X, User, Clock, CheckCircle } from 'lucide-react';
 import { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
+import { useLanguage } from '@/components/LanguageContext';
 
 type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 
@@ -11,9 +14,31 @@ interface DashboardDetailModalProps {
   title: string;
   type: 'athletes' | 'classes' | 'payments';
   data: DashboardModalItem[];
+  variant?: 'overdue' | null;
 }
 
-export default function DashboardDetailModal({ isOpen, onClose, title, type, data }: DashboardDetailModalProps) {
+export default function DashboardDetailModal({
+  isOpen,
+  onClose,
+  title,
+  type,
+  data,
+  variant,
+}: DashboardDetailModalProps) {
+  const { t } = useLanguage();
+  const [reservedOnly, setReservedOnly] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setReservedOnly(false);
+  }, [isOpen]);
+
+  const athletes = data as DashboardProfile[];
+  const overdueRows = useMemo(() => {
+    if (variant !== 'overdue') return athletes;
+    if (!reservedOnly) return athletes;
+    return athletes.filter((athlete) => athlete.has_booking_today);
+  }, [athletes, reservedOnly, variant]);
+
   if (!isOpen) return null;
 
   return (
@@ -30,7 +55,7 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
           <div>
             <h3 className="text-xl font-black text-pits-text uppercase italic tracking-tight">{title}</h3>
             <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1">
-              {data.length} items identified
+              {variant === 'overdue' ? overdueRows.length : data.length} items identified
             </p>
           </div>
           <button 
@@ -41,33 +66,91 @@ export default function DashboardDetailModal({ isOpen, onClose, title, type, dat
           </button>
         </div>
 
+        {variant === 'overdue' ? (
+          <div className="px-6 pt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setReservedOnly(false)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                !reservedOnly
+                  ? 'bg-pits-primary text-pits-dark-text border-pits-primary'
+                  : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+              }`}
+            >
+              {t('All overdue')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setReservedOnly(true)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                reservedOnly
+                  ? 'bg-pits-primary text-pits-dark-text border-pits-primary'
+                  : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+              }`}
+            >
+              {t('Reserved today')}
+            </button>
+          </div>
+        ) : null}
+
         {/* CONTENT */}
         <div className="flex-1 overflow-y-auto p-6">
-          {data.length === 0 ? (
+          {(variant === 'overdue' ? overdueRows : data).length === 0 ? (
             <div className="py-12 text-center text-pits-dim">
                <CheckCircle size={48} className="mx-auto mb-4 opacity-10" />
                <p className="font-bold uppercase text-xs">No records found.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {type === 'athletes' && (data as DashboardProfile[]).map((athlete) => (
-                <div key={athlete.id} className="flex items-center justify-between p-3 rounded-xl border border-pits-edge bg-pits-surface-muted/30 hover:border-pits-primary/30 hover:bg-pits-surface-muted/60 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-pits-surface-muted flex items-center justify-center text-pits-dim font-bold overflow-hidden border border-pits-edge">
+              {type === 'athletes' && (variant === 'overdue' ? overdueRows : athletes).map((athlete) => (
+                <div key={athlete.id} className="flex items-center justify-between p-3 rounded-xl border border-pits-edge bg-pits-surface-muted/30 hover:border-pits-primary/30 hover:bg-pits-surface-muted/60 transition-all group gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-pits-surface-muted flex items-center justify-center text-pits-dim font-bold overflow-hidden border border-pits-edge shrink-0">
                       {athlete.avatar_url ? (
                         <img src={athlete.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         athlete.full_name?.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <div>
-                      <p className="font-bold text-pits-text text-sm group-hover:text-pits-primary transition-colors">{athlete.full_name}</p>
-                      <p className="text-[10px] text-pits-dim font-bold uppercase">{athlete.plan || 'No Plan'}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-pits-text text-sm group-hover:text-pits-primary transition-colors truncate">{athlete.full_name}</p>
+                      <p className="text-[10px] text-pits-dim font-bold uppercase truncate">
+                        {athlete.plan || t('No plan')}
+                        {variant === 'overdue' && athlete.days_overdue != null
+                          ? ` · ${t('Days overdue', { days: athlete.days_overdue })}`
+                          : ''}
+                      </p>
                     </div>
                   </div>
-                  <div className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${athlete.is_solvent ? 'bg-green-950/40 text-green-400' : 'bg-red-950/40 text-red-400'}`}>
-                    {athlete.is_solvent ? 'Solvent' : 'Unpaid'}
-                  </div>
+                  {variant === 'overdue' ? (
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      {athlete.has_booking_today ? (
+                        <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-sky-50 text-sky-700">
+                          {t('Reserved today')}
+                        </span>
+                      ) : null}
+                      {athlete.has_pending_proof ? (
+                        <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-sky-50 text-sky-700">
+                          {t('Proof in review')}
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600">
+                          {athlete.payment_status === 'no_plan' ? t('No plan') : t('Payment pending')}
+                        </span>
+                      )}
+                      <Link
+                        href={`/dashboard/athletes/${athlete.id}`}
+                        className="text-[9px] font-black uppercase tracking-widest text-pits-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {t('Open member')}
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${athlete.is_solvent ? 'bg-green-950/40 text-green-400' : 'bg-red-950/40 text-red-400'}`}>
+                      {athlete.is_solvent ? 'Solvent' : 'Unpaid'}
+                    </div>
+                  )}
                 </div>
               ))}
 
