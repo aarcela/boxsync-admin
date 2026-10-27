@@ -11,7 +11,7 @@ export type OverdueSettings = {
 export const DEFAULT_OVERDUE_SETTINGS: OverdueSettings = {
   graceDays: 3,
   checkinMode: 'warn',
-  bookingMode: 'warn',
+  bookingMode: 'block',
 };
 
 export const OVERDUE_GRACE_MIN = 0;
