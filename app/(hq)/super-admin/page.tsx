@@ -38,6 +38,8 @@ export default function SuperAdminTenantsPage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [platformPlan, setPlatformPlan] = useState<PlatformPlanId>(DEFAULT_PLATFORM_PLAN);
+  const [originFilter, setOriginFilter] = useState<'all' | 'hq' | 'self_serve'>('all');
+  const [flagFilter, setFlagFilter] = useState<'all' | 'unverified' | 'inactive' | 'activated'>('all');
 
   const loadTenants = useCallback(async () => {
     setLoading(true);
@@ -205,6 +207,45 @@ export default function SuperAdminTenantsPage() {
       </form>
 
       <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-pits-edge flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted mr-2">
+            {t('Filter tenants')}
+          </span>
+          {(['all', 'hq', 'self_serve'] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setOriginFilter(id)}
+              className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                originFilter === id
+                  ? 'bg-pits-black text-white border-pits-black'
+                  : 'border-pits-edge text-pits-ink-muted'
+              }`}
+            >
+              {id === 'all' ? t('All') : id === 'hq' ? t('HQ') : t('Self-serve')}
+            </button>
+          ))}
+          {(['all', 'unverified', 'inactive', 'activated'] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setFlagFilter(id)}
+              className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                flagFilter === id
+                  ? 'bg-pits-black text-white border-pits-black'
+                  : 'border-pits-edge text-pits-ink-muted'
+              }`}
+            >
+              {id === 'all'
+                ? t('All')
+                : id === 'unverified'
+                  ? t('Email unverified')
+                  : id === 'inactive'
+                    ? t('Inactive 14d')
+                    : t('Activated')}
+            </button>
+          ))}
+        </div>
         {loading ? (
           <div className="p-8 flex justify-center">
             <Loader2 className="animate-spin text-pits-ink-muted" />
@@ -213,13 +254,18 @@ export default function SuperAdminTenantsPage() {
           <p className="p-8 text-center text-sm text-pits-ink-muted">{t('No tenants yet.')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[960px]">
+            <table className="w-full text-left min-w-[1280px]">
               <thead className="bg-pits-surface-muted text-xs font-bold uppercase tracking-wider text-pits-ink-muted">
                 <tr>
                   <th className="px-4 py-3">{t('Tenant name')}</th>
-                <th className="px-4 py-3">{t('Status')}</th>
+                  <th className="px-4 py-3">{t('Origin')}</th>
+                  <th className="px-4 py-3">{t('Status')}</th>
                   <th className="px-4 py-3">{t('Platform plan')}</th>
-                  <th className="px-4 py-3">{t('Plan expires')}</th>
+                  <th className="px-4 py-3">{t('Trial days left')}</th>
+                  <th className="px-4 py-3">{t('Activated')}</th>
+                  <th className="px-4 py-3">{t('Last login')}</th>
+                  <th className="px-4 py-3">{t('Inactive 14d')}</th>
+                  <th className="px-4 py-3">{t('Email unverified')}</th>
                   <th className="px-4 py-3">{t('Users')}</th>
                   <th className="px-4 py-3">{t('Active members')}</th>
                   <th className="px-4 py-3">{t('Pending payments')}</th>
@@ -228,7 +274,17 @@ export default function SuperAdminTenantsPage() {
                 </tr>
               </thead>
               <tbody>
-                {tenants.map((tenant) => {
+                {tenants
+                  .filter((tenant) => {
+                    if (originFilter !== 'all' && tenant.stats.signupSource !== originFilter) {
+                      return false;
+                    }
+                    if (flagFilter === 'unverified' && !tenant.stats.emailUnverified) return false;
+                    if (flagFilter === 'inactive' && !tenant.inactive_flagged_at) return false;
+                    if (flagFilter === 'activated' && !tenant.stats.activated) return false;
+                    return true;
+                  })
+                  .map((tenant) => {
                   const plan = getPlatformPlan(tenant.platform_plan);
                   const cap = plan.maxActiveMembers;
                   const capLabel =
@@ -253,6 +309,16 @@ export default function SuperAdminTenantsPage() {
                         <p className="text-xs text-pits-ink-muted font-mono mt-0.5">
                           {tenant.slug}
                         </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-pits-edge">
+                          {tenant.stats.signupSource === 'self_serve' ? t('Self-serve') : t('HQ')}
+                        </span>
+                        {tenant.stats.possibleDuplicate && (
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-orange-600 mt-1">
+                            {t('Possible duplicate')}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -287,7 +353,7 @@ export default function SuperAdminTenantsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {tenant.platform_plan === 'trial' && tenant.trial_ends_at ? (
+                        {tenant.platform_plan === 'trial' ? (
                           <span
                             className={`font-bold ${
                               tenant.stats.trialExpired
@@ -297,8 +363,38 @@ export default function SuperAdminTenantsPage() {
                                   : 'text-pits-ink'
                             }`}
                           >
-                            {new Date(tenant.trial_ends_at).toLocaleDateString()}
+                            {tenant.stats.trialDaysLeft ?? '—'}
                           </span>
+                        ) : (
+                          <span className="text-pits-ink-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {tenant.stats.activated ? (
+                          <span className="font-bold text-pits-ink">
+                            {tenant.activated_at
+                              ? new Date(tenant.activated_at).toLocaleDateString()
+                              : t('Activated')}
+                          </span>
+                        ) : (
+                          <span className="text-pits-ink-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-pits-ink">
+                        {tenant.last_staff_login_at
+                          ? new Date(tenant.last_staff_login_at).toLocaleDateString()
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {tenant.inactive_flagged_at ? (
+                          <span className="font-bold text-orange-700">{t('Inactive 14d')}</span>
+                        ) : (
+                          <span className="text-pits-ink-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {tenant.stats.emailUnverified ? (
+                          <span className="font-bold text-orange-700">{t('Email unverified')}</span>
                         ) : (
                           <span className="text-pits-ink-muted">—</span>
                         )}
