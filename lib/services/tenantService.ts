@@ -9,7 +9,7 @@ import {
 } from '../platform-plans';
 
 export const TENANT_COLUMNS =
-  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason, ai_monthly_question_limit';
+  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason, ai_monthly_question_limit, signup_source, owner_user_id, activated_at, last_staff_login_at, inactive_flagged_at, trial_extended_days';
 
 function normalizeTenant(row: Tenant): Tenant {
   return {
@@ -48,7 +48,14 @@ export const tenantService = {
   },
 
   async createTenant(
-    input: { slug: string; name: string; id?: string; platform_plan?: PlatformPlanId },
+    input: {
+      slug: string;
+      name: string;
+      id?: string;
+      platform_plan?: PlatformPlanId;
+      signup_source?: 'hq' | 'self_serve';
+      owner_user_id?: string;
+    },
     client: SupabaseClient
   ): Promise<Tenant> {
     const slug = input.slug.trim().toLowerCase();
@@ -61,9 +68,13 @@ export const tenantService = {
       name,
       platform_plan,
       platform_plan_started_at: now.toISOString(),
+      signup_source: input.signup_source === 'self_serve' ? 'self_serve' : 'hq',
     };
     if (input.id) {
       row.id = input.id;
+    }
+    if (input.owner_user_id) {
+      row.owner_user_id = input.owner_user_id;
     }
     if (platform_plan === 'trial') {
       row.trial_ends_at = trialEndsAtIso(now);
@@ -184,7 +195,7 @@ export const tenantService = {
   ): Promise<Tenant> {
     const { data: current, error: currentError } = await client
       .from('tenants')
-      .select('trial_ends_at')
+      .select('trial_ends_at, trial_extended_days')
       .eq('id', tenantId)
       .single();
 
@@ -192,10 +203,14 @@ export const tenantService = {
     const base = current.trial_ends_at && new Date(current.trial_ends_at) > new Date()
       ? new Date(current.trial_ends_at)
       : new Date();
+    const extended = (current.trial_extended_days ?? 0) + days;
 
     const { data, error } = await client
       .from('tenants')
-      .update({ trial_ends_at: trialEndsAtIso(base, days) })
+      .update({
+        trial_ends_at: trialEndsAtIso(base, days),
+        trial_extended_days: extended,
+      })
       .eq('id', tenantId)
       .select(TENANT_COLUMNS)
       .single();

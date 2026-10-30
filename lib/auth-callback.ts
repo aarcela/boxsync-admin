@@ -1,7 +1,11 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-export const AUTH_CALLBACK_NEXT_PATHS = ['/reset-password', '/welcome'] as const;
+export const AUTH_CALLBACK_NEXT_PATHS = [
+  '/reset-password',
+  '/welcome',
+  '/dashboard/setup',
+] as const;
 export type AuthCallbackNextPath = (typeof AUTH_CALLBACK_NEXT_PATHS)[number];
 
 const ALLOWED_NEXT_PATHS = new Set<string>(AUTH_CALLBACK_NEXT_PATHS);
@@ -12,7 +16,9 @@ export function resolveAuthCallbackNext(next: string | null): AuthCallbackNextPa
 }
 
 export function resolveAuthCallbackFailPath(next: AuthCallbackNextPath): string {
-  return next === '/welcome' ? '/welcome' : '/forgot-password?error=link_expired';
+  if (next === '/welcome') return '/welcome';
+  if (next === '/dashboard/setup') return '/?error=verify_expired';
+  return '/forgot-password?error=link_expired';
 }
 
 /** Exchange Supabase email-link tokens (hash, token_hash, or code) for a session. */

@@ -101,6 +101,10 @@ export function resolveLoginError(
 
   const msg = err.message.toLowerCase();
 
+  if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
+    return t('Check your email to activate your account.');
+  }
+
   if (msg.includes('too many') || msg.includes('rate limit')) {
     return t('Too many login attempts. Please try again later.');
   }
