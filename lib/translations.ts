@@ -1863,6 +1863,8 @@ export const translations = {
     'We will help you set it up': 'We will help you set it up',
     'Continue setup': 'Continue setup',
     'Finish configuring your gym': 'Finish configuring your gym',
+    Plans: 'Plans',
+    'Class types': 'Class types',
     'Your trial ends on {{date}}. Write us to keep your founding price.':
       'Your trial ends on {{date}}. Write us to keep your founding price.',
     'Your trial has ended. The dashboard is read-only.':
@@ -3723,13 +3725,11 @@ export const translations = {
     '{{done}} of {{total}} steps': '{{done}} de {{total}} pasos',
     'Gym profile': 'Perfil del gym',
     'Name, colors, and terminology': 'Nombre, colores y terminología',
-    Payments: 'Pagos',
     'Methods, currency, plans, and overdue mode':
       'Métodos, moneda, planes y modo morosos',
     'Classes and schedule': 'Clases y horario',
     'Class types are ready — add at least one class':
       'Los tipos de clase ya están listos — agrega al menos una clase',
-    Members: 'Miembros',
     'Add manually, share the join link, or ask us to import':
       'Agrega a mano, comparte el link o pídenos que importemos',
     'Share the app': 'Compartir la app',
@@ -3738,7 +3738,6 @@ export const translations = {
     Skipped: 'Saltado',
     'To do': 'Pendiente',
     'Save name': 'Guardar nombre',
-    Open: 'Abrir',
     'Add class': 'Agregar clase',
     'We will load your members': 'Te cargamos tus miembros',
     'Copy link': 'Copiar link',
@@ -3752,7 +3751,8 @@ export const translations = {
     'We will help you set it up': 'Te ayudamos a configurarlo',
     'Continue setup': 'Continuar configuración',
     'Finish configuring your gym': 'Termina de configurar tu gym',
-    Dismiss: 'Descartar',
+    Plans: 'Planes',
+    'Class types': 'Tipos de clase',
     'Your trial ends on {{date}}. Write us to keep your founding price.':
       'Tu prueba termina el {{date}}. Escríbenos para mantener tu precio de fundador.',
     'Your trial has ended. The dashboard is read-only.':
@@ -3766,7 +3766,6 @@ export const translations = {
     'Email unverified': 'Email no verificado',
     'Possible duplicate': 'Posible duplicado',
     'Trial days left': 'Días de trial',
-    All: 'Todos',
     'Filter tenants': 'Filtrar tenants',
   }
 }

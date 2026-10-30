@@ -23,6 +23,7 @@ import {
   loadMembersWhatsAppText,
 } from '@/lib/founder-contact';
 import { SETUP_STEPS, type SetupStepId, type SetupSteps } from '@/lib/setup-progress';
+import type { TranslationKey } from '@/lib/translations';
 import { saveGymNameAction } from './actions';
 
 type SetupPayload = {
@@ -38,7 +39,7 @@ type SetupPayload = {
 
 const STEP_META: Record<
   SetupStepId,
-  { title: string; hint: string; href?: string }
+  { title: TranslationKey; hint: TranslationKey; href?: string }
 > = {
   profile: {
     title: 'Gym profile',
