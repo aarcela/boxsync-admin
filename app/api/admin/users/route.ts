@@ -65,7 +65,7 @@ async function resolvePlanIdForTenant(
 }
 
 export async function POST(request: Request) {
-  const staffAuth = await requireStaffApi();
+  const staffAuth = await requireStaffApi({ write: true });
   if ('error' in staffAuth) return staffAuth.error;
 
   try {
@@ -122,6 +122,10 @@ export async function POST(request: Request) {
         { error: 'Missing tenant context.' },
         { status: 400 }
       );
+    }
+
+    if (!staffAuth.user.email_confirmed_at) {
+      return NextResponse.json({ error: 'email_unverified' }, { status: 403 });
     }
 
     // 2. Create Auth User

@@ -38,6 +38,8 @@ import {
   CalendarClock,
   Settings,
   QrCode,
+  ListChecks,
+  MessageCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
@@ -51,7 +53,12 @@ import {
   isTrialEndingSoon,
   isTrialExpired,
 } from '@/lib/platform-plans';
+import {
+  founderWhatsAppUrl,
+  setupHelpWhatsAppText,
+} from '@/lib/founder-contact';
 import Image from 'next/image';
+import type { TranslationKey } from '@/lib/translations';
 
 type NavSubItem = {
   name: string;
@@ -89,7 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Always start closed so SSR + first client paint match (avoid hydration mismatch).
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
-  const { name: boxName, features, platformPlan, trialEndsAt } = useTenant();
+  const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -97,6 +104,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [runningExpiry, setRunningExpiry] = useState(false);
   const [confirmExpiryOpen, setConfirmExpiryOpen] = useState(false);
   const [dueCount, setDueCount] = useState(0);
+  const [emailConfirmed, setEmailConfirmed] = useState(true);
+  const [trialBannerTracked, setTrialBannerTracked] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -240,12 +249,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             icon: Settings,
             tip: t('Nav tip Settings'),
             subItems: [
-              {
-                name: t('Athlete join QR'),
-                href: '/dashboard/profile',
-                icon: QrCode,
-                tip: t('Nav tip Athlete join QR'),
-              },
+              ...(emailConfirmed
+                ? [
+                    {
+                      name: t('Athlete join QR'),
+                      href: '/dashboard/profile',
+                      icon: QrCode,
+                      tip: t('Nav tip Athlete join QR'),
+                    },
+                  ]
+                : []),
+              ...(signupSource === 'self_serve'
+                ? [
+                    {
+                      name: t('Setup assistant'),
+                      href: '/dashboard/setup',
+                      icon: ListChecks,
+                      tip: t('Configure your gym'),
+                    },
+                  ]
+                : []),
               ...(userRole === 'admin'
                 ? [
                     {
@@ -280,7 +303,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ],
       },
     ];
-  }, [t, userRole, features]);
+  }, [t, userRole, features, emailConfirmed, signupSource]);
 
   const toggleMenu = (menuName: string) => {
     setOpenMenus((prev) => (prev.includes(menuName) ? [] : [menuName]));
@@ -324,6 +347,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
       setUserRole(profile?.role ?? null);
       setUserFullName(profile?.full_name ?? null);
+      setEmailConfirmed(Boolean(user.email_confirmed_at));
     };
     verifyStaffSession();
   }, [router]);
@@ -600,6 +624,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
+        {!emailConfirmed && (
+          <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold uppercase tracking-wider">
+            {t('Check your email to activate your account.')}
+          </div>
+        )}
+        {platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt) && (
+          <div className="px-4 py-2 bg-red-50 text-red-800 text-xs font-bold uppercase tracking-wider">
+            {t('Your trial has ended. The dashboard is read-only.')}
+          </div>
+        )}
+        {platformPlan === 'trial' &&
+          !isTrialExpired(platformPlan, trialEndsAt) &&
+          isTrialEndingSoon(platformPlan, trialEndsAt) && (
+            <TrialFounderBanner
+              date={trialEndsAt}
+              gymName={boxName}
+              t={t}
+              tracked={trialBannerTracked}
+              onTrack={() => setTrialBannerTracked(true)}
+            />
+          )}
+
         {/* Scrollable Page Content */}
         <main
           className={`bg-pits-edge flex-1 min-w-0 min-h-0 p-4 lg:p-6 text-pits-ink ${
@@ -628,6 +674,69 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
         onCancel={() => setConfirmExpiryOpen(false)}
       />
+
+      {platformPlan === 'trial' && (
+        <a
+          href={founderWhatsAppUrl(setupHelpWhatsAppText(boxName || slugFromPath(pathname)))}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-pits-primary text-pits-dark-text px-4 py-3 text-xs font-black uppercase tracking-wider shadow-lg"
+        >
+          <MessageCircle size={16} />
+          <span className="hidden sm:inline">{t('We will help you set it up')}</span>
+        </a>
+      )}
+    </div>
+  );
+}
+
+function slugFromPath(pathname: string): string {
+  const match = pathname.match(/^\/([^/]+)/);
+  return match?.[1] ?? 'gym';
+}
+
+function TrialFounderBanner({
+  date,
+  gymName,
+  t,
+  tracked,
+  onTrack,
+}: {
+  date: string | null;
+  gymName: string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
+  tracked: boolean;
+  onTrack: () => void;
+}) {
+  useEffect(() => {
+    if (tracked) return;
+    onTrack();
+    void fetch('/api/admin/setup', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'trial_banner' }),
+    });
+  }, [tracked, onTrack]);
+
+  const label = date
+    ? new Date(date).toLocaleDateString()
+    : '';
+  return (
+    <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold flex flex-wrap items-center gap-3">
+      <span>
+        {t('Your trial ends on {{date}}. Write us to keep your founding price.', {
+          date: label,
+        })}
+      </span>
+      <a
+        href={founderWhatsAppUrl(setupHelpWhatsAppText(gymName))}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+      >
+        WhatsApp
+      </a>
     </div>
   );
 }

@@ -2,8 +2,9 @@ import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { isStaffRole } from './auth';
+import { isTrialExpired, parsePlatformPlanId } from './platform-plans';
 
-export async function requireStaffApi() {
+export async function requireStaffApi(opts?: { write?: boolean }) {
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -41,6 +42,22 @@ export async function requireStaffApi() {
 
   if (profileError || !isStaffRole(profile?.role)) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+
+  if (opts?.write && profile.tenant_id) {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('platform_plan, trial_ends_at')
+      .eq('id', profile.tenant_id)
+      .maybeSingle();
+    if (
+      tenant &&
+      isTrialExpired(parsePlatformPlanId(tenant.platform_plan), tenant.trial_ends_at)
+    ) {
+      return {
+        error: NextResponse.json({ error: 'trial_readonly' }, { status: 403 }),
+      };
+    }
   }
 
   return { supabase, user, profile };

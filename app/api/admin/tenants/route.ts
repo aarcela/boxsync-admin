@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { classTypeService } from '@/lib/services/classTypeService';
-import { membershipPlanService } from '@/lib/services/membershipPlanService';
-import { tenantService } from '@/lib/services/tenantService';
-import { DEFAULT_UNLIMITED_MEMBERSHIP_PLAN } from '@/lib/types/gym';
-
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+import { ProvisionTenantError, provisionTenant, SLUG_RE } from '@/lib/provision-tenant';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -57,34 +52,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid id UUID.' }, { status: 400 });
     }
 
-    const existing = await tenantService.getTenantBySlug(slug, supabaseAdmin);
-    if (existing) {
-      return NextResponse.json(
-        { error: `Tenant slug "${slug}" already exists.` },
-        { status: 409 }
-      );
-    }
-
-    const tenant = await tenantService.createTenant(
-      { slug, name, ...(id ? { id } : {}) },
+    const { tenant, membershipPlan } = await provisionTenant(
+      { slug, name, ...(id ? { id } : {}), signup_source: 'hq' },
       supabaseAdmin
     );
 
-    let membershipPlan;
-    try {
-      membershipPlan = await membershipPlanService.createMembershipPlan(
-        supabaseAdmin,
-        tenant.id,
-        DEFAULT_UNLIMITED_MEMBERSHIP_PLAN
-      );
-      await classTypeService.seedDefaultsForTenant(supabaseAdmin, tenant.id);
-    } catch (planError) {
-      await supabaseAdmin.from('tenants').delete().eq('id', tenant.id);
-      throw planError;
-    }
-
     return NextResponse.json({ tenant, membershipPlan }, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof ProvisionTenantError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, suggestions: error.suggestions },
+        { status: error.status }
+      );
+    }
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

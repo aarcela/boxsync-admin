@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { isTrialExpired, parsePlatformPlanId } from '@/lib/platform-plans';
 
 const ADMIN_ONLY = 'Only admins can manage this resource.';
+const TRIAL_READONLY = 'trial_readonly';
 
 /** Validates cookie session: caller is admin with tenant_id. */
 export async function requireAdminTenantId(): Promise<string> {
@@ -49,6 +51,18 @@ export async function requireAdminTenantId(): Promise<string> {
 
   if (!profile.tenant_id) {
     throw new Error('Missing tenant context.');
+  }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('platform_plan, trial_ends_at')
+    .eq('id', profile.tenant_id)
+    .maybeSingle();
+  if (
+    tenant &&
+    isTrialExpired(parsePlatformPlanId(tenant.platform_plan), tenant.trial_ends_at)
+  ) {
+    throw new Error(TRIAL_READONLY);
   }
 
   return profile.tenant_id as string;

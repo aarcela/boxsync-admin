@@ -83,6 +83,7 @@ export default function ProfilePage() {
   const [joinQrDataUrl, setJoinQrDataUrl] = useState<string | null>(null);
   const [qrGenerating, setQrGenerating] = useState(true);
   const [copiedField, setCopiedField] = useState<'slug' | 'link' | null>(null);
+  const [emailConfirmed, setEmailConfirmed] = useState(true);
 
   const joinLink = useMemo(() => buildMobileJoinDeepLink(slug), [slug]);
 
@@ -189,6 +190,7 @@ export default function ProfilePage() {
 
         setEmail(user.email ?? '');
         setUserId(user.id);
+        setEmailConfirmed(Boolean(user.email_confirmed_at));
 
         const { data, error } = await supabase
           .from('profiles')
@@ -407,7 +409,12 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-6">
-        <div className="flex items-start gap-3 mb-6">
+        {!emailConfirmed && (
+          <p className="mb-4 text-sm font-bold text-orange-700">
+            {t('Verify your email before sharing the join link.')}
+          </p>
+        )}
+        <div className={`flex items-start gap-3 mb-6 ${emailConfirmed ? '' : 'opacity-40 pointer-events-none'}`}>
           <div className="p-2.5 rounded-xl bg-pits-primary/15 text-pits-primary shrink-0">
             <QrCode size={22} />
           </div>
@@ -422,7 +429,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-6">
+        <div className={`flex flex-col sm:flex-row items-center gap-6 ${emailConfirmed ? '' : 'opacity-40 pointer-events-none'}`}>
           <div className="p-4 bg-white rounded-2xl border border-pits-edge shadow-sm shrink-0 flex items-center justify-center w-[232px] h-[232px]">
             {qrGenerating ? (
               <Loader2 className="animate-spin text-pits-primary" size={28} />

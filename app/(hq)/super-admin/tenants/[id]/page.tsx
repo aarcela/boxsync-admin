@@ -355,6 +355,14 @@ export default function SuperAdminTenantDetailPage() {
               <span className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t(plan?.nameKey ?? 'Trial')}
               </span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+                {tenant.stats.signupSource === 'self_serve' ? t('Self-serve') : t('HQ')}
+              </span>
+              {tenant.stats.possibleDuplicate && (
+                <span className="text-[10px] font-black uppercase tracking-wider text-orange-600">
+                  {t('Possible duplicate')}
+                </span>
+              )}
               {tenant.platform_plan === 'trial' && tenant.trial_ends_at && (
                 <span
                   className={`text-[10px] font-black uppercase tracking-wider ${

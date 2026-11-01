@@ -4,6 +4,7 @@ import { requirePlatformAdminApi } from '@/lib/require-platform-admin-api';
 import { hqStatsService } from '@/lib/services/hqStatsService';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { trackProductEvent } from '@/lib/product-events';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,6 +84,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         return NextResponse.json({ error: 'days must be an integer between 1 and 90.' }, { status: 400 });
       }
       const tenant = await tenantService.extendTrial(tenantId, days, supabaseAdmin);
+      await trackProductEvent('trial_extended', { days }, { tenantId });
       return NextResponse.json({ tenant });
     }
 

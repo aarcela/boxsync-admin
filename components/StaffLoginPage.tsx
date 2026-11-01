@@ -27,6 +27,7 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,8 +163,30 @@ export default function StaffLoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg text-center">
-              {error}
+            <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg text-center space-y-2">
+              <p>{error}</p>
+              {error === t('Check your email to activate your account.') && (
+                <button
+                  type="button"
+                  disabled={resendState !== 'idle' || !email.trim()}
+                  onClick={async () => {
+                    setResendState('sending');
+                    try {
+                      await fetch(buildHqUrl('/api/public/gym-signup/resend'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+                      });
+                      setResendState('sent');
+                    } catch {
+                      setResendState('idle');
+                    }
+                  }}
+                  className="underline text-xs uppercase tracking-wider"
+                >
+                  {resendState === 'sent' ? t('Verification email sent.') : t('Resend email')}
+                </button>
+              )}
             </div>
           )}
 

@@ -46,15 +46,39 @@ export const hqStatsService = {
       { data: profiles, error: profilesError },
       { data: pending, error: paymentsError },
       { data: aiUsage, error: aiUsageError },
+      { data: signups, error: signupsError },
     ] = await Promise.all([
       client.from('profiles').select('tenant_id, role, is_solvent'),
       client.from('payments').select('tenant_id').eq('status', 'pending'),
       client.from('tenant_ai_usage').select('tenant_id, questions_used').eq('period_ym', periodYm),
+      client
+        .from('tenant_signups')
+        .select('tenant_id, possible_duplicate, email_verified_at, created_at'),
     ]);
 
     if (profilesError) throw profilesError;
     if (paymentsError) throw paymentsError;
     if (aiUsageError) throw aiUsageError;
+    if (signupsError) throw signupsError;
+
+    const signupByTenant = new Map<
+      string,
+      { possible_duplicate: boolean; email_verified_at: string | null; created_at: string }
+    >();
+    for (const row of (signups ?? []) as {
+      tenant_id: string;
+      possible_duplicate: boolean | null;
+      email_verified_at: string | null;
+      created_at: string;
+    }[]) {
+      signupByTenant.set(row.tenant_id, {
+        possible_duplicate: Boolean(row.possible_duplicate),
+        email_verified_at: row.email_verified_at,
+        created_at: row.created_at,
+      });
+    }
+
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 
     const byTenant = new Map<string, Counts>();
     for (const tenant of tenants) {
@@ -114,6 +138,19 @@ export const hqStatsService = {
       const trialExpired = isTrialExpired(platform_plan, tenant.trial_ends_at);
       const trialEndsSoon = isTrialEndingSoon(platform_plan, tenant.trial_ends_at);
       const pendingCount = pendingByTenant.get(tenant.id) ?? 0;
+      const signup = signupByTenant.get(tenant.id);
+      const signupSource = tenant.signup_source === 'self_serve' ? 'self_serve' : 'hq';
+      const trialDaysLeft =
+        platform_plan === 'trial' && tenant.trial_ends_at
+          ? Math.ceil(
+              (new Date(tenant.trial_ends_at).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+            )
+          : null;
+      const emailUnverified = Boolean(
+        signup &&
+          !signup.email_verified_at &&
+          Date.now() - new Date(signup.created_at).getTime() >= sevenDaysMs
+      );
 
       planCounts[platform_plan] += 1;
       mrrUsd += getPlatformPlan(platform_plan).priceUsd;
@@ -139,7 +176,12 @@ export const hqStatsService = {
           overMemberCap,
           trialExpired,
           trialEndsSoon,
+          trialDaysLeft,
           isActive: tenant.is_active !== false,
+          activated: Boolean(tenant.activated_at),
+          signupSource,
+          emailUnverified,
+          possibleDuplicate: Boolean(signup?.possible_duplicate),
           aiQuestionsUsed: aiUsedByTenant.get(tenant.id) ?? 0,
           aiQuestionLimit: resolveAiMonthlyQuestions(
             platform_plan,

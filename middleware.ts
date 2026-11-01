@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isPlatformAdmin, isStaffRole } from './lib/auth';
+import { supabaseAdmin } from './lib/supabase-admin';
 import { buildHqUrl, isHqHost, resolveTenantSlug } from './lib/tenant-host';
 
 const SKIP_REWRITE_PREFIXES = [
@@ -158,7 +159,7 @@ export async function middleware(request: NextRequest) {
   if (slug && profile?.tenant_id) {
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('slug, is_active')
+      .select('slug, is_active, last_staff_login_at')
       .eq('id', profile.tenant_id)
       .maybeSingle();
 
@@ -180,6 +181,16 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
+    }
+
+    const last = tenant?.last_staff_login_at
+      ? new Date(tenant.last_staff_login_at).getTime()
+      : 0;
+    if (!last || Date.now() - last > 12 * 60 * 60 * 1000) {
+      void supabaseAdmin
+        .from('tenants')
+        .update({ last_staff_login_at: new Date().toISOString() })
+        .eq('id', profile.tenant_id);
     }
   }
 

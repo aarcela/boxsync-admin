@@ -21,6 +21,17 @@ function AuthCallbackHandler() {
 
       if (cancelled) return;
 
+      if (sessionOk && next === '/dashboard/setup') {
+        try {
+          await fetch('/api/admin/setup/verified', {
+            method: 'POST',
+            credentials: 'include',
+          });
+        } catch {
+          // Banner still covers unverified; continue to setup.
+        }
+      }
+
       const destination = sessionOk ? next : resolveAuthCallbackFailPath(next);
       window.location.replace(destination);
     }

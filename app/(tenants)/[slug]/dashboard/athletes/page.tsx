@@ -70,6 +70,7 @@ export default function AthletesPage() {
 
   const [callerRole, setCallerRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [emailConfirmed, setEmailConfirmed] = useState(true);
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const isAdmin = callerRole === 'admin';
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,6 +83,7 @@ export default function AthletesPage() {
       if (!user) return;
 
       setCurrentUserId(user.id);
+      setEmailConfirmed(Boolean(user.email_confirmed_at));
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -410,14 +412,20 @@ export default function AthletesPage() {
             )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg bg-pits-text text-white text-xs font-bold hover:bg-black transition-colors"
-        >
-          <UserPlus size={16} aria-hidden />
-          {t('Add Athlete')}
-        </button>
+        {emailConfirmed ? (
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 min-h-10 px-4 rounded-lg bg-pits-text text-white text-xs font-bold hover:bg-black transition-colors"
+          >
+            <UserPlus size={16} aria-hidden />
+            {t('Add Athlete')}
+          </button>
+        ) : (
+          <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+            {t('Check your email to activate your account.')}
+          </p>
+        )}
       </div>
 
       <div className="bg-pits-surface-elevated p-3 sm:p-4 rounded-xl border border-pits-edge space-y-3">

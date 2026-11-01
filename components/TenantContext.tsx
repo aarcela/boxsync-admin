@@ -5,9 +5,11 @@ import type { TenantCurrencyConfig } from '@/lib/currency';
 import { DEFAULT_TENANT_CURRENCIES } from '@/lib/currency';
 import {
   DEFAULT_PLATFORM_PLAN,
+  isTrialExpired,
   parsePlatformPlanId,
   type PlatformPlanId,
 } from '@/lib/platform-plans';
+import type { SignupSource } from '@/lib/types/gym';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
 import {
   DEFAULT_TENANT_FEATURES,
@@ -21,6 +23,8 @@ export type TenantContextValue = {
   name: string;
   platformPlan: PlatformPlanId;
   trialEndsAt: string | null;
+  staffReadOnly: boolean;
+  signupSource: SignupSource;
   currencies: TenantCurrencyConfig;
   setCurrencies: (next: TenantCurrencyConfig) => void;
   refreshCurrencies: () => Promise<TenantCurrencyConfig>;
@@ -38,12 +42,17 @@ export function TenantProvider({
 }: {
   value: Omit<
     TenantContextValue,
-    'setCurrencies' | 'refreshCurrencies' | 'setFeatures' | 'setSettings'
+    | 'setCurrencies'
+    | 'refreshCurrencies'
+    | 'setFeatures'
+    | 'setSettings'
+    | 'staffReadOnly'
   > & {
     currencies?: TenantCurrencyConfig;
     features?: TenantFeatures;
     platformPlan?: PlatformPlanId;
     trialEndsAt?: string | null;
+    signupSource?: SignupSource;
     settings?: unknown;
   };
   children: ReactNode;
@@ -80,6 +89,11 @@ export function TenantProvider({
         name: value.name,
         platformPlan: parsePlatformPlanId(value.platformPlan ?? DEFAULT_PLATFORM_PLAN),
         trialEndsAt: value.trialEndsAt ?? null,
+        staffReadOnly: isTrialExpired(
+          parsePlatformPlanId(value.platformPlan ?? DEFAULT_PLATFORM_PLAN),
+          value.trialEndsAt ?? null
+        ),
+        signupSource: value.signupSource === 'self_serve' ? 'self_serve' : 'hq',
         currencies,
         setCurrencies,
         refreshCurrencies,

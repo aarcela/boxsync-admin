@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { financialService } from '@/lib/services/financialService';
 import {
@@ -20,12 +20,31 @@ import PaymentProofPreviewModal from '@/components/PaymentProofPreviewModal';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { currencySymbol } from '@/lib/currency';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { stats, loading, refresh, removePaymentLocally } = useDashboardData();
   const { toast } = useToast();
   const { t } = useLanguage();
   const { currencies } = useTenant();
+  const [setupCard, setSetupCard] = useState<{ show: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/setup', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        const pending = data?.steps
+          ? Object.values(data.steps as Record<string, string | null>).some((v) => v == null)
+          : false;
+        setSetupCard({
+          show:
+            data?.tenant?.signupSource === 'self_serve' &&
+            !data?.dismissedAt &&
+            pending,
+        });
+      })
+      .catch(() => setSetupCard({ show: false }));
+  }, []);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -204,6 +223,38 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {setupCard?.show && (
+        <div className="mb-4 rounded-2xl border border-pits-primary/40 bg-pits-primary-soft p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-black uppercase italic text-pits-ink">{t('Continue setup')}</p>
+            <p className="text-sm text-pits-ink-muted">{t('Finish configuring your gym')}</p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href="/dashboard/setup"
+              className="px-4 py-2 rounded-lg bg-pits-black text-white text-xs font-black uppercase tracking-wider"
+            >
+              {t('Setup assistant')}
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch('/api/admin/setup', {
+                  method: 'PATCH',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'dismiss' }),
+                });
+                setSetupCard({ show: false });
+              }}
+              className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider"
+            >
+              {t('Dismiss')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* OPERATIONAL SIGNAL GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">

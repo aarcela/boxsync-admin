@@ -5,6 +5,8 @@ export { CurrencyType };
 export type { TenantCurrencyConfig };
 export type { PlatformPlanId };
 
+export type SignupSource = 'hq' | 'self_serve';
+
 export interface Tenant {
   id: string;
   slug: string;
@@ -18,6 +20,12 @@ export interface Tenant {
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
   ai_monthly_question_limit?: number | null;
+  signup_source?: SignupSource;
+  owner_user_id?: string | null;
+  activated_at?: string | null;
+  last_staff_login_at?: string | null;
+  inactive_flagged_at?: string | null;
+  trial_extended_days?: number | null;
 }
 
 export interface TenantHqStats {
@@ -31,7 +39,12 @@ export interface TenantHqStats {
   overMemberCap: boolean;
   trialExpired: boolean;
   trialEndsSoon: boolean;
+  trialDaysLeft: number | null;
   isActive: boolean;
+  activated: boolean;
+  signupSource: SignupSource;
+  emailUnverified: boolean;
+  possibleDuplicate: boolean;
   aiQuestionsUsed: number;
   aiQuestionLimit: number;
   aiCustomLimit: boolean;

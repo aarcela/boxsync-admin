@@ -7,7 +7,8 @@ import { getUpstashRedis } from '@/lib/upstash-redis';
 export type RateLimitKind =
   | 'register'
   | 'forgot-password'
-  | 'public-get';
+  | 'public-get'
+  | 'gym-signup';
 
 /** Thresholds chosen for abuse protection without blocking normal gym traffic. */
 const LIMITERS: Record<
@@ -20,6 +21,8 @@ const LIMITERS: Record<
   'forgot-password': { requests: 5, window: '1 h', prefix: 'rl:forgot' },
   // Public tenant/product GETs (slug scraping / scrape bots)
   'public-get': { requests: 60, window: '1 m', prefix: 'rl:public-get' },
+  // Self-serve gym owner signup
+  'gym-signup': { requests: 3, window: '1 h', prefix: 'rl:gym-signup' },
 };
 
 const limiterCache = new Map<RateLimitKind, Ratelimit>();
@@ -135,7 +138,7 @@ export async function enforcePublicGetRateLimit(
  * Both must pass when email is provided.
  */
 export async function enforceAuthPostRateLimit(
-  kind: 'register' | 'forgot-password',
+  kind: 'register' | 'forgot-password' | 'gym-signup',
   request: Request,
   email?: string
 ): Promise<NextResponse | null> {

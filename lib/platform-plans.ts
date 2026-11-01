@@ -68,10 +68,26 @@ export function getPlatformPlan(id: unknown): PlatformPlanDef {
   return PLATFORM_PLANS[parsePlatformPlanId(id)];
 }
 
+const CARACAS_TZ = 'America/Caracas';
+
+function caracasYmd(from: Date): { y: number; m: number; d: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CARACAS_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(from);
+  const num = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value);
+  return { y: num('year'), m: num('month'), d: num('day') };
+}
+
+/** End of calendar day in America/Caracas, `days` days from `from`. */
 export function trialEndsAtIso(from = new Date(), days = TRIAL_DAYS): string {
-  const next = new Date(from.getTime());
-  next.setUTCDate(next.getUTCDate() + days);
-  return next.toISOString();
+  const { y, m, d } = caracasYmd(from);
+  // Caracas is UTC-4 year-round. Midnight of (date + days + 1) minus 1s = 23:59:59 VET.
+  const endUtcMs = Date.UTC(y, m - 1, d + days + 1, 4, 0, 0) - 1000;
+  return new Date(endUtcMs).toISOString();
 }
 
 export function isTrialExpired(
