@@ -100,7 +100,7 @@ export default function IncomePage() {
 
       const [methods, data] = await Promise.all([
         financialService.getPaymentMethods(),
-        incomeService.getIncomes(start, end),
+        incomeService.getLedgerIncomes(start, end, rate),
       ]);
       setPaymentMethods(methods);
       setIncomes(data);
@@ -157,6 +157,10 @@ export default function IncomePage() {
 
   const handleDeleteIncome = async () => {
     if (!deleteConfirm) return;
+    if (deleteConfirm.id.startsWith('payment:')) {
+      setDeleteConfirm(null);
+      return;
+    }
     try {
       await incomeService.deleteIncome(deleteConfirm.id);
       toast(t('Record purged from ledger'), 'success');
@@ -369,12 +373,18 @@ export default function IncomePage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => setDeleteConfirm({ id: inc.id, description: inc.description })}
-                          className="p-2 text-pits-dim hover:text-pits-red transition-colors active:scale-90"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {inc.source !== 'membership_payment' ? (
+                          <button
+                            onClick={() => setDeleteConfirm({ id: inc.id, description: inc.description })}
+                            className="p-2 text-pits-dim hover:text-pits-red transition-colors active:scale-90"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        ) : (
+                          <span className="text-[8px] font-black uppercase text-pits-dim">
+                            {t('From membership')}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))

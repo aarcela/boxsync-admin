@@ -471,6 +471,7 @@ export interface ExpenseRecord {
 }
 
 export type IncomeCategory =
+  | 'membership_payments'
   | 'merchandise_sales'
   | 'supplement_sales'
   | 'food_beverage_sales'
@@ -495,6 +496,8 @@ export interface IncomeRecord {
   status: IncomeStatus;
   created_by?: string;
   created_at: string;
+  /** Present when row is projected from `payments` (not stored in `incomes`). */
+  source?: 'manual' | 'membership_payment';
 }
 
 export interface ProfitabilityStats {
