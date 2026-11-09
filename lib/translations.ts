@@ -762,12 +762,9 @@ export const translations = {
     'Failed to load profile': 'Failed to load profile',
     'Phone saved': 'Phone saved',
     'Failed to save phone': 'Failed to save phone',
-    'App access QR': 'App access QR',
-    'Scan or share this QR code so athletes can download and access the app.':
-      'Scan or share this QR code so {members} can download and access the app.',
-    'Athlete join QR': '{Member} join QR',
+    'Athlete join QR': '{Member} join QR (sign-up only)',
     'Athletes scan this QR in the WODUS app to register at your gym.':
-      '{Members} scan this QR in the WODUS app to register at your {venue}.',
+      '{Members} scan this QR in the WODUS app to register at your {venue}. Sign-up only — not for check-in.',
     'Gym code': '{Venue} code',
     'Copy gym code': 'Copy {venue} code',
     'Gym code copied': '{Venue} code copied',
@@ -777,6 +774,26 @@ export const translations = {
     'Downloading...': 'Downloading...',
     'Failed to download QR code': 'Failed to download QR code',
     'Failed to generate QR code': 'Failed to generate QR code',
+    'Check-in QR': 'Check-in QR',
+    'Print this QR at the front desk. Athletes scan it in WODUS to mark attendance.':
+      'Print this QR at the front desk. {Members} scan it in WODUS to mark attendance.',
+    'Print / PDF': 'Print / PDF',
+    'Regenerate code': 'Regenerate code',
+    'Regenerate check-in QR?': 'Regenerate check-in QR?',
+    'Printed check-in QRs will stop working immediately.':
+      'Printed check-in QRs will stop working immediately.',
+    Regenerate: 'Regenerate',
+    'Check-in code regenerated': 'Check-in code regenerated',
+    'Failed to regenerate check-in code': 'Failed to regenerate check-in code',
+    'Failed to load check-in QR': 'Failed to load check-in QR',
+    'Accept previous QR': 'Accept previous QR',
+    'Allow the old lobby / join QR to check in members of this gym.':
+      'Allow the old lobby / join QR to check in {members} of this {venue}.',
+    'Legacy QR setting saved': 'Legacy QR setting saved',
+    'Failed to update legacy QR setting': 'Failed to update legacy QR setting',
+    'Scan with the WODUS app to mark attendance':
+      'Scan with the WODUS app to mark attendance',
+    Print: 'Print',
     English: 'English',
     Spanish: 'Spanish',
 
@@ -896,6 +913,7 @@ export const translations = {
     due: 'Due',
     confirmed: 'Confirmed',
     cancelled: 'Cancelled',
+    membership_payments: 'Membership Payments',
     merchandise_sales: 'Merchandise Sales',
     supplement_sales: 'Supplement Sales',
     food_beverage_sales: 'Food & Beverage Sales',
@@ -905,6 +923,7 @@ export const translations = {
     sponsorships: 'Sponsorships',
     income_adjustments: 'Income Adjustments',
     other_income: 'Other Income',
+    'From membership': 'From membership',
 
     // Action Center (Insights)
     'Action Center': 'Action Center',
@@ -2645,12 +2664,9 @@ export const translations = {
     'Failed to load profile': 'No se pudo cargar el perfil',
     'Phone saved': 'Teléfono guardado',
     'Failed to save phone': 'No se pudo guardar el teléfono',
-    'App access QR': 'QR de acceso a la app',
-    'Scan or share this QR code so athletes can download and access the app.':
-      'Escanea o comparte este código QR para que los {members} descarguen y accedan a la app.',
-    'Athlete join QR': 'QR de registro de {members}',
+    'Athlete join QR': 'QR de registro de {members} (solo alta)',
     'Athletes scan this QR in the WODUS app to register at your gym.':
-      'Los {members} escanean este QR en la app WODUS para registrarse en tu {venue}.',
+      'Los {members} escanean este QR en la app WODUS para registrarse en tu {venue}. Solo alta — no sirve para check-in.',
     'Gym code': 'Código del {venue}',
     'Copy gym code': 'Copiar código',
     'Gym code copied': 'Código copiado',
@@ -2660,6 +2676,26 @@ export const translations = {
     'Downloading...': 'Descargando...',
     'Failed to download QR code': 'No se pudo descargar el código QR',
     'Failed to generate QR code': 'No se pudo generar el código QR',
+    'Check-in QR': 'QR de check-in',
+    'Print this QR at the front desk. Athletes scan it in WODUS to mark attendance.':
+      'Imprime este QR en recepción. Los {members} lo escanean en WODUS para marcar asistencia.',
+    'Print / PDF': 'Imprimir / PDF',
+    'Regenerate code': 'Regenerar código',
+    'Regenerate check-in QR?': '¿Regenerar QR de check-in?',
+    'Printed check-in QRs will stop working immediately.':
+      'Los QR de check-in impresos dejarán de funcionar de inmediato.',
+    Regenerate: 'Regenerar',
+    'Check-in code regenerated': 'Código de check-in regenerado',
+    'Failed to regenerate check-in code': 'No se pudo regenerar el código de check-in',
+    'Failed to load check-in QR': 'No se pudo cargar el QR de check-in',
+    'Accept previous QR': 'Aceptar QR anterior',
+    'Allow the old lobby / join QR to check in members of this gym.':
+      'Permite que el QR anterior de lobby / registro marque asistencia de {members} de este {venue}.',
+    'Legacy QR setting saved': 'Ajuste de QR anterior guardado',
+    'Failed to update legacy QR setting': 'No se pudo actualizar el ajuste de QR anterior',
+    'Scan with the WODUS app to mark attendance':
+      'Escanea con la app WODUS para marcar asistencia',
+    Print: 'Imprimir',
     English: 'Inglés',
     Spanish: 'Español',
 
@@ -2779,6 +2815,7 @@ export const translations = {
     due: 'Vencido',
     confirmed: 'Confirmado',
     cancelled: 'Cancelado',
+    membership_payments: 'Pagos de Membresía',
     merchandise_sales: 'Venta de Merchandising',
     supplement_sales: 'Venta de Suplementos',
     food_beverage_sales: 'Venta de Comida y Bebidas',
@@ -2788,6 +2825,7 @@ export const translations = {
     sponsorships: 'Patrocinios',
     income_adjustments: 'Ajustes de Ingresos',
     other_income: 'Otros Ingresos',
+    'From membership': 'De membresía',
 
     // Action Center (Insights)
     'Action Center': 'Centro de Acción',

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import {
   Loader2,
   Mail,
@@ -13,9 +12,12 @@ import {
   QrCode,
   Copy,
   Check,
+  Printer,
+  RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import QRCode from 'qrcode';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -25,13 +27,14 @@ import {
   MIN_RESET_PASSWORD_LENGTH,
   resolvePasswordResetError,
 } from '@/lib/auth';
-import { buildMobileJoinDeepLink } from '@/lib/constants/app-links';
+import {
+  buildMobileJoinDeepLink,
+  buildPublicCheckinUrl,
+} from '@/lib/constants/app-links';
+import { checkinCodeService } from '@/lib/services/checkinCodeService';
 import { tenantSupportService } from '@/lib/services/tenantSupportService';
 import { normalizeWhatsAppRecipient } from '@/lib/whatsapp';
 import type { TranslationKey } from '@/lib/translations';
-
-const APP_ACCESS_QR_PATH = '/assets/qr-access.png';
-const APP_ACCESS_QR_DOWNLOAD_NAME = 'boxsync-app-access-qr.png';
 
 type StaffProfile = {
   full_name: string | null;
@@ -79,13 +82,25 @@ export default function ProfilePage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [downloadingJoinQr, setDownloadingJoinQr] = useState(false);
-  const [downloadingAppAccessQr, setDownloadingAppAccessQr] = useState(false);
+  const [downloadingCheckinQr, setDownloadingCheckinQr] = useState(false);
   const [joinQrDataUrl, setJoinQrDataUrl] = useState<string | null>(null);
+  const [checkinQrDataUrl, setCheckinQrDataUrl] = useState<string | null>(null);
   const [qrGenerating, setQrGenerating] = useState(true);
+  const [checkinQrGenerating, setCheckinQrGenerating] = useState(true);
+  const [checkinCode, setCheckinCode] = useState<string | null>(null);
+  const [acceptLegacyQr, setAcceptLegacyQr] = useState(false);
+  const [legacySaving, setLegacySaving] = useState(false);
+  const [rotatingCode, setRotatingCode] = useState(false);
+  const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<'slug' | 'link' | null>(null);
   const [emailConfirmed, setEmailConfirmed] = useState(true);
 
+  const isAdmin = profile?.role === 'admin';
   const joinLink = useMemo(() => buildMobileJoinDeepLink(slug), [slug]);
+  const checkinLink = useMemo(
+    () => (checkinCode ? buildPublicCheckinUrl(checkinCode) : null),
+    [checkinCode]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -120,6 +135,50 @@ export default function ProfilePage() {
     };
   }, [joinLink, t, toast]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCheckin = async () => {
+      setCheckinQrGenerating(true);
+      try {
+        const row = await checkinCodeService.get();
+        if (cancelled) return;
+        if (!row?.code) {
+          setCheckinCode(null);
+          setCheckinQrDataUrl(null);
+          setAcceptLegacyQr(false);
+          return;
+        }
+        setCheckinCode(row.code);
+        setAcceptLegacyQr(row.accept_legacy_qr);
+        const dataUrl = await QRCode.toDataURL(buildPublicCheckinUrl(row.code), {
+          width: 480,
+          margin: 2,
+          errorCorrectionLevel: 'M',
+          color: {
+            dark: '#111111',
+            light: '#ffffff',
+          },
+        });
+        if (!cancelled) setCheckinQrDataUrl(dataUrl);
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setCheckinCode(null);
+          setCheckinQrDataUrl(null);
+          toast(t('Failed to load check-in QR'), 'error');
+        }
+      } finally {
+        if (!cancelled) setCheckinQrGenerating(false);
+      }
+    };
+
+    void loadCheckin();
+    return () => {
+      cancelled = true;
+    };
+  }, [t, toast]);
+
   const handleDownloadJoinQr = async () => {
     if (!joinQrDataUrl) {
       toast(t('Failed to download QR code'), 'error');
@@ -142,26 +201,66 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDownloadAppAccessQr = async () => {
-    setDownloadingAppAccessQr(true);
-    try {
-      const response = await fetch(APP_ACCESS_QR_PATH);
-      if (!response.ok) throw new Error('download_failed');
+  const handleDownloadCheckinQr = async () => {
+    if (!checkinQrDataUrl) {
+      toast(t('Failed to download QR code'), 'error');
+      return;
+    }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+    setDownloadingCheckinQr(true);
+    try {
       const link = document.createElement('a');
-      link.href = url;
-      link.download = APP_ACCESS_QR_DOWNLOAD_NAME;
+      link.href = checkinQrDataUrl;
+      link.download = `wodus-checkin-${slug}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
       toast(t('Failed to download QR code'), 'error');
     } finally {
-      setDownloadingAppAccessQr(false);
+      setDownloadingCheckinQr(false);
+    }
+  };
+
+  const handleRotateCheckinCode = async () => {
+    setRotateConfirmOpen(false);
+    setRotatingCode(true);
+    try {
+      const nextCode = await checkinCodeService.rotate();
+      setCheckinCode(nextCode);
+      const dataUrl = await QRCode.toDataURL(buildPublicCheckinUrl(nextCode), {
+        width: 480,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#111111',
+          light: '#ffffff',
+        },
+      });
+      setCheckinQrDataUrl(dataUrl);
+      toast(t('Check-in code regenerated'), 'success');
+    } catch (error) {
+      console.error(error);
+      toast(t('Failed to regenerate check-in code'), 'error');
+    } finally {
+      setRotatingCode(false);
+    }
+  };
+
+  const handleToggleLegacyQr = async (next: boolean) => {
+    setLegacySaving(true);
+    const previous = acceptLegacyQr;
+    setAcceptLegacyQr(next);
+    try {
+      await checkinCodeService.setAcceptLegacy(next);
+      toast(t('Legacy QR setting saved'), 'success');
+    } catch (error) {
+      console.error(error);
+      setAcceptLegacyQr(previous);
+      toast(t('Failed to update legacy QR setting'), 'error');
+    } finally {
+      setLegacySaving(false);
     }
   };
 
@@ -309,6 +408,7 @@ export default function ProfilePage() {
   }
 
   return (
+    <>
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-black text-pits-ink uppercase tracking-tight">
@@ -509,49 +609,110 @@ export default function ProfilePage() {
           </div>
           <div>
             <h3 className="text-lg font-black text-pits-ink uppercase tracking-tight">
-              {t('App access QR')}
+              {t('Check-in QR')}
             </h3>
             <p className="text-sm text-pits-ink-muted mt-1">
               {t(
-                'Scan or share this QR code so athletes can download and access the app.'
+                'Print this QR at the front desk. Athletes scan it in WODUS to mark attendance.'
               )}
             </p>
+            <p className="text-sm font-bold text-pits-ink mt-2">{tenantName}</p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="p-4 bg-white rounded-2xl border border-pits-edge shadow-sm shrink-0">
-            <Image
-              src={APP_ACCESS_QR_PATH}
-              alt={t('App access QR')}
-              width={200}
-              height={200}
-              className="w-48 h-48 object-contain"
-              priority
-            />
+          <div className="p-4 bg-white rounded-2xl border border-pits-edge shadow-sm shrink-0 flex items-center justify-center w-[232px] h-[232px]">
+            {checkinQrGenerating ? (
+              <Loader2 className="animate-spin text-pits-primary" size={28} />
+            ) : checkinQrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={checkinQrDataUrl}
+                alt={t('Check-in QR')}
+                width={200}
+                height={200}
+                className="w-48 h-48 object-contain"
+              />
+            ) : (
+              <span className="text-sm text-pits-ink-muted text-center px-4">
+                {t('Failed to generate QR code')}
+              </span>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => void handleDownloadAppAccessQr()}
-            disabled={downloadingAppAccessQr}
-            className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg transition-all
-              ${
-                downloadingAppAccessQr
-                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                  : 'bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20'
-              }
-            `}
-          >
-            {downloadingAppAccessQr ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Download size={18} />
+          <div className="flex-1 w-full space-y-3">
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void handleDownloadCheckinQr()}
+                disabled={downloadingCheckinQr || !checkinQrDataUrl}
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg transition-all
+                  ${
+                    downloadingCheckinQr || !checkinQrDataUrl
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20'
+                  }
+                `}
+              >
+                {downloadingCheckinQr ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+                {downloadingCheckinQr ? t('Downloading...') : t('Download QR code')}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(`/${slug}/dashboard/profile/checkin-print`, '_blank');
+                }}
+                disabled={!checkinLink}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-bold uppercase tracking-widest hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
+              >
+                <Printer size={16} />
+                {t('Print / PDF')}
+              </button>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setRotateConfirmOpen(true)}
+                  disabled={rotatingCode || checkinQrGenerating}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-orange-300 bg-orange-50 text-orange-800 text-sm font-bold uppercase tracking-widest hover:bg-orange-100 transition-colors disabled:opacity-50"
+                >
+                  {rotatingCode ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                  {t('Regenerate code')}
+                </button>
+              )}
+            </div>
+
+            {isAdmin && (
+              <label className="flex items-start gap-3 rounded-xl border border-pits-edge bg-pits-surface-muted/50 p-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                  checked={acceptLegacyQr}
+                  disabled={legacySaving || checkinQrGenerating}
+                  onChange={(e) => void handleToggleLegacyQr(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-bold text-pits-ink">
+                    {t('Accept previous QR')}
+                  </span>
+                  <span className="block text-xs text-pits-ink-muted mt-1">
+                    {t(
+                      'Allow the old lobby / join QR to check in members of this gym.'
+                    )}
+                  </span>
+                </span>
+              </label>
             )}
-            {downloadingAppAccessQr
-              ? t('Downloading...')
-              : t('Download QR code')}
-          </button>
+          </div>
         </div>
       </div>
 
@@ -635,5 +796,17 @@ export default function ProfilePage() {
         </form>
       </div>
     </div>
+
+    <ConfirmDialog
+      isOpen={rotateConfirmOpen}
+      title={t('Regenerate check-in QR?')}
+      message={t('Printed check-in QRs will stop working immediately.')}
+      confirmLabel={t('Regenerate')}
+      cancelLabel={t('Cancel')}
+      variant="warning"
+      onConfirm={() => void handleRotateCheckinCode()}
+      onCancel={() => setRotateConfirmOpen(false)}
+    />
+    </>
   );
 }

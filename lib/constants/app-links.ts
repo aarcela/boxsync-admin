@@ -28,6 +28,15 @@ export function buildPublicJoinUrl(slug: string): string {
 }
 
 /**
+ * Public HTTPS check-in URL encoded in the lobby QR.
+ * Must stay on www.getwodus.com so it matches check_in_athlete parsers.
+ */
+export function buildPublicCheckinUrl(code: string): string {
+  const normalized = code.trim();
+  return `https://www.getwodus.com/checkin/${encodeURIComponent(normalized)}`;
+}
+
+/**
  * HTTPS link for emails. Custom schemes (boxwaveapp://) are stripped by Gmail/Outlook.
  * Opens getwodus.com/auth/confirm, then the user taps once to open the app.
  */
