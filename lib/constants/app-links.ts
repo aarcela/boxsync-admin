@@ -49,13 +49,8 @@ export function buildMobilePasswordResetEmailLink(tokenHash: string): string {
   return `${getPublicSiteOrigin()}/auth/confirm?${params.toString()}`;
 }
 
-/**
- * iOS App Store listing.
- * NOTE: this URL slug ("pits-crossfit") predates the app's generic WODUS/BoxWave
- * branding (bundle id com.aaamdev.wodus) — confirm in App Store Connect that this
- * listing is the correct one before relying on it in new links.
- */
+/** iOS App Store listing for WODUS (`com.aaamdev.wodus`). */
 export const APP_STORE_URL =
-  'https://apps.apple.com/ve/app/pits-crossfit/id6758683997';
+  'https://apps.apple.com/app/wodus/id6780208414';
 
 export const IOS_APP_COMING_SOON = false;
