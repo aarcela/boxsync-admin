@@ -9,7 +9,6 @@ type PaymentLedgerRow = {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   currency: string | null;
-  currency_type?: string | null;
   exchange_rate_at_time?: number | null;
   profiles: { full_name: string | null } | { full_name: string | null }[] | null;
 };
@@ -40,7 +39,7 @@ function paymentToIncomeRow(
     description: profileFullName(payment.profiles),
     category: 'membership_payments',
     amount: Number(payment.amount) || 0,
-    currency: payment.currency || payment.currency_type || 'USD',
+    currency: payment.currency || 'USD',
     exchange_rate_at_time: rate,
     income_date: payment.created_at.slice(0, 10),
     // Prefer method id so the Income page can resolve the staff label.
@@ -77,7 +76,7 @@ export const incomeService = {
       supabase
         .from('payments')
         .select(
-          'id, amount, method, payment_method_id, status, created_at, currency, currency_type, exchange_rate_at_time, profiles ( full_name )'
+          'id, amount, method, payment_method_id, status, created_at, currency, exchange_rate_at_time, profiles ( full_name )'
         )
         .gte('created_at', startIso)
         .lte('created_at', endIso)
