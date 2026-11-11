@@ -197,7 +197,7 @@ export const dashboardService = {
       overdueMembers,
       totalMembers: allMembers,
       lowOccupancyClasses: lowOccupancy,
-      dailyUsagePercent: usagePercent
+      dailyUsagePercent: usagePercent,
     };
   }
 };

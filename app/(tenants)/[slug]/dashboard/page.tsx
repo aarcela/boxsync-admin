@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useDashboardData } from '@/lib/hooks/useDashboardData';
 import { financialService } from '@/lib/services/financialService';
 import {
-  CheckCircle, XCircle, Eye, RefreshCw,
+  CheckCircle, XCircle, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
   Calendar, Clock, Sparkles
@@ -16,7 +16,6 @@ type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PaymentProofReader from '@/components/PaymentProofReader';
-import PaymentProofPreviewModal from '@/components/PaymentProofPreviewModal';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { currencySymbol } from '@/lib/currency';
@@ -46,13 +45,12 @@ export default function DashboardPage() {
       .catch(() => setSetupCard({ show: false }));
   }, []);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
-  const [confirmConfig, setConfirmConfig] = useState<{
+  const [rejectConfirm, setRejectConfirm] = useState<{
     isOpen: boolean;
     paymentId: string;
-    action: 'approve' | 'reject';
     userId: string;
     athleteName: string;
-  }>({ isOpen: false, paymentId: '', action: 'approve', userId: '', athleteName: '' });
+  }>({ isOpen: false, paymentId: '', userId: '', athleteName: '' });
 
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -68,10 +66,8 @@ export default function DashboardPage() {
     variant: null,
   });
 
-  const [proofPreview, setProofPreview] = useState<{
-    url: string;
-    athleteName: string;
-  } | null>(null);
+  /** Optional AI/proof review — approve from the table is 1 click; this is assist only. */
+  const [proofReview, setProofReview] = useState<DashboardPayment | null>(null);
 
   const openModal = (
     title: string,
@@ -88,10 +84,11 @@ export default function DashboardPage() {
     toast(t('Dashboard synced'), 'success');
   };
 
-  // ACTION: APPROVE PAYMENT
+  // ACTION: APPROVE PAYMENT (1 click from table — AI assist is optional)
   const handleApprove = async (id: string, userId: string) => {
     try {
       const { activated } = await financialService.approvePayment(id, userId);
+      setProofReview(null);
       removePaymentLocally(id);
       refresh();
       toast(
@@ -111,6 +108,8 @@ export default function DashboardPage() {
   const handleReject = async (id: string, userId: string) => {
     try {
       await financialService.rejectPayment(id, userId);
+      setProofReview(null);
+      setRejectConfirm({ isOpen: false, paymentId: '', userId: '', athleteName: '' });
       removePaymentLocally(id);
       refresh();
       toast(t('Payment rejected'), 'warning');
@@ -119,70 +118,32 @@ export default function DashboardPage() {
     }
   };
 
-  const handleConfirmAction = async () => {
-    const { action, paymentId, userId } = confirmConfig;
-    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-    if (action === 'approve') {
-      await handleApprove(paymentId, userId);
-    } else {
-      await handleReject(paymentId, userId);
-    }
-  };
-
   // Format currency for display
   const formatCurrency = (amount: number) => {
     return `${currencySymbol(currencies.reference)}${amount.toLocaleString()}`;
   };
 
-  const requestPaymentAction = (payment: DashboardPayment, action: 'approve' | 'reject') => {
-    setConfirmConfig({
+  const requestReject = (payment: DashboardPayment) => {
+    setRejectConfirm({
       isOpen: true,
       paymentId: payment.id,
-      action,
       userId: payment.user_id,
       athleteName: payment.profiles?.full_name || t('Unknown Athlete'),
     });
   };
 
   const renderPaymentActions = (payment: DashboardPayment, compact = false) => (
-    <div className={`flex items-center ${compact ? 'gap-1.5 w-full' : 'flex-wrap justify-end gap-2'}`}>
-      {payment.proof_image_url ? (
-        <button
-          type="button"
-          onClick={() =>
-            setProofPreview({
-              url: payment.proof_image_url,
-              athleteName: payment.profiles?.full_name || t('Unknown Athlete'),
-            })
-          }
-          className={`inline-flex items-center justify-center shrink-0 font-black uppercase tracking-tighter text-blue-600 hover:text-pits-dark-text transition-all ${
-            compact ? 'h-9 w-9 rounded-xl border bg-pits-surface-elevated' : 'text-[10px] hover:translate-y-px'
-          }`}
-          title={t('Audit Proof')}
-        >
-          <Eye size={14} className={compact ? '' : 'mr-1.5'} />
-          {!compact && t('Audit Proof')}
-        </button>
-      ) : (
-        !compact && <span className="text-[10px] font-black uppercase text-pits-dim">—</span>
-      )}
+    <div className={`flex items-center ${compact ? 'w-full' : 'justify-end'}`}>
       <button
-        onClick={() => requestPaymentAction(payment, 'reject')}
-        className="inline-flex items-center justify-center shrink-0 h-9 w-9 rounded-xl text-pits-error hover:bg-red-50 hover:text-pits-dark-text transition-all border hover:border-red-200 shadow-sm"
-        title={t('Dismiss Payment')}
-      >
-        <XCircle size={16} />
-      </button>
-      <button
-        onClick={() => requestPaymentAction(payment, 'approve')}
-        title={t('Proof reader')}
+        type="button"
+        onClick={() => setProofReview(payment)}
+        title={t('VERIFY & UNLOCK')}
         className={`inline-flex items-center justify-center rounded-xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft font-black text-[10px] tracking-[0.05em] transition-all shadow-sm active:scale-95 ${
-          compact ? 'h-9 flex-1 px-3' : 'h-9 px-3'
+          compact ? 'h-9 w-full px-3' : 'h-9 px-3'
         }`}
       >
-        <CheckCircle size={14} className="mr-1.5 text-pits-success shrink-0" />
+        <Sparkles size={14} className="mr-1.5 shrink-0 opacity-80" aria-hidden />
         <span className="truncate">{t('VERIFY & UNLOCK')}</span>
-        <Sparkles size={12} className="ml-1.5 shrink-0 opacity-80" aria-hidden />
       </button>
     </div>
   );
@@ -192,11 +153,7 @@ export default function DashboardPage() {
       {/* COMMAND CENTER HEADER */}
       <div className="flex justify-between items-center gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-dim">{t('System Live')}</span>
-          </div>
-          <h2 className="text-2xl sm:text-4xl font-black text-pits-text uppercase italic tracking-tighter leading-none truncate">
+          <h2 className="text-2xl sm:text-4xl font-black text-pits-text uppercase tracking-tighter leading-none truncate">
             {t('Command Center')}
           </h2>
           <p className="text-pits-dim font-bold text-[10px] sm:text-xs mt-1.5 sm:mt-2 uppercase tracking-wide">
@@ -212,8 +169,8 @@ export default function DashboardPage() {
         
         <div className="flex gap-3 shrink-0">
           <div className="hidden lg:flex flex-col items-end mr-4 border-r pr-4">
-             <span className="text-[10px] font-black text-pits-dim uppercase italic">{t('Box Load')}</span>
-             <span className="text-xl font-black text-pits-text italic leading-none">{stats.dailyUsagePercent}%</span>
+             <span className="text-[10px] font-black text-pits-dim uppercase">{t('Box Load')}</span>
+             <span className="text-xl font-black text-pits-text leading-none">{stats.dailyUsagePercent}%</span>
           </div>
           <button 
             onClick={handleRefresh}
@@ -227,7 +184,7 @@ export default function DashboardPage() {
       {setupCard?.show && (
         <div className="mb-4 rounded-2xl border border-pits-primary/40 bg-pits-primary-soft p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-black uppercase italic text-pits-ink">{t('Continue setup')}</p>
+            <p className="font-black uppercase text-pits-ink">{t('Continue setup')}</p>
             <p className="text-sm text-pits-ink-muted">{t('Finish configuring your gym')}</p>
           </div>
           <div className="flex gap-2">
@@ -270,7 +227,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.pendingPayments.length}</p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{stats.pendingPayments.length}</p>
             <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-red">
                <span className="truncate pr-1">{t('Awaiting Review')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
@@ -290,7 +247,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.overdueMembers.length}</p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{stats.overdueMembers.length}</p>
             <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-red-700">
                <span className="truncate pr-1">{t('Overdue today help')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
@@ -310,7 +267,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.inactiveAthletes.length}</p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{stats.inactiveAthletes.length}</p>
             <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-orange-600">
                <span className="truncate pr-1">{t('Out of box 10+ days')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
@@ -330,7 +287,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.lowOccupancyClasses.length}</p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{stats.lowOccupancyClasses.length}</p>
             <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-orange-600">
                <span className="truncate pr-1">{t('Capacity Gaps Today')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
@@ -350,8 +307,8 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text italic leading-none">{stats.totalMembers.filter(m => m.is_solvent).length}</p>
-            <p className="text-[9px] sm:text-[10px] text-pits-dim font-black uppercase tracking-widest mt-1.5 italic flex items-center justify-between group-hover:text-pits-text transition-colors">
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{stats.totalMembers.filter(m => m.is_solvent).length}</p>
+            <p className="text-[9px] sm:text-[10px] text-pits-dim font-black uppercase tracking-widest mt-1.5 flex items-center justify-between group-hover:text-pits-text transition-colors">
               <span className="truncate pr-1">{t('Active Athletes')}</span>
               <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </p>
@@ -363,25 +320,25 @@ export default function DashboardPage() {
       <div className="bg-pits-surface-elevated rounded-2xl sm:rounded-3xl border shadow-sm overflow-hidden min-w-0">
         <div className="px-4 py-3.5 sm:px-6 sm:py-5 border-b border-gray-50 flex justify-between items-center gap-3 bg-gray-50/10">
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-xl font-black text-pits-text uppercase italic tracking-tighter flex items-center leading-none">
+            <h3 className="text-sm sm:text-xl font-black text-pits-text uppercase tracking-tighter flex items-center leading-none">
               <Zap size={18} className="mr-2 sm:mr-3 text-pits-red shrink-0" />
               <span className="truncate">{t('Priority Action Queue')}</span>
             </h3>
             <p className="hidden sm:block text-[10px] text-pits-dim font-bold uppercase tracking-widest mt-2">{t('Critical issues waiting for your decision')}</p>
           </div>
-          <span className="shrink-0 bg-pits-red/10 text-pits-red text-[10px] sm:text-xs font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-tighter italic">
+          <span className="shrink-0 bg-pits-red/10 text-pits-red text-[10px] sm:text-xs font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-tighter">
             {t('{{count}} HIGH STAKE', { count: stats.pendingPayments.length })}
           </span>
         </div>
 
         {loading ? (
-          <div className="p-8 sm:p-16 text-center text-pits-dim font-black uppercase text-xs tracking-[0.3em] animate-pulse italic">{t('Verifying Ledger Persistence...')}</div>
+          <div className="p-8 sm:p-16 text-center text-pits-dim font-black uppercase text-xs tracking-[0.3em] animate-pulse">{t('Verifying Ledger Persistence...')}</div>
         ) : stats.pendingPayments.length === 0 ? (
           <div className="p-8 sm:p-16 text-center text-pits-dim flex flex-col items-center">
              <div className="w-14 h-14 sm:w-20 sm:h-20 bg-green-50 rounded-full flex items-center justify-center mb-4 sm:mb-6">
                 <CheckCircle className="w-7 h-7 sm:w-10 sm:h-10 text-green-500 opacity-40 shadow-sm" />
              </div>
-             <p className="font-black uppercase text-sm tracking-tight italic text-pits-text">{t('All operational frictions resolved.')}</p>
+             <p className="font-black uppercase text-sm tracking-tight text-pits-text">{t('All operational frictions resolved.')}</p>
              <p className="text-xs text-gray-400 mt-2 font-medium">{t('Your queue is empty. Focus on coaching.')}</p>
           </div>
         ) : (
@@ -471,43 +428,81 @@ export default function DashboardPage() {
         variant={modalConfig.variant}
       />
 
-      <PaymentProofPreviewModal
-        url={proofPreview?.url ?? null}
-        athleteName={proofPreview?.athleteName}
-        onClose={() => setProofPreview(null)}
-      />
+      {proofReview ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-pits-background/60 p-4 backdrop-blur-sm"
+          onClick={() => setProofReview(null)}
+        >
+          <div
+            className="bg-pits-surface-elevated border border-pits-edge rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center gap-3 p-4 border-b border-pits-edge">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-pits-text uppercase tracking-tight truncate">
+                  {t('Proof reader')}
+                </h3>
+                <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1 truncate">
+                  {proofReview.profiles?.full_name || t('Unknown Athlete')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProofReview(null)}
+                className="p-2 rounded-lg border text-pits-dim hover:text-pits-text shrink-0"
+                aria-label={t('Close')}
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 space-y-3">
+              {proofReview.proof_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={proofReview.proof_image_url}
+                  alt={t('Check Proof')}
+                  className="w-full max-h-56 object-contain rounded-lg bg-pits-surface-muted"
+                />
+              ) : null}
+              <PaymentProofReader
+                paymentId={proofReview.id}
+                proofHref={proofReview.proof_image_url}
+              />
+            </div>
+            <div className="p-4 border-t border-pits-edge flex gap-2">
+              <button
+                type="button"
+                onClick={() => requestReject(proofReview)}
+                className="h-10 px-3 rounded-xl border text-pits-error text-[10px] font-black uppercase"
+              >
+                {t('Dismiss Payment')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleApprove(proofReview.id, proofReview.user_id)}
+                className="h-10 flex-1 px-3 rounded-xl bg-pits-primary text-pits-dark-text text-[10px] font-black uppercase inline-flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle size={14} className="text-pits-success" />
+                {t('VERIFY & UNLOCK')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ConfirmDialog
-        isOpen={confirmConfig.isOpen}
-        title={confirmConfig.action === 'reject' ? t('Reject Payment') : t('Protocol: Verify')}
-        message={
-          confirmConfig.action === 'reject'
-            ? t(
-                "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?",
-                { name: confirmConfig.athleteName },
-              )
-            : t('Confirm status update message', { name: confirmConfig.athleteName })
-        }
-        confirmLabel={confirmConfig.action === 'reject' ? t('Confirm Rejection') : t('VERIFY')}
-        confirmIcon={
-          confirmConfig.action === 'approve' ? (
-            <Sparkles size={12} className="shrink-0 opacity-80" aria-hidden />
-          ) : undefined
-        }
+        isOpen={rejectConfirm.isOpen}
+        title={t('Reject Payment')}
+        message={t(
+          "This will block the athlete's access immediately. Are you sure you want to reject the payment from {{name}}?",
+          { name: rejectConfirm.athleteName },
+        )}
+        confirmLabel={t('Confirm Rejection')}
         cancelLabel={t('Discard')}
-        variant={confirmConfig.action === 'reject' ? 'danger' : 'default'}
-        onConfirm={handleConfirmAction}
-        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
-      >
-        {confirmConfig.action === 'approve' && confirmConfig.paymentId ? (
-          <PaymentProofReader
-            paymentId={confirmConfig.paymentId}
-            proofHref={
-              stats.pendingPayments.find((p) => p.id === confirmConfig.paymentId)?.proof_image_url
-            }
-          />
-        ) : null}
-      </ConfirmDialog>
+        variant="danger"
+        onConfirm={() => void handleReject(rejectConfirm.paymentId, rejectConfirm.userId)}
+        onCancel={() => setRejectConfirm((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

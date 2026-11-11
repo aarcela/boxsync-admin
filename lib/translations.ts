@@ -544,6 +544,20 @@ export const translations = {
     'Capacity Gaps Today': 'Capacity Gaps Today',
     'Active Roster': 'Active Roster',
     Roster: 'Roster',
+    'This week': 'This week',
+    '{{classes}} classes · {{bookings}} bookings · {{checkins}} check-ins':
+      '{{classes}} classes · {{bookings}} bookings · {{checkins}} check-ins',
+    '{{count}} members without a booking this week':
+      '{{count}} members without a booking this week',
+    'Print check-in QR': 'Print check-in QR',
+    'Open schedule': 'Open schedule',
+    'No classes this week yet. Add them on the schedule so members can book.':
+      'No classes this week yet. Add them on the schedule so members can book.',
+    'Classes this week but no bookings yet. Share the join link so athletes can register and book.':
+      'Classes this week but no bookings yet. Share the join link so athletes can register and book.',
+    'Members booked this week but nobody checked in. Print the lobby QR and put it at the door.':
+      'Members booked this week but nobody checked in. Print the lobby QR and put it at the door.',
+    'Could not copy link': 'Could not copy link',
     'Priority Action Queue': 'Priority Action Queue',
     'Critical issues waiting for your decision': 'Critical issues waiting for your decision',
     '{{count}} HIGH STAKE': '{{count}} HIGH STAKE',
@@ -2446,6 +2460,20 @@ export const translations = {
     'Capacity Gaps Today': 'Huecos de Capacidad Hoy',
     'Active Roster': 'Plantilla Activa',
     Roster: 'Plantilla',
+    'This week': 'Esta semana',
+    '{{classes}} classes · {{bookings}} bookings · {{checkins}} check-ins':
+      '{{classes}} clases · {{bookings}} reservas · {{checkins}} asistencias',
+    '{{count}} members without a booking this week':
+      '{{count}} miembros sin reservar esta semana',
+    'Print check-in QR': 'Imprimir QR de check-in',
+    'Open schedule': 'Abrir horario',
+    'No classes this week yet. Add them on the schedule so members can book.':
+      'Aún no hay clases esta semana. Agrégalas en el horario para que los miembros puedan reservar.',
+    'Classes this week but no bookings yet. Share the join link so athletes can register and book.':
+      'Hay clases esta semana, pero todavía no hay reservas. Comparte el link de registro para que se unan y reserven.',
+    'Members booked this week but nobody checked in. Print the lobby QR and put it at the door.':
+      'Hay reservas esta semana, pero nadie hizo check-in. Imprime el QR del lobby y colócalo en la puerta.',
+    'Could not copy link': 'No se pudo copiar el enlace',
     'Priority Action Queue': 'Cola de Acciones Prioritarias',
     'Critical issues waiting for your decision': 'Problemas críticos esperando tu decisión',
     '{{count}} HIGH STAKE': '{{count}} ALTA PRIORIDAD',
