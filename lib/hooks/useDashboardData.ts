@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '@/components/TenantContext';
-import { dashboardService, DashboardStats } from '../services/dashboardService';
+import {
+  dashboardService,
+  DashboardStats,
+  EMPTY_TODAY_ATTENDANCE,
+} from '../services/dashboardService';
 
 export function useDashboardData() {
   const { tenantId } = useTenant();
@@ -12,6 +16,7 @@ export function useDashboardData() {
     totalMembers: [],
     lowOccupancyClasses: [],
     dailyUsagePercent: 0,
+    todayAttendance: EMPTY_TODAY_ATTENDANCE,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

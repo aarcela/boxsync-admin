@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { getCaracasDate, getCaracasDayRange } from '../utils/date';
 import { signPaymentProofUrl } from './financialService';
 
 export interface DashboardProfile {
@@ -34,6 +35,20 @@ export interface DashboardClass {
   bookings: { count: number }[];
 }
 
+export interface TodayAttendance {
+  classes: number;
+  booked: number;
+  attended: number;
+  noShow: number;
+}
+
+export const EMPTY_TODAY_ATTENDANCE: TodayAttendance = {
+  classes: 0,
+  booked: 0,
+  attended: 0,
+  noShow: 0,
+};
+
 export interface DashboardStats {
   pendingPayments: DashboardPayment[];
   inactiveAthletes: DashboardProfile[];
@@ -42,6 +57,7 @@ export interface DashboardStats {
   totalMembers: DashboardProfile[];
   lowOccupancyClasses: DashboardClass[];
   dailyUsagePercent: number;
+  todayAttendance: TodayAttendance;
 }
 
 export const dashboardService = {
@@ -146,6 +162,37 @@ export const dashboardService = {
     };
   },
 
+  /**
+   * Counts today's bookings by status (Caracas day, class start_time).
+   */
+  async getTodayAttendance(): Promise<TodayAttendance> {
+    const { startUtc, endUtc } = getCaracasDayRange(getCaracasDate());
+    const [classesResult, bookingsResult] = await Promise.all([
+      supabase
+        .from('classes')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_cancelled', false)
+        .gte('start_time', startUtc)
+        .lte('start_time', endUtc),
+      supabase
+        .from('bookings')
+        .select('status, classes!inner(start_time)')
+        .gte('classes.start_time', startUtc)
+        .lte('classes.start_time', endUtc),
+    ]);
+
+    if (classesResult.error) throw classesResult.error;
+    if (bookingsResult.error) throw bookingsResult.error;
+
+    const counts = { ...EMPTY_TODAY_ATTENDANCE, classes: classesResult.count ?? 0 };
+    for (const row of bookingsResult.data || []) {
+      if (row.status === 'booked') counts.booked += 1;
+      else if (row.status === 'attended') counts.attended += 1;
+      else if (row.status === 'no_show') counts.noShow += 1;
+    }
+    return counts;
+  },
+
   async getOverdueMembers(tenantId: string): Promise<DashboardProfile[]> {
     const { data, error } = await supabase.rpc('overdue_members_today', {
       p_tenant: tenantId,
@@ -180,11 +227,18 @@ export const dashboardService = {
    * Aggregates all dashboard data.
    */
   async getAllDashboardData(tenantId?: string): Promise<DashboardStats> {
-    const [pendingPayments, allMembers, { lowOccupancy, usagePercent }, overdueMembers] = await Promise.all([
+    const [
+      pendingPayments,
+      allMembers,
+      { lowOccupancy, usagePercent },
+      overdueMembers,
+      todayAttendance,
+    ] = await Promise.all([
       this.getPendingPayments(),
       this.getTotalMembers(),
       this.getTodayUsageData(),
       tenantId ? this.getOverdueMembers(tenantId) : Promise.resolve([] as DashboardProfile[]),
+      this.getTodayAttendance(),
     ]);
 
     const inactiveAthletes = await this.getInactiveAthletes(allMembers);
@@ -198,6 +252,7 @@ export const dashboardService = {
       totalMembers: allMembers,
       lowOccupancyClasses: lowOccupancy,
       dailyUsagePercent: usagePercent,
+      todayAttendance,
     };
   }
 };

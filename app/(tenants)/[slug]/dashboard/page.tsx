@@ -66,7 +66,7 @@ export default function DashboardPage() {
     variant: null,
   });
 
-  /** Optional AI/proof review — approve from the table is 1 click; this is assist only. */
+  /** Proof + AI + accept/reject in one panel. */
   const [proofReview, setProofReview] = useState<DashboardPayment | null>(null);
 
   const openModal = (
@@ -212,6 +212,56 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* TODAY ATTENDANCE */}
+      <Link
+        href="/dashboard/attendance"
+        className="block bg-pits-surface-elevated rounded-2xl border shadow-sm p-4 sm:p-5 border-b-4 border-b-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+      >
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+            {t('Daily Attendance')}
+          </p>
+          <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 flex items-center gap-1">
+            {t('Today')}
+            <ChevronRight size={12} />
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+          <div>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">
+              {stats.todayAttendance.classes}
+            </p>
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+              {t('Classes')}
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">
+              {stats.todayAttendance.booked}
+            </p>
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+              {t('booked')}
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl sm:text-3xl font-black text-green-600 leading-none">
+              {stats.todayAttendance.attended}
+            </p>
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+              {t('attended')}
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl sm:text-3xl font-black text-pits-error leading-none">
+              {stats.todayAttendance.noShow}
+            </p>
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+              {t('no_show')}
+            </p>
+          </div>
+        </div>
+      </Link>
 
       {/* OPERATIONAL SIGNAL GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
