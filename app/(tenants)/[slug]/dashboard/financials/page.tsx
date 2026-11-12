@@ -239,7 +239,7 @@ export default function FinancialsPage() {
           <Calendar size={16} className="text-pits-red" />
           <span className="text-[11px] font-black uppercase tracking-widest text-pits-text">{t('Filters')}</span>
         </div>
-        <div className="flex flex-wrap gap-1.5 bg-pits-surface-muted p-1 rounded-xl">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 bg-pits-surface-muted p-1 rounded-xl">
           {([
             { id: 'today' as const, label: t('Today') },
             { id: 'week' as const, label: t('This Week') },
@@ -253,7 +253,7 @@ export default function FinancialsPage() {
                 setPeriod(id);
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 text-[11px] font-black rounded-lg uppercase transition-all ${
+              className={`px-3 min-h-9 text-[11px] font-black rounded-lg uppercase transition-all ${
                 period === id ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -406,7 +406,7 @@ export default function FinancialsPage() {
                                 <button
                                   type="button"
                                   onClick={() => setReviewId(p.id)}
-                                  className="inline-flex items-center gap-1.5 bg-pits-primary text-pits-dark-text px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm hover:bg-pits-primary-dark active:scale-95 transition-all"
+                                  className="inline-flex items-center gap-1.5 bg-pits-primary text-pits-dark-text px-3 min-h-9 rounded-lg text-xs font-semibold shadow-sm hover:bg-pits-primary-dark active:scale-95 transition-all"
                                 >
                                   {t('Review')}
                                 </button>

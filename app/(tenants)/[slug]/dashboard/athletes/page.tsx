@@ -9,7 +9,7 @@ import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, Chevro
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { formatRelative } from '@/lib/utils/format-date';
+import { formatDate, formatRelative } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 import { Profile, MembershipPlan } from '@/lib/types/gym';
@@ -186,11 +186,13 @@ export default function AthletesPage() {
     setMenuPosition(null);
   };
 
-  const toggleMenu = (profileId: string) => {
+  /** The row and the phone card each have a ⋯ button; anchor the menu to the one tapped. */
+  const toggleMenu = (profileId: string, button: HTMLButtonElement) => {
     if (openMenuId === profileId) {
       closeMenu();
       return;
     }
+    menuButtonRefs.current[profileId] = button;
     setOpenMenuId(profileId);
   };
 
@@ -597,7 +599,96 @@ export default function AthletesPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="sm:hidden divide-y divide-pits-edge">
+            {profiles.length === 0 ? (
+              <li className="px-4 py-14 text-center text-pits-dim">{t('No records found.')}</li>
+            ) : (
+              profiles.map((profile) => {
+                const phoneDigits = profile.phone?.replace(/[^0-9]/g, '') || '';
+                const isSelected = selectedIds.has(profile.id);
+                const renew = profile.role === 'member' ? getRenewDateInputValue(profile, timezone) : '';
+                return (
+                  <li
+                    key={profile.id}
+                    className={`flex items-start gap-2 px-2 py-3 ${
+                      isSelected ? 'ring-1 ring-inset ring-pits-primary ' : ''
+                    }${profile.is_solvent ? '' : 'bg-pits-warning-soft'}`}
+                  >
+                    <label className="flex items-center justify-center w-9 h-10 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelected(profile.id)}
+                        aria-label={t('Select athlete')}
+                        className="rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
+                      className="flex flex-1 min-w-0 items-start gap-3 text-left"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-pits-surface-muted border border-pits-edge overflow-hidden shrink-0 flex items-center justify-center">
+                        <ProfileAvatar url={profile.avatar_url} name={profile.full_name} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-pits-text truncate">{profile.full_name || t('Unnamed')}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {profile.role === 'member' ? (
+                            <span
+                              className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                                profile.is_solvent
+                                  ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                                  : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
+                              }`}
+                            >
+                              {profile.is_solvent ? t('Up to date') : t('With debt')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                              {profile.role}
+                            </span>
+                          )}
+                          {profile.plan ? (
+                            <span className="text-xs text-pits-dim truncate">{planLabel(profile.plan)}</span>
+                          ) : null}
+                        </div>
+                        {renew ? (
+                          <p className="mt-0.5 text-xs text-pits-dim">
+                            {t('Renews on {{date}}', { date: formatDate(renew, lang) })}
+                          </p>
+                        ) : null}
+                      </div>
+                    </button>
+                    <div className="flex items-center shrink-0">
+                      {phoneDigits ? (
+                        <a
+                          href={`https://wa.me/${phoneDigits}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-center w-10 h-10 text-pits-positive rounded-lg hover:bg-pits-positive-soft"
+                          aria-label={t('Text on WhatsApp')}
+                        >
+                          <MessageCircle size={18} />
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => toggleMenu(profile.id, e.currentTarget)}
+                        className="flex items-center justify-center w-10 h-10 text-pits-dim rounded-lg hover:bg-pits-surface-muted"
+                        aria-label={t('More actions')}
+                        aria-expanded={openMenuId === profile.id}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-[11px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
                 <tr>
@@ -716,7 +807,7 @@ export default function AthletesPage() {
                                     href={`https://wa.me/${phoneDigits}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="p-1 text-pits-positive hover:bg-pits-positive-soft rounded-md transition-colors shrink-0"
+                                    className="p-2 -my-1 text-pits-positive hover:bg-pits-positive-soft rounded-md transition-colors shrink-0"
                                     title={t('Text on WhatsApp')}
                                     aria-label={t('Text on WhatsApp')}
                                     onClick={(e) => e.stopPropagation()}
@@ -884,10 +975,7 @@ export default function AthletesPage() {
                             </button>
                             <button
                               type="button"
-                              ref={(element) => {
-                                menuButtonRefs.current[profile.id] = element;
-                              }}
-                              onClick={() => toggleMenu(profile.id)}
+                              onClick={(e) => toggleMenu(profile.id, e.currentTarget)}
                               className="p-2 min-h-9 min-w-9 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
                               title={t('More actions')}
                               aria-label={t('More actions')}
@@ -904,6 +992,7 @@ export default function AthletesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {!loading && totalCount > 0 && (

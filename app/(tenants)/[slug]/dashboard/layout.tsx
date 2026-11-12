@@ -658,7 +658,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       type="button"
                       aria-pressed={moneyCurrency.mode === mode}
                       onClick={() => moneyCurrency.setMode(mode)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
+                      className={`px-3 min-h-8 rounded-md text-xs font-semibold ${
                         moneyCurrency.mode === mode
                           ? 'bg-pits-surface-elevated text-pits-text shadow-sm'
                           : 'text-pits-dim hover:text-pits-text'

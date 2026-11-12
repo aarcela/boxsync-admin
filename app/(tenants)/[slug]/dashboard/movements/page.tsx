@@ -137,7 +137,7 @@ export default function MovementsPage() {
           <p className="page-subtitle">{t('Everything that came in and went out this month.')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-xl border border-pits-edge bg-pits-surface-elevated">
+          <div className="flex flex-1 sm:flex-none items-center justify-between rounded-xl border border-pits-edge bg-pits-surface-elevated">
             <button
               type="button"
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
@@ -146,7 +146,7 @@ export default function MovementsPage() {
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="px-2 text-sm font-semibold text-pits-text min-w-[8.5rem] text-center">
+            <span className="px-1 text-sm font-semibold text-pits-text min-w-[8.5rem] text-center whitespace-nowrap">
               {capitalizeFirst(formatMonthYear(`${month}-01`, lang))}
             </span>
             <button
@@ -251,7 +251,7 @@ export default function MovementsPage() {
               const original = m.currency !== displayCode ? `${currencySymbol(m.currency)}${m.amount.toLocaleString()}` : '';
               const detail = [t(m.category as TranslationKey), methodLabel(m.paymentMethod)].filter(Boolean).join(' · ');
               return (
-                <li key={`${m.source}-${m.id}`} className="flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 py-3">
+                <li key={`${m.source}-${m.id}`} className="flex items-start sm:items-center gap-3 px-4 py-3">
                   <span
                     className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center ${
                       m.kind === 'in' ? 'bg-pits-positive-soft text-pits-positive' : 'bg-pits-danger-soft text-pits-danger'
@@ -260,58 +260,68 @@ export default function MovementsPage() {
                   >
                     {m.kind === 'in' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-pits-text truncate">{m.description}</p>
-                    <p className="text-xs text-pits-dim truncate">
-                      {formatDate(m.date, lang)}
-                      {detail ? ` · ${detail}` : ''}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
-                      STATUS_TONE[m.status] ?? STATUS_TONE.cancelled
-                    }`}
-                  >
-                    {t(m.status as TranslationKey)}
-                  </span>
-                  <div className="text-right w-28 shrink-0">
-                    <p className={`text-sm font-bold tabular-nums ${m.kind === 'in' ? 'text-pits-positive' : 'text-pits-text'}`}>
-                      {m.kind === 'in' ? '+' : '−'}
-                      {money(value)}
-                    </p>
-                    {original ? <p className="text-[11px] text-pits-dim tabular-nums">{original}</p> : null}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 w-36 justify-end">
-                    {m.source === 'membership' ? (
-                      <Link href="/dashboard/financials" className="text-xs font-semibold text-pits-info hover:underline">
-                        {t('Open in Payments')}
-                      </Link>
-                    ) : (
-                      <>
-                        {m.source === 'expense' ? (
-                          <select
-                            value={m.status}
-                            onChange={(e) => void changeExpenseStatus(m, e.target.value as 'pending' | 'paid' | 'due')}
-                            aria-label={t('Change Status')}
-                            className="h-8 rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-xs font-semibold text-pits-text"
-                          >
-                            {(['paid', 'pending', 'due'] as const).map((s) => (
-                              <option key={s} value={s}>
-                                {t(s)}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => setToDelete(m)}
-                          aria-label={t('Delete')}
-                          className="p-2 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                  {/* Phone: description + amount, then status + actions. Wider: one row. */}
+                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 sm:flex sm:items-center">
+                    <div className="min-w-0 sm:flex-1 sm:order-1">
+                      <p className="text-sm font-semibold text-pits-text line-clamp-2 sm:truncate">{m.description}</p>
+                      <p className="text-xs text-pits-dim truncate">
+                        {formatDate(m.date, lang)}
+                        {detail ? ` · ${detail}` : ''}
+                      </p>
+                    </div>
+                    <div className="text-right sm:w-28 shrink-0 sm:order-3">
+                      <p className={`text-sm font-bold tabular-nums ${m.kind === 'in' ? 'text-pits-positive' : 'text-pits-text'}`}>
+                        {m.kind === 'in' ? '+' : '−'}
+                        {money(value)}
+                      </p>
+                      {original ? <p className="text-[11px] text-pits-dim tabular-nums">{original}</p> : null}
+                    </div>
+                    <div className="col-span-2 flex items-center justify-between gap-2 sm:contents">
+                      {/* Expenses change status in place, so the dropdown is their badge. */}
+                      {m.source === 'expense' ? (
+                        <span className="sm:order-2" />
+                      ) : (
+                        <span
+                          className={`sm:order-2 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                            STATUS_TONE[m.status] ?? STATUS_TONE.cancelled
+                          }`}
                         >
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    )}
+                          {t(m.status as TranslationKey)}
+                        </span>
+                      )}
+                      <div className="sm:order-4 flex items-center gap-1 shrink-0 sm:w-36 justify-end">
+                        {m.source === 'membership' ? (
+                          <Link href="/dashboard/financials" className="py-2 text-xs font-semibold text-pits-info hover:underline">
+                            {t('Open in Payments')}
+                          </Link>
+                        ) : (
+                          <>
+                            {m.source === 'expense' ? (
+                              <select
+                                value={m.status}
+                                onChange={(e) => void changeExpenseStatus(m, e.target.value as 'pending' | 'paid' | 'due')}
+                                aria-label={t('Change Status')}
+                                className="h-9 rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-xs font-semibold text-pits-text"
+                              >
+                                {(['paid', 'pending', 'due'] as const).map((s) => (
+                                  <option key={s} value={s}>
+                                    {t(s)}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => setToDelete(m)}
+                              aria-label={t('Delete')}
+                              className="p-2.5 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </li>
               );

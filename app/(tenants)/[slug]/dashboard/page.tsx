@@ -281,7 +281,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.pendingPayments.length)}</p>
             <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
-               <span className="truncate pr-1">{t('Awaiting Review')}</span>
+               <span className="line-clamp-2 pr-1">{t('Awaiting Review')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </div>
           </div>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.overdueMembers.length)}</p>
             <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
-               <span className="truncate pr-1">{t('Overdue today help')}</span>
+               <span className="line-clamp-2 pr-1">{t('Overdue today help')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
           </div>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.inactiveAthletes.length)}</p>
             <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
-               <span className="truncate pr-1">{t('Out of box 10+ days')}</span>
+               <span className="line-clamp-2 pr-1">{t('Out of box 10+ days')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
           </div>
@@ -341,7 +341,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.lowOccupancyClasses.length)}</p>
             <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
-               <span className="truncate pr-1">{t('Low occupancy today')}</span>
+               <span className="line-clamp-2 pr-1">{t('Low occupancy today')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.totalMembers.filter(m => m.is_solvent).length)}</p>
             <p className="text-[11px] sm:text-[11px] text-pits-dim font-black uppercase tracking-widest mt-1.5 flex items-center justify-between group-hover:text-pits-text transition-colors">
-              <span className="truncate pr-1">{t('Active Athletes')}</span>
+              <span className="line-clamp-2 pr-1">{t('Active Athletes')}</span>
               <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </p>
           </div>

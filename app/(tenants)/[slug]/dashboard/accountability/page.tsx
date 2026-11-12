@@ -140,7 +140,7 @@ export default function ThisMonthPage() {
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="px-2 text-sm font-semibold text-pits-text min-w-[8.5rem] text-center">
+          <span className="px-1 text-sm font-semibold text-pits-text min-w-[8.5rem] text-center whitespace-nowrap">
             {capitalizeFirst(formatMonthYear(`${month}-01`, lang))}
           </span>
           <button
