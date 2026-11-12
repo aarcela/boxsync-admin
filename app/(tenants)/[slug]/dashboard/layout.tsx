@@ -21,7 +21,6 @@ import {
   MessageSquare,
   TrendingUp,
   Wallet,
-  ChevronDown,
   Scale,
   MessagesSquare,
   Trophy,
@@ -63,35 +62,27 @@ import {
 import Image from 'next/image';
 import type { TranslationKey } from '@/lib/translations';
 
-type NavSubItem = {
+type NavTab = {
   name: string;
   href: string;
   icon: LucideIcon;
   tip: string;
 };
 
-type NavLinkItem = {
-  name: string;
-  href: string;
-  icon: LucideIcon;
-  tip: string;
-};
-
-type NavParentItem = {
-  name: string;
-  icon: LucideIcon;
-  tip: string;
-  subItems: NavSubItem[];
-};
-
-type NavItem = NavLinkItem | NavParentItem;
-
-type NavSection = {
+/** One sidebar entry. Groups with several tabs show a tab bar above their pages. */
+type NavGroup = {
   id: string;
-  /** Empty = no header (used when the only item is an accordion with the same name). */
-  label: string;
-  items: NavItem[];
+  name: string;
+  icon: LucideIcon;
+  tip: string;
+  tabs: NavTab[];
 };
+
+/** Home only matches itself; every other tab also owns its sub-routes (e.g. athletes/[id]). */
+function tabMatchLength(pathname: string, href: string): number {
+  if (href === '/dashboard') return pathname === href ? href.length : -1;
+  return pathname === href || pathname.startsWith(`${href}/`) ? href.length : -1;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -104,7 +95,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
-  const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(null);
   const [runningExpiry, setRunningExpiry] = useState(false);
@@ -158,162 +148,124 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return userFullName.slice(0, 2).toUpperCase();
   })();
 
-  const navSections = useMemo((): NavSection[] => {
-    const moneySubItems: NavSubItem[] = [
-      { name: t('Money overview'), href: '/dashboard/financials', icon: DollarSign, tip: t('Nav tip Money overview') },
-      { name: t('Income'), href: '/dashboard/income', icon: TrendingUp, tip: t('Nav tip Income') },
-      { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet, tip: t('Nav tip Expenses') },
-      { name: t('Who has paid'), href: '/dashboard/accountability', icon: Scale, tip: t('Nav tip Who has paid') },
-      { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags, tip: t('Nav tip Membership Plans') },
-      { name: t('How they pay'), href: '/dashboard/payment_methods', icon: CreditCard, tip: t('Nav tip How they pay') },
-      { name: t('Reports'), href: '/dashboard/financials/insights', icon: BarChart3, tip: t('Nav tip Reports') },
-    ];
-
-    if (userRole === 'admin') {
-      moneySubItems.push(
-        { name: t('Salary'), href: '/dashboard/salary', icon: Banknote, tip: t('Nav tip Salary') },
-        { name: t('Payroll'), href: '/dashboard/payroll', icon: Receipt, tip: t('Nav tip Payroll') },
-      );
-    }
-
-    return [
-      {
-        id: 'today',
-        label: t('Today'),
-        items: [
-          { name: t('Home'), href: '/dashboard', icon: LayoutDashboard, tip: t('Nav tip Home') },
-          { name: t('Nav Check-in'), href: '/dashboard/attendance', icon: ClipboardCheck, tip: t('Nav tip Check-in') },
-          { name: t('Users'), href: '/dashboard/athletes', icon: Users, tip: t('Nav tip Users') },
-        ],
-      },
+  const navGroups = useMemo((): NavGroup[] => {
+    const tab = (name: TranslationKey, href: string, icon: LucideIcon, tip: TranslationKey): NavTab => ({
+      name: t(name),
+      href,
+      icon,
+      tip: t(tip),
+    });
+    const groups: NavGroup[] = [
+      { id: 'home', name: t('Home'), icon: LayoutDashboard, tip: t('Nav tip Home'), tabs: [tab('Home', '/dashboard', LayoutDashboard, 'Nav tip Home')] },
+      { id: 'checkin', name: t('Nav Check-in'), icon: ClipboardCheck, tip: t('Nav tip Check-in'), tabs: [tab('Nav Check-in', '/dashboard/attendance', ClipboardCheck, 'Nav tip Check-in')] },
+      { id: 'users', name: t('Users'), icon: Users, tip: t('Nav tip Users'), tabs: [tab('Users', '/dashboard/athletes', Users, 'Nav tip Users')] },
       {
         id: 'classes',
-        label: '',
-        items: [
-          {
-            name: t('Classes'),
-            icon: Dumbbell,
-            tip: t('Nav tip Classes'),
-            subItems: [
-              { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays, tip: t('Nav tip Schedule') },
-              ...(features.wod
-                ? [{ name: t('Daily workouts'), href: '/dashboard/wods', icon: Dumbbell, tip: t('Nav tip Daily workouts') }]
-                : []),
-              { name: t('Class Types'), href: '/dashboard/class_types', icon: Layers, tip: t('Nav tip Class Types') },
-              ...(features.personalRecords
-                ? [{ name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy, tip: t('Nav tip Personal Records') }]
-                : []),
-            ],
-          },
+        name: t('Classes'),
+        icon: Dumbbell,
+        tip: t('Nav tip Classes'),
+        tabs: [
+          tab('Schedule', '/dashboard/schedule', CalendarDays, 'Nav tip Schedule'),
+          ...(features.wod ? [tab('Daily workouts', '/dashboard/wods', Dumbbell, 'Nav tip Daily workouts')] : []),
+          ...(features.personalRecords
+            ? [tab('Personal Records', '/dashboard/personal_records', Trophy, 'Nav tip Personal Records')]
+            : []),
+          tab('Class Types', '/dashboard/class_types', Layers, 'Nav tip Class Types'),
         ],
       },
       {
         id: 'money',
-        label: '',
-        items: [
-          {
-            name: t('Money'),
-            icon: DollarSign,
-            tip: t('Nav tip Money'),
-            subItems: moneySubItems,
-          },
+        name: t('Money'),
+        icon: DollarSign,
+        tip: t('Nav tip Money'),
+        tabs: [
+          tab('Money overview', '/dashboard/financials', DollarSign, 'Nav tip Money overview'),
+          tab('Who has paid', '/dashboard/accountability', Scale, 'Nav tip Who has paid'),
+          tab('Income', '/dashboard/income', TrendingUp, 'Nav tip Income'),
+          tab('Expenses', '/dashboard/expenses', Wallet, 'Nav tip Expenses'),
+          tab('Reports', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
+          ...(userRole === 'admin'
+            ? [
+                tab('Salary', '/dashboard/salary', Banknote, 'Nav tip Salary'),
+                tab('Payroll', '/dashboard/payroll', Receipt, 'Nav tip Payroll'),
+              ]
+            : []),
         ],
       },
       {
-        id: 'talk',
-        label: t('Talk to members'),
-        items: [
-          { name: t('Announcements'), href: '/dashboard/news', icon: Megaphone, tip: t('Nav tip Announcements') },
-          { name: t('Push notifications'), href: '/dashboard/notifications', icon: Bell, tip: t('Nav tip Push notifications') },
+        id: 'messages',
+        name: t('Messages'),
+        icon: Megaphone,
+        tip: t('Nav tip Messages'),
+        tabs: [
+          tab('Announcements', '/dashboard/news', Megaphone, 'Nav tip Announcements'),
+          tab('Push notifications', '/dashboard/notifications', Bell, 'Nav tip Push notifications'),
           ...(features.community
-            ? [{ name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') }]
+            ? [tab('Community', '/dashboard/community', MessagesSquare, 'Nav tip Community')]
             : []),
-          { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare, tip: t('Nav tip Feedback') },
+          tab('Feedback', '/dashboard/feedback', MessageSquare, 'Nav tip Feedback'),
         ],
       },
       {
         id: 'results',
-        label: t('Results'),
-        items: [
-          { name: t('Box health'), href: '/dashboard/performance', icon: TrendingUp, tip: t('Nav tip Box health') },
-          { name: t('Ask AI'), href: '/dashboard/ask', icon: Sparkles, tip: t('Nav tip Ask AI') },
+        name: t('Results'),
+        icon: BarChart3,
+        tip: t('Nav tip Results'),
+        tabs: [
+          tab('Box health', '/dashboard/performance', TrendingUp, 'Nav tip Box health'),
+          tab('Ask AI', '/dashboard/ask', Sparkles, 'Nav tip Ask AI'),
+          tab('Founding Pilot', '/dashboard/pilot', Rocket, 'Nav tip Founding Pilot'),
         ],
       },
       {
         id: 'settings',
-        label: '',
-        items: [
-          {
-            name: t('Settings'),
-            icon: Settings,
-            tip: t('Nav tip Settings'),
-            subItems: [
-              ...(emailConfirmed
-                ? [
-                    {
-                      name: t('Athlete join QR'),
-                      href: '/dashboard/profile',
-                      icon: QrCode,
-                      tip: t('Nav tip Athlete join QR'),
-                    },
-                  ]
-                : []),
-              ...(signupSource === 'self_serve'
-                ? [
-                    {
-                      name: t('Setup assistant'),
-                      href: '/dashboard/setup',
-                      icon: ListChecks,
-                      tip: t('Configure your gym'),
-                    },
-                  ]
-                : []),
-              ...(userRole === 'admin'
-                ? [
-                    {
-                      name: t('Onboarding'),
-                      href: '/dashboard/onboarding',
-                      icon: ClipboardList,
-                      tip: t('Nav tip Onboarding'),
-                    },
-                    {
-                      name: t('Booking'),
-                      href: '/dashboard/booking',
-                      icon: CalendarClock,
-                      tip: t('Nav tip Booking'),
-                    },
-                    {
-                      name: t('Appearance'),
-                      href: '/dashboard/appearance',
-                      icon: Palette,
-                      tip: t('Nav tip Appearance'),
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
-      },
-      {
-        id: 'special',
-        label: t('Special'),
-        items: [
-          { name: t('Founding Pilot'), href: '/dashboard/pilot', icon: Rocket, tip: t('Nav tip Founding Pilot') },
+        name: t('Settings'),
+        icon: Settings,
+        tip: t('Nav tip Settings'),
+        tabs: [
+          ...(userRole === 'admin' ? [tab('Booking', '/dashboard/booking', CalendarClock, 'Nav tip Booking')] : []),
+          tab('Membership Plans', '/dashboard/plans', Tags, 'Nav tip Membership Plans'),
+          tab('How they pay', '/dashboard/payment_methods', CreditCard, 'Nav tip How they pay'),
+          ...(userRole === 'admin'
+            ? [
+                tab('Onboarding', '/dashboard/onboarding', ClipboardList, 'Nav tip Onboarding'),
+                tab('Appearance', '/dashboard/appearance', Palette, 'Nav tip Appearance'),
+              ]
+            : []),
+          ...(emailConfirmed ? [tab('Join QR', '/dashboard/profile', QrCode, 'Nav tip Athlete join QR')] : []),
+          ...(signupSource === 'self_serve'
+            ? [{ name: t('Setup assistant'), href: '/dashboard/setup', icon: ListChecks, tip: t('Configure your gym') }]
+            : []),
         ],
       },
     ];
+    return groups.filter((g) => g.tabs.length > 0);
   }, [t, userRole, features, emailConfirmed, signupSource]);
 
-  const paletteLinks = useMemo((): PaletteLink[] => {
-    const links: PaletteLink[] = [];
-    for (const section of navSections) {
-      for (const item of section.items) {
-        if ('href' in item) links.push({ name: item.name, href: item.href, icon: item.icon, group: section.label || undefined });
-        else for (const sub of item.subItems) links.push({ name: sub.name, href: sub.href, icon: sub.icon, group: item.name });
+  /** The group and tab that own the current page (longest matching href wins). */
+  const activeNav = useMemo(() => {
+    let best: { group: NavGroup; tab: NavTab; len: number } | null = null;
+    for (const group of navGroups) {
+      for (const navTab of group.tabs) {
+        const len = tabMatchLength(pathname, navTab.href);
+        if (len > (best?.len ?? -1)) best = { group, tab: navTab, len };
       }
     }
-    return links;
-  }, [navSections]);
+    return best;
+  }, [navGroups, pathname]);
+
+  const paletteLinks = useMemo(
+    (): PaletteLink[] =>
+      navGroups.flatMap((group) =>
+        group.tabs.map((navTab) => ({
+          name: navTab.name,
+          href: navTab.href,
+          icon: navTab.icon,
+          group: group.tabs.length > 1 ? group.name : undefined,
+        })),
+      ),
+    [navGroups],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -331,18 +283,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  const toggleMenu = (menuName: string) => {
-    // Collapsed rail has no room for sub-items: expand and open in one click.
-    if (collapsed) {
-      setCollapsed(false);
-      setOpenMenus((prev) => (prev.includes(menuName) ? prev : [...prev, menuName]));
-      return;
-    }
-    setOpenMenus((prev) =>
-      prev.includes(menuName) ? prev.filter((m) => m !== menuName) : [...prev, menuName],
-    );
-  };
 
   const closeSidebarOnMobile = () => setMobileOpen(false);
 
@@ -435,102 +375,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
-        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {navSections.map((section) => (
-            <div key={section.id} className="space-y-1">
-              {section.label && (
-                <p className={`px-3 pt-1 pb-1 text-[10px] font-black uppercase tracking-widest text-pits-shell-ink-muted whitespace-nowrap ${whenExpanded}`}>
-                  {section.label}
-                </p>
-              )}
-              {collapsed && section.id !== 'today' && (
-                <div className="hidden lg:block mx-2 my-2 border-t border-pits-shell-edge" />
-              )}
-              {section.items.map((item) => {
-                const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
-                const isMenuOpen =
-                  openMenus.includes(item.name) ||
-                  ('subItems' in item && item.subItems?.some((sub) => pathname === sub.href) === true);
-                const isActive =
-                  'href' in item
-                    ? pathname === item.href
-                    : 'subItems' in item && item.subItems?.some((sub) => pathname === sub.href);
-                const rowClass = `w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent ${
-                  collapsed ? 'lg:justify-center' : ''
-                } ${
-                  isActive
-                    ? 'border-pits-shell-accent text-pits-shell-ink'
-                    : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'
-                }`;
-                const iconClass = `shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`;
-
-                return (
-                  <div key={`${section.id}-${item.name}`} className="space-y-1">
-                    {hasSubItems ? (
-                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => toggleMenu(item.name)}
-                          aria-expanded={isMenuOpen && !collapsed}
-                          aria-label={item.name}
-                          className={rowClass}
-                        >
-                          <item.icon size={20} className={iconClass} />
-                          <span className={`ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left min-w-0 truncate ${whenExpanded}`}>
-                            {item.name}
-                          </span>
-                          <ChevronDown
-                            size={16}
-                            className={`shrink-0 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''} ${whenExpanded}`}
-                          />
-                        </button>
-                      </Tooltip>
-                    ) : 'href' in item ? (
-                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
-                        <Link
-                          href={item.href}
-                          onClick={closeSidebarOnMobile}
-                          aria-label={item.name}
-                          className={rowClass}
-                        >
-                          <item.icon size={20} className={iconClass} />
-                          <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
-                            {item.name}
-                          </span>
-                        </Link>
-                      </Tooltip>
-                    ) : null}
-
-                    {hasSubItems && isMenuOpen && 'subItems' in item && (
-                      <div className={`ml-2 min-w-0 space-y-1 border-l border-pits-shell-edge pl-2 ${whenExpanded}`}>
-                        {item.subItems.map((sub) => {
-                          const isSubActive = pathname === sub.href;
-                          return (
-                            <Tooltip key={sub.href} content={sub.tip} side="right" className="w-full min-w-0">
-                              <Link
-                                href={sub.href}
-                                onClick={closeSidebarOnMobile}
-                                className={`w-full min-w-0 flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
-                                  ${isSubActive
-                                    ? 'border-pits-shell-accent text-pits-shell-ink'
-                                    : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                                `}
-                              >
-                                <sub.icon size={16} className={`shrink-0 ${isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide min-w-0 truncate">
-                                  {sub.name}
-                                </span>
-                              </Link>
-                            </Tooltip>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        <nav
+          aria-label={t('Menu')}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-1 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {navGroups.map((group) => {
+            const isActive = activeNav?.group.id === group.id;
+            return (
+              <div key={group.id}>
+                {group.id === 'settings' ? <div className="mx-2 my-3 border-t border-pits-shell-edge" /> : null}
+                <Tooltip content={group.tip} side="right" className="w-full min-w-0">
+                  <Link
+                    href={group.tabs[0].href}
+                    onClick={closeSidebarOnMobile}
+                    aria-label={group.name}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent ${
+                      collapsed ? 'lg:justify-center' : ''
+                    } ${
+                      isActive
+                        ? 'border-pits-shell-accent text-pits-shell-ink'
+                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'
+                    }`}
+                  >
+                    <group.icon
+                      size={20}
+                      className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`}
+                    />
+                    <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
+                      {group.name}
+                    </span>
+                  </Link>
+                </Tooltip>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer / Logout */}
@@ -696,6 +575,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               : 'overflow-y-auto overflow-x-hidden'
           }`}
         >
+          {activeNav && activeNav.group.tabs.length > 1 ? (
+            <nav
+              aria-label={activeNav.group.name}
+              className="-mx-4 lg:-mx-6 -mt-4 lg:-mt-6 mb-4 lg:mb-6 px-4 lg:px-6 border-b border-pits-border bg-pits-surface-elevated shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <ul className="flex gap-1 min-w-max">
+                {activeNav.group.tabs.map((navTab) => {
+                  const selected = navTab.href === activeNav.tab.href;
+                  return (
+                    <li key={navTab.href}>
+                      <Link
+                        href={navTab.href}
+                        aria-current={selected ? 'page' : undefined}
+                        className={`inline-flex items-center gap-2 px-3 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                          selected
+                            ? 'border-pits-primary text-pits-text'
+                            : 'border-transparent text-pits-dim hover:text-pits-text'
+                        }`}
+                      >
+                        <navTab.icon size={16} className={selected ? 'text-pits-primary' : ''} />
+                        {navTab.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ) : null}
           {children}
         </main>
       </div>
