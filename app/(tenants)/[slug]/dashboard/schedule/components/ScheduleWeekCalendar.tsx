@@ -23,10 +23,10 @@ import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
-const START_HOUR = 5;
-const END_HOUR = 21;
+/** Default visible range; it stretches when a class in the week falls outside it. */
+const DEFAULT_START_HOUR = 5;
+const DEFAULT_END_HOUR = 21;
 const SLOT_HEIGHT = 56;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
 interface Coach {
   id: string;
@@ -37,6 +37,45 @@ interface ScheduleWeekCalendarProps {
   onCreateSlot: (date: string, time: string) => void;
   refreshKey?: number;
   onClassesChanged?: () => void;
+}
+
+/**
+ * Side-by-side lanes for overlapping classes in one day, so none hides behind another.
+ * Returns lane index and lane count (of its overlap group) per class id.
+ */
+function layoutLanes(dayClasses: ClassSession[]): Map<string, { lane: number; lanes: number }> {
+  const sorted = [...dayClasses].sort(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+  );
+  const result = new Map<string, { lane: number; lanes: number }>();
+  let group: { id: string; lane: number }[] = [];
+  let laneEnds: number[] = [];
+  let groupEnd = -Infinity;
+  const flush = () => {
+    for (const item of group) result.set(item.id, { lane: item.lane, lanes: laneEnds.length });
+    group = [];
+    laneEnds = [];
+  };
+  for (const cls of sorted) {
+    const start = new Date(cls.start_time).getTime();
+    // Short classes still take 30 min of space on the grid.
+    const end = Math.max(new Date(cls.end_time).getTime(), start + 30 * 60000);
+    if (start >= groupEnd) {
+      flush();
+      groupEnd = -Infinity;
+    }
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(end);
+    } else {
+      laneEnds[lane] = end;
+    }
+    group.push({ id: cls.id, lane });
+    groupEnd = Math.max(groupEnd, end);
+  }
+  flush();
+  return result;
 }
 
 function getDurationMinutes(startIso: string, endIso: string): number {
@@ -74,6 +113,19 @@ export default function ScheduleWeekCalendar({
 
   const weekDays = useMemo(() => getGymWeekDays(anchorDate), [anchorDate]);
   const weekRange = useMemo(() => getGymWeekRange(anchorDate, tz), [anchorDate, tz]);
+  // Stretch the grid so classes before 05:00 or after 21:00 are still shown.
+  const { START_HOUR, HOURS } = useMemo(() => {
+    let start = DEFAULT_START_HOUR;
+    let end = DEFAULT_END_HOUR;
+    for (const cls of classes) {
+      const { hour } = getGymHourMinute(cls.start_time, tz);
+      const endHour = getGymHourMinute(cls.end_time, tz).hour;
+      start = Math.min(start, hour);
+      end = Math.max(end, hour, endHour > hour ? endHour : hour);
+    }
+    end = Math.min(end, 23);
+    return { START_HOUR: start, HOURS: Array.from({ length: end - start + 1 }, (_, i) => start + i) };
+  }, [classes, tz]);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const periodLabel = useMemo(() => {
@@ -175,6 +227,23 @@ export default function ScheduleWeekCalendar({
 
   const handleEmptySlot = (day: string, hour: number) => {
     onCreateSlot(day, `${String(hour).padStart(2, '0')}:00`);
+  };
+
+  /** Moving the start keeps the class length, so a new start never leaves a 12-hour class. */
+  const moveStart = (nextDate: string, nextTime: string) => {
+    if (bulkDate && bulkTime && bulkEndDate && bulkEndTime && nextDate && nextTime) {
+      const prevStart = gymDateTimeToUtc(bulkDate, bulkTime, tz).getTime();
+      const prevEnd = gymDateTimeToUtc(bulkEndDate, bulkEndTime, tz).getTime();
+      const nextStart = gymDateTimeToUtc(nextDate, nextTime, tz).getTime();
+      const length = prevEnd - prevStart;
+      if (Number.isFinite(nextStart) && length > 0) {
+        const nextEnd = new Date(nextStart + length).toISOString();
+        setBulkEndDate(getGymDateFromIso(nextEnd, tz));
+        setBulkEndTime(getGymTimeLabel(nextEnd, tz));
+      }
+    }
+    setBulkDate(nextDate);
+    setBulkTime(nextTime);
   };
 
   const handleApplyBulk = async () => {
@@ -355,7 +424,7 @@ export default function ScheduleWeekCalendar({
           <input
             type="date"
             value={bulkDate}
-            onChange={(e) => setBulkDate(e.target.value)}
+            onChange={(e) => moveStart(e.target.value, bulkTime)}
             disabled={!singleSelected}
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start date')}
@@ -363,7 +432,7 @@ export default function ScheduleWeekCalendar({
           <input
             type="time"
             value={bulkTime}
-            onChange={(e) => setBulkTime(e.target.value)}
+            onChange={(e) => moveStart(bulkDate, e.target.value)}
             disabled={!singleSelected}
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start time')}
@@ -385,6 +454,11 @@ export default function ScheduleWeekCalendar({
             className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('End time')}
           />
+          {singleSelected && bulkTime && bulkTime < '05:00' ? (
+            <span className="text-[11px] font-semibold text-pits-warning">
+              {t('Starts at {{time}} (early morning). Did you mean PM?', { time: bulkTime })}
+            </span>
+          ) : null}
           <button
             type="button"
             disabled={saving || !someSelected}
@@ -452,6 +526,7 @@ export default function ScheduleWeekCalendar({
 
               {weekDays.map((day) => {
                 const dayClasses = classesByDay.get(day) ?? [];
+                const lanes = layoutLanes(dayClasses);
                 return (
                   <div
                     key={day}
@@ -481,16 +556,18 @@ export default function ScheduleWeekCalendar({
                       const bookingCount = cls.bookings[0]?.count ?? 0;
                       const waitlistCount = cls.waitlist?.[0]?.count ?? 0;
 
-                      if (hour < START_HOUR || hour > END_HOUR) return null;
+                      const { lane, lanes: laneCount } = lanes.get(cls.id) ?? { lane: 0, lanes: 1 };
 
                       return (
                         <div
                           key={cls.id}
-                          className={`absolute left-1 right-1 rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 text-white ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
+                          className={`absolute rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 text-white ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
                           style={{
                             ...classTypeBadgeStyle(colorByName[cls.class_type]),
                             top: top + 2,
                             height,
+                            left: `calc(${(lane / laneCount) * 100}% + 2px)`,
+                            width: `calc(${100 / laneCount}% - 4px)`,
                           }}
                           title={`${cls.class_type} · ${getGymTimeLabel(cls.start_time, tz)}`}
                         >

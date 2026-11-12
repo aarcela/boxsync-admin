@@ -334,7 +334,14 @@ export default function CreateClassModal({
               </div>
             </div>
             {endLabel ? (
-              <p className="-mt-2 text-xs text-pits-dim">{t('Ends at {{time}}', { time: endLabel })}</p>
+              <p className="-mt-2 text-xs text-pits-dim">
+                {t('Ends at {{time}}', { time: endLabel })}
+                {time && time < '05:00' ? (
+                  <span className="block mt-0.5 font-semibold text-pits-warning">
+                    {t('Starts at {{time}} (early morning). Did you mean PM?', { time })}
+                  </span>
+                ) : null}
+              </p>
             ) : null}
 
             <div className="grid grid-cols-2 gap-3">
