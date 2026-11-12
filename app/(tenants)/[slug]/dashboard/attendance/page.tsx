@@ -5,6 +5,7 @@ import {
   Calendar, Clock, CheckCircle, XCircle,
   Users, ChevronLeft, ChevronRight, CheckCheck, Search, UserPlus, UserMinus, Info
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useAttendance } from './hooks/useAttendance';
 import Tooltip from '@/components/Tooltip';
 import AddToClassModal from '@/components/AddToClassModal';
@@ -25,6 +26,7 @@ export default function AttendancePage() {
   const { t } = useLanguage();
   const { tenantId, timezone } = useTenant();
   const classTime = (iso: string) => getGymTimeLabel(iso, timezone);
+  const searchParams = useSearchParams();
   const {
     date,
     setDate,
@@ -48,7 +50,7 @@ export default function AttendancePage() {
     markRemaining,
     nextDay,
     prevDay
-  } = useAttendance();
+  } = useAttendance({ date: searchParams.get('date'), classId: searchParams.get('class') });
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddGuestOpen, setIsAddGuestOpen] = useState(false);

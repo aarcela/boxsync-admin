@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getGymDate } from '@/lib/utils/date';
 import { classService } from '@/lib/services/classService';
 import { guestService, GuestBooking } from '@/lib/services/guestService';
@@ -7,7 +7,8 @@ import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 
-export function useAttendance() {
+/** `initial` comes from `?date=YYYY-MM-DD&class=<id>` (e.g. Schedule → Take attendance). */
+export function useAttendance(initial?: { date?: string | null; classId?: string | null }) {
   const { toast } = useToast();
   const { t } = useLanguage();
   const { timezone } = useTenant();
@@ -23,8 +24,10 @@ export function useAttendance() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Initial date setup
+  const initialRef = useRef(initial);
   useEffect(() => {
-    setDate(getGymDate(new Date(), timezone));
+    const wanted = initialRef.current?.date;
+    setDate(wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) ? wanted : getGymDate(new Date(), timezone));
   }, [timezone]);
 
   // 1. Fetch Classes for selected Date
@@ -41,6 +44,14 @@ export function useAttendance() {
       setClasses(data);
 
       if (data.length === 0) return;
+
+      // Opened for a specific class: select it once, then behave as usual.
+      const wantedClass = initialRef.current?.classId;
+      if (wantedClass && data.some((cls) => cls.id === wantedClass)) {
+        initialRef.current = undefined;
+        setSelectedClassId(wantedClass);
+        return;
+      }
 
       // Today: closest class to now. Other days: first class, so roster is ready.
       const todayStr = getGymDate(new Date(), timezone);
