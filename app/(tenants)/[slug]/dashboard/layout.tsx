@@ -255,7 +255,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ]
             : []),
           ...(emailConfirmed ? [tab('Join QR', '/dashboard/profile', QrCode, 'Nav tip Athlete join QR')] : []),
-          ...(signupSource === 'self_serve'
+          ...(userRole === 'admin' || signupSource === 'self_serve'
             ? [{ name: t('Setup assistant'), href: '/dashboard/setup', icon: ListChecks, tip: t('Configure your gym') }]
             : []),
         ],

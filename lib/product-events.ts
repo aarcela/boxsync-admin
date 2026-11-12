@@ -10,6 +10,7 @@ export type ProductEventName =
   | 'setup_step_completed'
   | 'setup_step_skipped'
   | 'setup_completed'
+  | 'setup_restarted'
   | 'help_whatsapp_clicked'
   | 'tenant_activated'
   | 'trial_banner_shown'

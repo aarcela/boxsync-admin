@@ -53,10 +53,8 @@ export default function DashboardPage() {
           ? Object.values(data.steps as Record<string, string | null>).some((v) => v == null)
           : false;
         setSetupCard({
-          show:
-            data?.tenant?.signupSource === 'self_serve' &&
-            !data?.dismissedAt &&
-            pending,
+          // Self-serve gyms start with the assistant open; any gym that restarts it gets the card back.
+          show: !data?.dismissedAt && pending,
         });
       })
       .catch(() => setSetupCard({ show: false }));
