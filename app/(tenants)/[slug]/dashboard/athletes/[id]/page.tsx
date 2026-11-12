@@ -1,5 +1,6 @@
 'use client';
 
+import { useTenant } from '@/components/TenantContext';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -51,6 +52,7 @@ type ConfirmKind =
   | null;
 
 export default function AthleteDetailPage() {
+  const { timezone } = useTenant();
   const { id } = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -161,12 +163,12 @@ export default function AthleteDetailPage() {
   const handleRenewDateChange = async (value: string) => {
     if (!profile) return;
     const previous = profile.plan_period_start ?? null;
-    const nextIso = value ? renewDateToIso(value) : null;
+    const nextIso = value ? renewDateToIso(value, timezone) : null;
 
     setProfile({ ...profile, plan_period_start: nextIso });
     setSavingRenewDate(true);
     try {
-      await athleteService.updatePlanPeriodStart(profile.id, value || null);
+      await athleteService.updatePlanPeriodStart(profile.id, value || null, timezone);
       toast(t('Renew date updated'), 'success');
       await refreshPlanUsage();
     } catch {
@@ -431,7 +433,7 @@ export default function AthleteDetailPage() {
     profile.bookings?.filter((b) => b.status === 'attended').length || 0;
   const noShows =
     profile.bookings?.filter((b) => b.status === 'no_show').length || 0;
-  const renewDateValue = getRenewDateInputValue(profile);
+  const renewDateValue = getRenewDateInputValue(profile, timezone);
   const renewDateLabel = renewDateValue
     ? formatDate(renewDateValue, lang)
     : t('Not set');

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Each gym's local timezone (IANA name) lives in `tenants.settings.timezone`.
  * Missing or invalid values fall back to Caracas, which is what every gym used before.
@@ -47,4 +48,14 @@ export function patchGymTimezone(settings: unknown, timezone: string): Record<st
   const base =
     settings && typeof settings === 'object' ? { ...(settings as Record<string, unknown>) } : {};
   return { ...base, timezone };
+}
+
+/** Reads a gym's timezone on the server (falls back to Caracas on any problem). */
+export async function fetchGymTimezone(
+  client: SupabaseClient,
+  tenantId: string | null | undefined,
+): Promise<string> {
+  if (!tenantId) return DEFAULT_GYM_TIMEZONE;
+  const { data } = await client.from('tenants').select('settings').eq('id', tenantId).maybeSingle();
+  return parseGymTimezone(data?.settings);
 }

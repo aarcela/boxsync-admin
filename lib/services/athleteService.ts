@@ -141,12 +141,12 @@ export const athleteService = {
   /**
    * Updates the membership renew / period-start date.
    */
-  async updatePlanPeriodStart(id: string, planPeriodStart: string | null): Promise<void> {
+  async updatePlanPeriodStart(id: string, planPeriodStart: string | null, tz?: string): Promise<void> {
     const { error } = await supabase
       .from('profiles')
       .update({
         plan_period_start: planPeriodStart
-          ? renewDateToIso(planPeriodStart)
+          ? renewDateToIso(planPeriodStart, tz)
           : null,
       })
       .eq('id', id);

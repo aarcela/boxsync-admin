@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/components/TenantContext';
 import { X, Loader2, Save } from 'lucide-react';
 import { useToast } from './Toast';
 import { AthletePlan, InscriptionPlan, MembershipPlan } from '../lib/types/gym';
@@ -21,6 +22,7 @@ interface EditAthleteModalProps {
 }
 
 export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }: EditAthleteModalProps) {
+  const { timezone } = useTenant();
   const { toast } = useToast();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -116,10 +118,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
         password: '', // Don't pre-fill password
         role: userRole,
         plan: data.plan || membershipPlans[0]?.id || '',
-        plan_period_start: getRenewDateInputValue({
-          plan_period_start: data.plan_period_start,
-          is_solvent: data.is_solvent ?? true,
-        }),
+        plan_period_start: getRenewDateInputValue(
+          {
+            plan_period_start: data.plan_period_start,
+            is_solvent: data.is_solvent ?? true,
+          },
+          timezone,
+        ),
         inscription_plan: data.inscription_plan || 'standard',
         inscription_paid: data.inscription_paid ?? false,
         discount: data.discount !== null ? String(data.discount) : '',

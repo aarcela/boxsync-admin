@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { nextMonthlyRenewDate, renewDateToIso } from './renew-date';
+import { fetchGymTimezone } from './gym-timezone';
 import type { PlanLimitType } from './types/gym';
 
 export async function getPlanLimitType(
@@ -128,6 +129,8 @@ export async function buildMembershipActivationFields(
     ? await getPlanLimitType(supabase, profile.plan, resolvedTenantId)
     : 'none';
 
+  const gymTz = await fetchGymTimezone(supabase, resolvedTenantId);
+
   if (limitType === 'period') {
     return {
       is_solvent: true,
@@ -139,7 +142,7 @@ export async function buildMembershipActivationFields(
 
   return {
     is_solvent: true,
-    plan_period_start: renewDateToIso(nextMonthlyRenewDate(profile?.plan_period_start)),
+    plan_period_start: renewDateToIso(nextMonthlyRenewDate(profile?.plan_period_start, gymTz), gymTz),
     plan_usage_offset: 0,
     plan_usage_offset_week_start: null,
   };

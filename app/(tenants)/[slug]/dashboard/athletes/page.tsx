@@ -1,5 +1,6 @@
 'use client';
 
+import { useTenant } from '@/components/TenantContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,6 +29,7 @@ const ACTION_MENU_WIDTH = 220;
 const ACTION_MENU_ITEM_HEIGHT = 40;
 
 export default function AthletesPage() {
+  const { timezone } = useTenant();
   const router = useRouter();
   const { t, lang } = useLanguage();
   const {
@@ -830,7 +832,7 @@ export default function AthletesPage() {
                           {profile.role === 'member' ? (
                             <input
                               type="date"
-                              value={getRenewDateInputValue(profile)}
+                              value={getRenewDateInputValue(profile, timezone)}
                               onChange={(e) => {
                                 const value = e.target.value || null;
                                 void updateRenewDate(profile.id, value);
