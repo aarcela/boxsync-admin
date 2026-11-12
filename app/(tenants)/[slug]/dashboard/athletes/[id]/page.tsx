@@ -32,8 +32,8 @@ import {
 import { athleteService, PlanSessionUsage } from '@/lib/services/athleteService';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { MembershipPlan, Profile } from '@/lib/types/gym';
-import { format, formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/components/Toast';
+import { formatDate, formatDateTime, formatMonthYear, formatRelative, formatWeekdayShort } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { getRenewDateInputValue, renewDateToIso } from '@/lib/renew-date';
 import { supabase } from '@/lib/supabase';
@@ -433,7 +433,7 @@ export default function AthleteDetailPage() {
     profile.bookings?.filter((b) => b.status === 'no_show').length || 0;
   const renewDateValue = getRenewDateInputValue(profile);
   const renewDateLabel = renewDateValue
-    ? format(new Date(`${renewDateValue}T12:00:00`), 'dd MMM yyyy')
+    ? formatDate(renewDateValue, lang)
     : t('Not set');
 
   const btnBase =
@@ -516,7 +516,7 @@ export default function AthleteDetailPage() {
                 )}
                 <span className="inline-flex items-center gap-1.5">
                   <History size={14} className="shrink-0" aria-hidden />
-                  {t('Since')} {format(new Date(profile.created_at), 'MMM yyyy')}
+                  {t('Since')} {formatMonthYear(profile.created_at, lang)}
                 </span>
                 {profile.instagram && (
                   <a
@@ -784,15 +784,13 @@ export default function AthleteDetailPage() {
                   <p className={fieldLabel}>{t('Last Payment')}</p>
                   <p className={fieldValue}>
                     {profile.last_payment_date
-                      ? format(new Date(profile.last_payment_date), 'dd MMM yyyy')
+                      ? formatDate(profile.last_payment_date, lang)
                       : t('No payments')}
                   </p>
                 </div>
                 {profile.last_payment_date && (
                   <span className="text-[10px] text-pits-dim capitalize shrink-0">
-                    {formatDistanceToNow(new Date(profile.last_payment_date), {
-                      addSuffix: true,
-                    })}
+                    {formatRelative(new Date(profile.last_payment_date), lang)}
                   </span>
                 )}
               </div>
@@ -899,11 +897,8 @@ export default function AthleteDetailPage() {
                           </p>
                           <p className="text-[11px] text-pits-dim">
                             {booking.classes?.start_time
-                              ? format(
-                                  new Date(booking.classes.start_time),
-                                  'EEE, MMM dd • HH:mm'
-                                )
-                              : format(new Date(booking.created_at), 'MMM dd, yyyy')}
+                              ? `${formatWeekdayShort(booking.classes.start_time, lang)}, ${formatDateTime(booking.classes.start_time, lang)}`
+                              : formatDate(booking.created_at, lang)}
                           </p>
                         </div>
                       </div>
@@ -943,7 +938,7 @@ export default function AthleteDetailPage() {
                   [
                     t('Birth Date'),
                     profile.birth_date
-                      ? format(new Date(profile.birth_date), 'dd/MM/yyyy')
+                      ? formatDate(profile.birth_date.slice(0, 10), lang)
                       : 'N/A',
                   ],
                   [t('Height'), profile.height_cm ? `${profile.height_cm} cm` : 'N/A'],
@@ -1062,10 +1057,7 @@ export default function AthleteDetailPage() {
                 <p className={fieldLabel}>{t('Accepted At')}</p>
                 <p className="text-xs font-medium text-pits-text mt-0.5">
                   {profile.onboarding_affidavit_accepted_at
-                    ? format(
-                        new Date(profile.onboarding_affidavit_accepted_at),
-                        'dd/MM/yyyy HH:mm'
-                      )
+                    ? formatDateTime(profile.onboarding_affidavit_accepted_at, lang)
                     : t('Pending acceptance')}
                 </p>
               </div>

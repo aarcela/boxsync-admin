@@ -13,6 +13,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
+import { formatDate, formatDateTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
@@ -563,9 +564,7 @@ export default function FinancialInsightsPage() {
                         <StatusBadge tone="warning">
                           <Clock size={11} />
                           {t('Due')}{' '}
-                          {new Date(item.due_at).toLocaleDateString(
-                            lang === 'es' ? 'es-ES' : 'en-US'
-                          )}
+                          {formatDate(item.due_at, lang)}
                         </StatusBadge>
                       )}
                     </div>
@@ -630,9 +629,7 @@ export default function FinancialInsightsPage() {
                       </p>
                       <p className="mt-1 text-xs font-semibold">
                         {item.outcome_detected_at
-                          ? new Date(item.outcome_detected_at).toLocaleDateString(
-                              lang === 'es' ? 'es-ES' : 'en-US'
-                            )
+                          ? formatDate(item.outcome_detected_at, lang)
                           : ''}
                       </p>
                     </div>
@@ -675,9 +672,7 @@ export default function FinancialInsightsPage() {
                               : ''}
                           </span>
                           <span className="shrink-0 text-[9px] text-pits-dim">
-                            {new Date(event.created_at).toLocaleString(
-                              lang === 'es' ? 'es-ES' : 'en-US'
-                            )}
+                            {formatDateTime(event.created_at, lang)}
                           </span>
                         </div>
                       ))}

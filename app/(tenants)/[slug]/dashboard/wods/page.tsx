@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { formatDate, formatDateLong, formatDateShort, formatWeekdayShort } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 
 function localDateKey(value = new Date()) {
@@ -73,7 +74,7 @@ function readWodContent(raw: string | null) {
 
 export default function WodEditorPage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { tenantId } = useTenant();
   const [date, setDate] = useState(() => localDateKey());
   const [loading, setLoading] = useState(true);
@@ -118,12 +119,8 @@ export default function WodEditorPage() {
   );
   const weekRangeLabel = useMemo(() => {
     const weekEnd = addDays(weekStart, 6);
-    const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
-    if (sameMonth) {
-      return `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'd, yyyy')}`;
-    }
-    return `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`;
-  }, [weekStart]);
+    return `${formatDateShort(weekStart, lang)} – ${formatDate(weekEnd, lang)}`;
+  }, [weekStart, lang]);
 
   const loadMovements = async () => {
     if (!tenantId || movementsRequested.current) return;
@@ -407,7 +404,7 @@ export default function WodEditorPage() {
                   }`}
               >
                 <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-pits-dark-text/80' : 'text-pits-dim'}`}>
-                  {format(day, 'EEE')}
+                  {formatWeekdayShort(day, lang)}
                 </span>
                 <span className={`text-base sm:text-lg font-black leading-none ${selected ? 'text-pits-dark-text' : 'text-pits-text'}`}>
                   {format(day, 'd')}
@@ -446,7 +443,7 @@ export default function WodEditorPage() {
             </h1>
             <p className="text-pits-dim font-medium text-xs flex items-center">
               <Calendar size={12} className="mr-1" />
-              {t('Assigning workout for {{date}}', { date: selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
+              {t('Assigning workout for {{date}}', { date: formatDateLong(selectedDate, lang) })}
             </p>
           </div>
         </div>
@@ -813,7 +810,7 @@ export default function WodEditorPage() {
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         title={t('Delete workout title')}
-        message={t('Delete workout dated message', { date: selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}
+        message={t('Delete workout dated message', { date: formatDateLong(selectedDate, lang) })}
         confirmLabel={t('Delete')}
         cancelLabel={t('Cancel')}
         variant="danger"

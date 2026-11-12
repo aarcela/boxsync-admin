@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { usePaletteCommand } from '@/components/CommandPalette';
 import Image from 'next/image';
 import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert, Info } from 'lucide-react';
 import CreateClassModal, { ClassFormPrefill, ClassModalMode } from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { formatDateTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
@@ -41,7 +44,9 @@ export default function SchedulePage() {
   const { tenantId, timezone: tz } = useTenant();
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(() => searchParams.get('new') === '1');
   const [modalMode, setModalMode] = useState<ClassModalMode>('create');
   const [modalPrefill, setModalPrefill] = useState<ClassFormPrefill | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
@@ -85,6 +90,8 @@ export default function SchedulePage() {
     setIsModalOpen(true);
   };
 
+  usePaletteCommand('new-class', () => openCreateModal());
+
   const sessionToPrefill = (session: ClassSession): ClassFormPrefill => ({
     id: session.id,
     start_time: session.start_time,
@@ -115,6 +122,7 @@ export default function SchedulePage() {
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+    if (searchParams.get('new')) router.replace('/dashboard/schedule');
     setModalMode('create');
     setModalPrefill(null);
     setModalInitialDate(undefined);
@@ -585,7 +593,7 @@ export default function SchedulePage() {
                               <div>
                                 <p className="font-bold text-pits-text text-sm">{entry.profiles.full_name}</p>
                                 <p className="text-[10px] text-pits-dim">
-                                  Joined {new Date(entry.joined_at).toLocaleString()}
+                                  {t('Joined {{date}}', { date: formatDateTime(entry.joined_at, lang) })}
                                 </p>
                               </div>
                             </div>

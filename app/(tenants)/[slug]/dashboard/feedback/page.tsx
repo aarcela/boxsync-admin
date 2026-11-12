@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Phone, Filter, ArrowRight
 } from 'lucide-react';
+import { formatDateShort, formatTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 
@@ -432,7 +433,7 @@ export default function FeedbackPage() {
                         <div className="flex items-center gap-2 text-[11px] font-black text-pits-text bg-pits-surface-muted px-3 py-1.5 rounded-lg">
                           <Calendar size={12} className="text-pits-red" />
                           <span className="uppercase italic">
-                            {item.class?.class_type || t('Class')} • {item.class?.start_time ? new Date(item.class.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : t('N/A')}
+                            {item.class?.class_type || t('Class')} • {item.class?.start_time ? formatTime(item.class.start_time, lang) : t('N/A')}
                           </span>
                         </div>
                       </div>
@@ -463,7 +464,7 @@ export default function FeedbackPage() {
                         )}
                         
                         <span className="text-[10px] font-bold text-pits-dim uppercase tracking-widest ml-2">
-                          {new Date(item.created_at).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric' })}
+                          {formatDateShort(item.created_at, lang)}
                         </span>
                       </div>
                     </div>

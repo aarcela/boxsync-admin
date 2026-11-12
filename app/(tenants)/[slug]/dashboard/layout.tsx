@@ -40,12 +40,15 @@ import {
   QrCode,
   ListChecks,
   MessageCircle,
+  Search,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import CommandPalette, { type PaletteLink } from '@/components/CommandPalette';
 import Tooltip from '@/components/Tooltip';
 import { financialService } from '@/lib/services/financialService';
 import {
@@ -97,6 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // match without a width animation on every page load.
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
@@ -299,6 +303,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       },
     ];
   }, [t, userRole, features, emailConfirmed, signupSource]);
+
+  const paletteLinks = useMemo((): PaletteLink[] => {
+    const links: PaletteLink[] = [];
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if ('href' in item) links.push({ name: item.name, href: item.href, icon: item.icon, group: section.label || undefined });
+        else for (const sub of item.subItems) links.push({ name: sub.name, href: sub.href, icon: sub.icon, group: item.name });
+      }
+    }
+    return links;
+  }, [navSections]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      } else if (e.key === '/' && !typing) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const toggleMenu = (menuName: string) => {
     // Collapsed rail has no room for sub-items: expand and open in one click.
@@ -571,7 +603,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         isTrialExpired(platformPlan, trialEndsAt)
                           ? t('Trial ended')
                           : t('Trial ends {{date}}', {
-                              date: new Date(trialEndsAt).toLocaleDateString(),
+                              date: formatDate(trialEndsAt, lang),
                             })
                       }`
                     : ''}
@@ -581,6 +613,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label={t('Search')}
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-pits-shell-edge bg-pits-black/40 text-pits-shell-ink-muted hover:text-pits-shell-ink hover:border-pits-shell-ink-muted transition-colors"
+            >
+              <Search size={16} />
+              <span className="hidden md:inline text-xs font-semibold">{t('Search')}</span>
+              <kbd className="hidden md:inline text-[10px] font-semibold border border-pits-shell-edge rounded px-1">⌘K</kbd>
+            </button>
             <Tooltip
               content={
                 dueCount > 0
@@ -658,6 +700,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} pages={paletteLinks} />
+
       <ConfirmDialog
         isOpen={confirmExpiryOpen}
         title={t('Lock expired memberships?')}
@@ -719,9 +763,8 @@ function TrialFounderBanner({
     });
   }, [tracked, onTrack]);
 
-  const label = date
-    ? new Date(date).toLocaleDateString()
-    : '';
+  const { lang } = useLanguage();
+  const label = date ? formatDate(date, lang) : '';
   return (
     <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold flex flex-wrap items-center gap-3">
       <span>

@@ -15,6 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
@@ -47,7 +48,7 @@ const CATEGORIES: IncomeCategory[] = [
 
 export default function IncomePage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { currencies, tenantId } = useTenant();
 
   const [loading, setLoading] = useState(true);
@@ -329,7 +330,7 @@ export default function IncomePage() {
                     <tr key={inc.id} className="hover:bg-pits-surface-elevated transition-colors group">
                       <td className="px-6 py-4">
                         <div className="text-[11px] font-black text-pits-text">
-                          {new Date(inc.income_date).toLocaleDateString()}
+                          {formatDate(inc.income_date, lang)}
                         </div>
                       </td>
                       <td className="px-6 py-4">

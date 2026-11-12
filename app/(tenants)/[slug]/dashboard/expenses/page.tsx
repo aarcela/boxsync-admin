@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { TranslationKey } from '@/lib/translations';
@@ -41,7 +42,7 @@ const expenseStatusKey = (status?: string): TranslationKey => {
 
 export default function ExpensesPage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { currencies, tenantId } = useTenant();
   const categoryLabel = (category: string) => {
     const key = expenseCategoryKey(category);
@@ -331,7 +332,7 @@ export default function ExpensesPage() {
                 ) : filteredExpenses.map(ex => (
                   <tr key={ex.id} className="hover:bg-pits-surface-muted/40 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="text-[11px] font-black text-pits-text">{new Date(ex.expense_date).toLocaleDateString()}</div>
+                      <div className="text-[11px] font-black text-pits-text">{formatDate(ex.expense_date, lang)}</div>
                       <div className="text-[9px] font-bold text-pits-dim mt-0.5">{ex.expense_date}</div>
                     </td>
                     <td className="px-6 py-4">

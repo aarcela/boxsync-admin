@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { communityService, Post, PostType } from '@/lib/services/communityService';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { 
   Trash2, 
@@ -23,7 +24,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 
 export default function CommunityPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -248,7 +249,7 @@ export default function CommunityPage() {
                     <div className="flex items-center gap-1.5 text-pits-dim">
                       <Calendar size={14} />
                       <span className="text-xs font-medium">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {formatDate(post.created_at, lang)}
                       </span>
                     </div>
                   </td>

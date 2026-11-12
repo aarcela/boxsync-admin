@@ -15,10 +15,10 @@ import {
   Printer,
   RefreshCw,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
@@ -67,7 +67,7 @@ function roleLabel(role: string, t: (key: TranslationKey) => string): string {
 }
 
 export default function ProfilePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const { slug, name: tenantName, tenantId } = useTenant();
   const [loading, setLoading] = useState(true);
@@ -500,7 +500,7 @@ export default function ProfilePage() {
               </dt>
               <dd className="text-sm font-bold text-pits-ink mt-0.5">
                 {profile.created_at
-                  ? format(new Date(profile.created_at), 'MMMM d, yyyy')
+                  ? formatDate(profile.created_at, lang)
                   : '—'}
               </dd>
             </div>

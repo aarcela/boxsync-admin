@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Plus, Trash2, Megaphone, Bell } from 'lucide-react';
 import CreateNewsModal from '@/components/AddNewsModal';
 import { useToast } from '@/components/Toast';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 
 interface NewsItem {
@@ -17,7 +18,7 @@ interface NewsItem {
 
 export default function NewsPage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,7 +123,7 @@ export default function NewsPage() {
                         {t(item.tag)}
                       </span>
                       <span className="text-xs text-pits-dim font-bold">
-                        {new Date(item.created_at).toLocaleDateString()}
+                        {formatDate(item.created_at, lang)}
                       </span>
                     </div>
                     <h4 className="font-bold text-pits-text">{item.title}</h4>
