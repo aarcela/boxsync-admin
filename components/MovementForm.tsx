@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
@@ -74,7 +75,7 @@ export default function MovementForm({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = Number(amount);
-    if (!(value > 0) || saving) return;
+    if (!(value > 0) || !paymentMethod || saving) return;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -200,6 +201,41 @@ export default function MovementForm({
             ) : null}
           </div>
 
+          <div className="space-y-1.5">
+            <label className={LABEL} htmlFor="movement-method">
+              {t('Payment Method')}
+            </label>
+            {paymentMethods.length > 0 ? (
+              <select
+                id="movement-method"
+                required
+                value={paymentMethod}
+                onChange={(e) => {
+                  setPaymentMethod(e.target.value);
+                  const method = paymentMethods.find((m) => m.id === e.target.value);
+                  if (method?.currency) setCurrency(method.currency);
+                }}
+                className={`${FIELD} ${paymentMethod ? '' : 'text-pits-dim'}`}
+              >
+                <option value="" disabled>
+                  {t('Select method')}
+                </option>
+                {paymentMethods.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label} ({m.currency})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="rounded-xl border border-pits-warning-edge bg-pits-warning-soft px-3 py-2.5 text-sm text-pits-warning">
+                {t('Add a payment method first.')}{' '}
+                <Link href="/dashboard/payment_methods" className="font-semibold underline">
+                  {t('How they pay')}
+                </Link>
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className={LABEL}>{t('Category')}</label>
@@ -218,6 +254,25 @@ export default function MovementForm({
           </div>
 
           <div className="space-y-1.5">
+            <span className={LABEL}>{t('Status')}</span>
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-pits-edge bg-pits-surface-muted p-1" role="group" aria-label={t('Status')}>
+              {(kind === 'in' ? ['confirmed', 'pending', 'cancelled'] : ['paid', 'pending', 'due']).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={status === s}
+                  onClick={() => setStatus(s)}
+                  className={`h-9 rounded-lg text-sm font-semibold ${
+                    status === s ? 'bg-pits-surface-elevated text-pits-text shadow-sm' : 'text-pits-dim hover:text-pits-text'
+                  }`}
+                >
+                  {t(s as TranslationKey)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <label className={LABEL}>{t('Description (optional)')}</label>
             <input
               type="text"
@@ -228,40 +283,6 @@ export default function MovementForm({
             />
           </div>
 
-          <details className="rounded-xl border border-pits-edge px-4 py-3">
-            <summary className="cursor-pointer text-sm font-semibold text-pits-text">{t('More details')}</summary>
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="space-y-1.5">
-                <label className={LABEL}>{t('Status')}</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className={FIELD}>
-                  {(kind === 'in' ? ['confirmed', 'pending', 'cancelled'] : ['paid', 'pending', 'due']).map((s) => (
-                    <option key={s} value={s}>
-                      {t(s as TranslationKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className={LABEL}>{t('Payment Method')}</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => {
-                    setPaymentMethod(e.target.value);
-                    const method = paymentMethods.find((m) => m.id === e.target.value);
-                    if (method?.currency) setCurrency(method.currency);
-                  }}
-                  className={FIELD}
-                >
-                  <option value="">{t('Select method')}</option>
-                  {paymentMethods.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label} ({m.currency})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </details>
 
           <div className="flex gap-2 pt-1">
             <button
@@ -273,7 +294,7 @@ export default function MovementForm({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !paymentMethod}
               className="h-11 flex-1 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold disabled:opacity-50"
             >
               {kind === 'in' ? t('Save income') : t('Save expense')}
