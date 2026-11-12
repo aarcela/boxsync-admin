@@ -6,6 +6,7 @@ import { Plus, Trash2, Megaphone, Bell } from 'lucide-react';
 import CreateNewsModal from '@/components/AddNewsModal';
 import { useToast } from '@/components/Toast';
 import { formatDate } from '@/lib/utils/format-date';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 
 interface NewsItem {
@@ -23,6 +24,7 @@ export default function NewsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [toRemove, setToRemove] = useState<NewsItem | null>(null);
 
   const fetchNews = async () => {
     setLoading(true);
@@ -50,8 +52,7 @@ export default function NewsPage() {
   if (!mounted) return null;
 
   const deleteNews = async (id: string) => {
-    if (!window.confirm(t('Remove this announcement?'))) return;
-
+    setToRemove(null);
     try {
       const { error } = await supabase
         .from('news')
@@ -77,15 +78,13 @@ export default function NewsPage() {
           <h1 className="page-title">
             {t('News & Alerts')}
           </h1>
-          <p className="text-pits-dim font-medium text-sm">
-            {t('Broadcast updates to the athlete mobile app.')}
-          </p>
+          <p className="page-subtitle">{t('Broadcast updates to the athlete mobile app.')}</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center px-4 py-3 bg-pits-primary text-pits-dark-text rounded-lg font-bold uppercase text-xs tracking-widest shadow-lg shadow-pits-primary/20 hover:bg-pits-primary-dark transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} className="mr-2" />
+          <Plus size={16} />
           {t('Post Update')}
         </button>
       </div>
@@ -96,33 +95,38 @@ export default function NewsPage() {
           <div className="p-12 text-center text-pits-dim">{t('Loading feed...')}</div>
         ) : news.length === 0 ? (
           <div className="p-12 text-center text-pits-dim flex flex-col items-center">
-            <Bell size={48} className="mb-4 text-pits-dim" />
-            <p>{t('No active announcements.')}</p>
+            <Bell size={32} className="mb-3 text-pits-dim" />
+            <p className="text-sm">{t('No active announcements.')}</p>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="mt-3 text-sm font-semibold text-pits-info hover:underline"
+            >
+              {t('Post Update')}
+            </button>
           </div>
         ) : (
           <div className="divide-y divide-pits-edge">
             {news.map((item) => (
-              <div key={item.id} className="p-4 hover:bg-pits-surface-muted transition-colors flex items-center justify-between group">
-                
-                <div className="flex items-center gap-4">
-                  <div className={`
-                    w-12 h-12 rounded-lg flex items-center justify-center
-                    ${item.tag === 'ALERT' ? 'bg-pits-primary-soft text-pits-error' : 
-                      item.tag === 'EVENT' ? 'bg-pits-surface-muted text-pits-primary' : 
-                      'bg-pits-surface-muted text-pits-text'}
-                  `}>
+              <div key={item.id} className="p-4 hover:bg-pits-surface-muted/50 transition-colors flex items-center justify-between gap-3">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center ${
+                    item.tag === 'ALERT' ? 'bg-pits-danger-soft text-pits-danger' :
+                    item.tag === 'EVENT' ? 'bg-pits-info-soft text-pits-info' :
+                    'bg-pits-surface-muted text-pits-text'
+                  }`}>
                     <Megaphone size={20} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded
-                        ${item.tag === 'ALERT' ? 'bg-pits-primary-soft text-pits-error' : 
-                          item.tag === 'EVENT' ? 'bg-pits-surface-muted text-pits-text' : 
-                          'bg-pits-surface-muted text-pits-text'}
-                      `}>
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                        item.tag === 'ALERT' ? 'bg-pits-danger-soft text-pits-danger' :
+                        item.tag === 'EVENT' ? 'bg-pits-info-soft text-pits-info' :
+                        'bg-pits-surface-muted text-pits-dim'
+                      }`}>
                         {t(item.tag)}
                       </span>
-                      <span className="text-xs text-pits-dim font-bold">
+                      <span className="text-xs text-pits-dim">
                         {formatDate(item.created_at, lang)}
                       </span>
                     </div>
@@ -133,19 +137,14 @@ export default function NewsPage() {
                   </div>
                 </div>
 
-                <button 
-                  id={`delete-news-${item.id}`}
+                <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    deleteNews(item.id);
-                  }}
-                  className="p-3 text-pits-error bg-pits-primary-soft hover:bg-pits-edge rounded-xl transition-all relative z-[100] cursor-pointer"
-                  style={{ pointerEvents: 'auto' }}
+                  onClick={() => setToRemove(item)}
+                  aria-label={t('Remove')}
                   title={t('Remove')}
+                  className="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={18} />
                 </button>
 
               </div>
@@ -153,6 +152,16 @@ export default function NewsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!toRemove}
+        title={t('Remove')}
+        message={t('Remove this announcement?')}
+        confirmLabel={t('Remove')}
+        variant="danger"
+        onConfirm={() => toRemove && void deleteNews(toRemove.id)}
+        onCancel={() => setToRemove(null)}
+      />
 
       <CreateNewsModal 
         isOpen={isModalOpen}

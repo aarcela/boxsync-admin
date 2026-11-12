@@ -153,7 +153,8 @@ export default function FeedbackPage() {
           allTimeAR,
           allTimeCount: c.aCount,
           trend,
-          alert: (c.wCount >= 3 && weekAR < ALERT_THRESHOLD) || (weekAR < allTimeAR - 0.5)
+          // Only flag a drop when there are ratings this week; no ratings isn't a bad week.
+          alert: c.wCount > 0 && ((c.wCount >= 3 && weekAR < ALERT_THRESHOLD) || weekAR < allTimeAR - 0.5)
         };
       });
 
@@ -232,7 +233,7 @@ export default function FeedbackPage() {
           <h1 className="page-title mb-1">
             {t('Service Quality Control')}
           </h1>
-          <p className="text-pits-dim font-bold text-[11px] uppercase tracking-widest opacity-60">
+          <p className="page-subtitle">
             {t('Strategic monitoring and coach evaluation')}
           </p>
         </div>
@@ -260,11 +261,6 @@ export default function FeedbackPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
         {evaluations.map((val) => (
           <div key={val.id} className={`bg-pits-surface-elevated p-3 rounded-xl border shadow-sm relative overflow-hidden transition-all hover:border-pits-red ${val.alert ? 'border-pits-edge' : 'border-pits-edge'}`}>
-            {val.alert && (
-              <div className="absolute top-0 right-0 bg-pits-error text-pits-text text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-widest">
-                {t('Needs Attention')}
-              </div>
-            )}
             
             <div className="flex justify-between items-start mb-2">
               <div className="max-w-[70%]">
@@ -272,43 +268,48 @@ export default function FeedbackPage() {
                   {val.name}
                 </h3>
                 <div className="flex items-center gap-1.5">
+                   {val.alert && (
+                     <span className="px-1.5 py-0.5 rounded bg-pits-danger-soft text-pits-danger text-[11px] font-semibold">
+                       {t('Needs Attention')}
+                     </span>
+                   )}
                    {val.trend === 'up' && <TrendingUp size={12} className="text-pits-success" />}
                    {val.trend === 'down' && <TrendingDown size={12} className="text-pits-error" />}
                    <span className={`text-[11px] font-black uppercase tracking-widest ${
                      val.trend === 'up' ? 'text-pits-success' : val.trend === 'down' ? 'text-pits-error' : 'text-pits-dim'
                    }`}>
-                     {val.trend === 'up' ? 'Improving' : val.trend === 'down' ? 'Declining' : 'Stable'}
+                     {val.trend === 'up' ? t('Improving') : val.trend === 'down' ? t('Declining') : t('Stable')}
                    </span>
                 </div>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className={`text-xl font-black leading-none ${getARColor(val.monthAR)}`}>
-                  {val.monthAR > 0 ? val.monthAR.toFixed(1) : "N/A"}
+                  {val.monthAR > 0 ? val.monthAR.toFixed(1) : '—'}
                 </span>
-                <span className="text-[11px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">30D Avg</span>
+                <span className="text-[11px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">{t('30-day average')}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-1 p-2 bg-pits-surface-elevated rounded-xl border border-pits-edge">
                {[
-                 { l: 'Today', v: val.todayAR },
-                 { l: '7 Days', v: val.weekAR },
-                 { l: '30 Days', v: val.monthAR },
-                 { l: 'All Time', v: val.allTimeAR }
+                 { l: t('Today short'), v: val.todayAR },
+                 { l: t('7d'), v: val.weekAR },
+                 { l: t('30d'), v: val.monthAR },
+                 { l: t('All time short'), v: val.allTimeAR }
                ].map((p, i) => (
                  <div key={i} className="flex flex-col items-center border-r last:border-0 border-pits-edge/50">
-                    <span className="text-[11px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l.split(' ')[0]}</span>
+                    <span className="text-[11px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l}</span>
                     <span className={`text-[13px] font-black ${getARColor(p.v)}`}>{p.v > 0 ? p.v.toFixed(1) : '-'}</span>
                  </div>
                ))}
             </div>
           </div>
         ))}
-        {evaluations.length === 0 && Array.from({length: 3}).map((_, i) => (
-           <div key={i} className="bg-pits-surface-elevated border border-dashed border-pits-edge p-3 rounded-xl flex flex-col items-center justify-center min-h-[70px]">
-              <div className="text-[11px] font-bold text-pits-dim uppercase tracking-widest">{t('N/A')}</div>
-           </div>
-        ))}
+        {evaluations.length === 0 && (
+          <div className="md:col-span-3 bg-pits-surface-elevated border border-dashed border-pits-edge p-4 rounded-xl text-center text-sm text-pits-dim">
+            {t('No ratings yet.')}
+          </div>
+        )}
       </div>
 
       {/* COMPACT SEARCH & FILTERS */}
@@ -330,7 +331,7 @@ export default function FeedbackPage() {
                onChange={(e) => { setFilterCoach(e.target.value); setCurrentPage(1); }}
                className="flex-1 md:flex-none bg-pits-surface-muted border border-pits-edge rounded-lg px-2 py-2 text-[11px] font-bold text-pits-text outline-none focus:border-pits-red cursor-pointer"
              >
-               <option value="all" className="text-black">All Coaches</option>
+               <option value="all" className="text-black">{t('All Coaches')}</option>
                {coaches.map(c => (
                  <option key={c.id} value={c.id} className="text-black">{c.full_name}</option>
                ))}
@@ -428,7 +429,7 @@ export default function FeedbackPage() {
                         <div className="flex items-center gap-2 text-[11px] font-black text-pits-text bg-pits-surface-muted px-3 py-1.5 rounded-lg">
                           <User size={12} className="text-pits-red" />
                           <span className="text-pits-dim uppercase tracking-tighter">{t('Coach:')}</span>
-                          <span className="uppercase italic">{item.coach?.full_name || t('N/A')}</span>
+                          <span className="uppercase italic">{item.coach?.full_name || '—'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] font-black text-pits-text bg-pits-surface-muted px-3 py-1.5 rounded-lg">
                           <Calendar size={12} className="text-pits-red" />
@@ -455,7 +456,7 @@ export default function FeedbackPage() {
                           </a>
                         ) : (
                           <button 
-                            onClick={() => toast(`Contact ${item.athlete?.full_name || t('Athlete')} directly (No phone on file)`, 'warning')}
+                            onClick={() => toast(t('No phone on file for {{name}}.', { name: item.athlete?.full_name || t('Athlete') }), 'warning')}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black uppercase italic tracking-wider transition-all shadow-sm bg-pits-surface-muted text-pits-dim border border-pits-edge cursor-not-allowed"
                           >
                             <Phone size={14} />

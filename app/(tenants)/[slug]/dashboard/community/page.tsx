@@ -198,9 +198,6 @@ export default function CommunityPage() {
                         <p className="text-sm font-black text-pits-text">
                           {post.profiles?.full_name || t('Unknown Athlete')}
                         </p>
-                        <p className="text-[11px] text-pits-dim font-bold uppercase tracking-tight">
-                          ID: {post.user_id.substring(0, 8)}...
-                        </p>
                       </div>
                     </div>
                   </td>
