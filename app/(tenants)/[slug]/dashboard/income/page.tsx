@@ -29,6 +29,7 @@ import {
 } from '@/lib/types/gym';
 import type { TranslationKey } from '@/lib/translations';
 import { useTenant } from '@/components/TenantContext';
+import { getGymDate } from '@/lib/utils/date';
 import {
   currencySymbol,
   isLocalCurrency,
@@ -49,7 +50,7 @@ const CATEGORIES: IncomeCategory[] = [
 export default function IncomePage() {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
-  const { currencies, tenantId } = useTenant();
+  const { currencies, tenantId, timezone } = useTenant();
 
   const [loading, setLoading] = useState(true);
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
@@ -66,7 +67,7 @@ export default function IncomePage() {
     category: 'other_income' as IncomeCategory,
     amount: '',
     currency: currencies.reference,
-    income_date: new Date().toISOString().split('T')[0],
+    income_date: getGymDate(new Date(), timezone),
     status: 'confirmed' as IncomeStatus,
     payment_method: '',
   });
@@ -146,7 +147,7 @@ export default function IncomePage() {
         category: 'other_income',
         amount: '',
         currency: currencies.reference,
-        income_date: new Date().toISOString().split('T')[0],
+        income_date: getGymDate(new Date(), timezone),
         status: 'confirmed',
         payment_method: '',
       });
@@ -309,7 +310,7 @@ export default function IncomePage() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                 <tr>
-                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Registry')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Date')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Context / Description')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Sector')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Method')}</th>

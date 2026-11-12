@@ -23,6 +23,7 @@ import { expenseService, parseExpenseCategory } from '@/lib/services/expenseServ
 import { financialService } from '@/lib/services/financialService';
 import { ExpenseRecord, ExpenseCategory, EXPENSE_CATEGORIES, PaymentMethod } from '@/lib/types/gym';
 import { useTenant } from '@/components/TenantContext';
+import { getGymDate } from '@/lib/utils/date';
 import {
   currencyOptionLabel,
   currencySymbol,
@@ -43,7 +44,7 @@ const expenseStatusKey = (status?: string): TranslationKey => {
 export default function ExpensesPage() {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
-  const { currencies, tenantId } = useTenant();
+  const { currencies, tenantId, timezone } = useTenant();
   const categoryLabel = (category: string) => {
     const key = expenseCategoryKey(category);
     return key ? t(key) : category;
@@ -66,7 +67,7 @@ export default function ExpensesPage() {
     category: 'Other' as ExpenseCategory,
     amount: '',
     currency: currencies.reference,
-    expense_date: new Date().toISOString().split('T')[0],
+    expense_date: getGymDate(new Date(), timezone),
     status: 'pending' as 'pending' | 'paid' | 'due',
     payment_method: ''
   });
@@ -151,7 +152,7 @@ export default function ExpensesPage() {
         category: 'Other' as ExpenseCategory,
         amount: '',
         currency: currencies.reference,
-        expense_date: new Date().toISOString().split('T')[0],
+        expense_date: getGymDate(new Date(), timezone),
         status: 'pending',
         payment_method: ''
       });
@@ -317,7 +318,7 @@ export default function ExpensesPage() {
             <table className="w-full text-left">
               <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                 <tr>
-                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">Expense Date</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Date')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Registry')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Category')}</th>
                   <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Payment Method')}</th>
@@ -328,12 +329,11 @@ export default function ExpensesPage() {
               </thead>
               <tbody className="divide-y divide-pits-edge">
                 {loading ? (
-                  <tr><td colSpan={7} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">Scanning Archive...</td></tr>
+                  <tr><td colSpan={7} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">{t('Loading...')}</td></tr>
                 ) : filteredExpenses.map(ex => (
                   <tr key={ex.id} className="hover:bg-pits-surface-muted/40 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="text-[11px] font-black text-pits-text">{formatDate(ex.expense_date, lang)}</div>
-                      <div className="text-[11px] font-bold text-pits-dim mt-0.5">{ex.expense_date}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs font-bold text-pits-text uppercase">{ex.description}</div>
@@ -381,7 +381,7 @@ export default function ExpensesPage() {
                   </tr>
                 ))}
                 {!loading && filteredExpenses.length === 0 && (
-                  <tr><td colSpan={7} className="py-20 text-center text-pits-dim font-bold uppercase">Zero costs in this sector.</td></tr>
+                  <tr><td colSpan={7} className="py-20 text-center text-pits-dim font-bold uppercase">{t('No expenses in this period.')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -414,7 +414,7 @@ export default function ExpensesPage() {
                   </div>
                 ))}
                 {stats.categoryBreakdown.length === 0 && (
-                  <p className="text-center py-6 text-pits-dim text-[11px] font-black uppercase border border-dashed border-pits-edge rounded-2xl">Awaiting data...</p>
+                  <p className="text-center py-6 text-pits-dim text-[11px] font-black uppercase border border-dashed border-pits-edge rounded-2xl">{t('No data yet.')}</p>
                 )}
               </div>
             </div>
@@ -432,7 +432,7 @@ export default function ExpensesPage() {
               />
               <InsightRow 
                 label={t('Top Risk')} 
-                text={`${stats.topCategory} ${t('is the primary cost driver.')}`}
+                text={`${categoryLabel(stats.topCategory)} ${t('is the primary cost driver.')}`}
                 variant="info"
               />
             </div>
