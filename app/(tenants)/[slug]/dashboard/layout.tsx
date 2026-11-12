@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +40,9 @@ import {
   ListChecks,
   MessageCircle,
   Search,
+  ChevronDown,
+  User,
+  Languages,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils/format-date';
@@ -92,6 +95,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(e.target as Node)) setAccountMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountMenuOpen]);
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
@@ -442,25 +463,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu size={20} />
             </button>
             
-            {/* Language Toggle */}
-            <div className="flex items-center bg-pits-black border border-pits-shell-edge rounded-full p-1 ml-2">
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'en' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
-                }`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLanguage('es')}
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'es' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
-                }`}
-              >
-                ES
-              </button>
-            </div>
 
             {boxName && (
               <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-3">
@@ -468,7 +470,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {boxName}
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-wider truncate ${
+                  className={`text-[11px] font-black uppercase tracking-wider truncate ${
                     platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt)
                       ? 'text-red-400'
                       : platformPlan === 'trial' && isTrialEndingSoon(platformPlan, trialEndsAt)
@@ -500,58 +502,99 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Search size={16} />
               <span className="hidden md:inline text-xs font-semibold">{t('Search')}</span>
-              <kbd className="hidden md:inline text-[10px] font-semibold border border-pits-shell-edge rounded px-1">⌘K</kbd>
+              <kbd className="hidden md:inline text-[11px] font-semibold border border-pits-shell-edge rounded px-1">⌘K</kbd>
             </button>
-            <Tooltip
-              content={
-                dueCount > 0
-                  ? t('Nav tip memberships due', { count: dueCount })
-                  : t('Nav tip Update expired memberships')
-              }
-            >
+            {dueCount > 0 ? (
+              <Tooltip content={t('Nav tip memberships due', { count: dueCount })}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmExpiryOpen(true)}
+                  disabled={runningExpiry}
+                  className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 bg-pits-warning-soft hover:bg-pits-warning-edge text-pits-warning border-pits-warning-edge"
+                >
+                  <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
+                  <span className="hidden sm:inline text-xs font-semibold">
+                    {t('{{count}} memberships due', { count: dueCount })}
+                  </span>
+                  <span className="sm:hidden text-xs font-bold">{dueCount > 99 ? '99+' : dueCount}</span>
+                </button>
+              </Tooltip>
+            ) : null}
+
+            <div className="relative" ref={accountMenuRef}>
               <button
                 type="button"
-                onClick={() => setConfirmExpiryOpen(true)}
-                disabled={runningExpiry}
-                className={`relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 ${
-                  dueCount > 0
-                    ? 'bg-pits-warning-soft hover:bg-pits-warning-edge text-pits-warning border-pits-warning-edge'
-                    : 'bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent border-pits-shell-edge'
-                }`}
+                onClick={() => setAccountMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
+                className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
               >
-                <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">
-                  {t('Update expired memberships')}
+                <span className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
+                  {userInitials}
                 </span>
-                {dueCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-danger text-white text-[10px] font-black leading-none flex items-center justify-center">
-                    {dueCount > 99 ? '99+' : dueCount}
-                  </span>
-                )}
+                <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
+                  {userFullName || t('Admin')}
+                </span>
+                <ChevronDown size={14} className="ml-1 text-pits-shell-ink-muted hidden sm:inline" />
               </button>
-            </Tooltip>
-
-            <Link
-              href="/dashboard/profile"
-              className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
-            >
-            <div className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
-              {userInitials}
+              {accountMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-56 rounded-xl border border-pits-edge bg-pits-surface-elevated shadow-2xl py-1 z-[60] text-pits-text"
+                >
+                  <Link
+                    href="/dashboard/profile"
+                    role="menuitem"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-pits-surface-muted"
+                  >
+                    <User size={16} className="text-pits-dim" />
+                    {t('My Profile')}
+                  </Link>
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Languages size={16} className="text-pits-dim" />
+                      {t('Language')}
+                    </span>
+                    <div className="flex rounded-lg border border-pits-edge p-0.5" role="group" aria-label={t('Language')}>
+                      {(['es', 'en'] as const).map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          aria-pressed={lang === code}
+                          onClick={() => setLanguage(code)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+                            lang === code ? 'bg-pits-text text-white' : 'text-pits-dim hover:text-pits-text'
+                          }`}
+                        >
+                          {code.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="my-1 border-t border-pits-edge" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-pits-danger hover:bg-pits-danger-soft"
+                  >
+                    <LogOut size={16} />
+                    {t('Log Out')}
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
-              {userFullName || t('Admin')}
-            </span>
-            </Link>
           </div>
         </header>
 
         {!emailConfirmed && (
-          <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold uppercase tracking-wider">
+          <div className="px-4 py-2 bg-pits-warning-soft text-pits-warning text-xs font-bold uppercase tracking-wider">
             {t('Check your email to activate your account.')}
           </div>
         )}
         {platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt) && (
-          <div className="px-4 py-2 bg-red-50 text-red-800 text-xs font-bold uppercase tracking-wider">
+          <div className="px-4 py-2 bg-pits-danger-soft text-pits-danger text-xs font-bold uppercase tracking-wider">
             {t('Your trial has ended. The dashboard is read-only.')}
           </div>
         )}
@@ -673,7 +716,7 @@ function TrialFounderBanner({
   const { lang } = useLanguage();
   const label = date ? formatDate(date, lang) : '';
   return (
-    <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold flex flex-wrap items-center gap-3">
+    <div className="px-4 py-2 bg-pits-warning-soft text-pits-warning text-xs font-bold flex flex-wrap items-center gap-3">
       <span>
         {t('Your trial ends on {{date}}. Write us to keep your founding price.', {
           date: label,

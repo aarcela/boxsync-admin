@@ -214,7 +214,7 @@ export default function PersonalRecordsPage() {
             <h1 className="page-title">
               {t('Personal Records')}
             </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
               {t('PR Catalog')}
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function PersonalRecordsPage() {
                   placeholder={t('Search movements...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
             </div>
@@ -255,22 +255,22 @@ export default function PersonalRecordsPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-pits-surface-elevated">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Movement')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Category')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Record Type')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Order')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Status')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
                       {t('Actions')}
                     </th>
                   </tr>
@@ -302,19 +302,19 @@ export default function PersonalRecordsPage() {
                               <div className="text-xs font-bold text-pits-text uppercase tracking-tight">
                                 {movement.name}
                               </div>
-                              <div className="text-[10px] text-pits-dim font-mono">
+                              <div className="text-[11px] text-pits-dim font-mono">
                                 {movement.slug}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge">
+                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge">
                             {t(categoryLabel(movement.category))}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-primary border-pits-edge">
+                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-primary border-pits-edge">
                             {t(recordTypeLabel(movement.record_type))}
                           </span>
                         </td>
@@ -324,7 +324,7 @@ export default function PersonalRecordsPage() {
                         <td className="px-6 py-4">
                           <button
                             onClick={() => handleToggleStatus(movement)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${movement.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${movement.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
                           >
                             {movement.is_active ? (
                               <CheckCircle2 size={10} />
@@ -385,7 +385,7 @@ export default function PersonalRecordsPage() {
               </p>
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">
                     {t('Total Movements')}
                   </span>
                   <span className="text-sm font-black text-pits-text">
@@ -393,7 +393,7 @@ export default function PersonalRecordsPage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">
                     {t('Active')}
                   </span>
                   <span className="text-sm font-black text-pits-success">
@@ -411,7 +411,7 @@ export default function PersonalRecordsPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                   {t(
                     'Slug is permanent once created — it links athlete PR data to this movement.'
                   )}
@@ -419,7 +419,7 @@ export default function PersonalRecordsPage() {
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                   {t(
                     'Record type controls how values are stored: weight (kg/lb), reps, or time (seconds).'
                   )}
@@ -443,7 +443,7 @@ export default function PersonalRecordsPage() {
                   <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">
                     {editingMovement ? t('Edit Movement') : t('Add Movement')}
                   </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('PR Movement Configuration')}
                   </p>
                 </div>
@@ -455,7 +455,7 @@ export default function PersonalRecordsPage() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {!editingMovement && (
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Slug')}
                     </label>
                     <input
@@ -476,7 +476,7 @@ export default function PersonalRecordsPage() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Name')}
                   </label>
                   <input
@@ -491,7 +491,7 @@ export default function PersonalRecordsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Category')}
                     </label>
                     <select
@@ -512,7 +512,7 @@ export default function PersonalRecordsPage() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Record Type')}
                     </label>
                     <select
@@ -536,7 +536,7 @@ export default function PersonalRecordsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Sort Order')}
                     </label>
                     <input
@@ -553,7 +553,7 @@ export default function PersonalRecordsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Status')}
                     </label>
                     <select

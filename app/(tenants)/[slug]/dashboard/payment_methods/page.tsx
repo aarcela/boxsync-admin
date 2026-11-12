@@ -352,7 +352,7 @@ export default function PaymentMethodsPage() {
             <h1 className="page-title">
               {t('Payment Methods')}
             </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
               {t('System Config')}
             </div>
           </div>
@@ -385,7 +385,7 @@ export default function PaymentMethodsPage() {
             type="button"
             onClick={handleSaveMoneySettings}
             disabled={savingMoney}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[11px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
           >
             {savingMoney ? t('Processing...') : t('Save money settings')}
           </button>
@@ -393,7 +393,7 @@ export default function PaymentMethodsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Reference currency')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Reference currency')}</label>
             <select
               value={currencySelectValue(draftCurrencies.reference, REFERENCE_CURRENCY_OPTIONS)}
               onChange={(e) => {
@@ -427,11 +427,11 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">{t('What membership plans are priced in (Zelle, Binance).')}</p>
+            <p className="text-[11px] text-pits-dim font-medium">{t('What membership plans are priced in (Zelle, Binance).')}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Local currency')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Local currency')}</label>
             <select
               value={currencySelectValue(draftCurrencies.local, LOCAL_CURRENCY_OPTIONS)}
               onChange={(e) => {
@@ -467,11 +467,11 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">{t('What athletes pay locally (Pago Móvil, cash).')}</p>
+            <p className="text-[11px] text-pits-dim font-medium">{t('What athletes pay locally (Pago Móvil, cash).')}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Exchange rate')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Exchange rate')}</label>
             <select
               value={rateConfig.baseSource}
               onChange={(e) =>
@@ -517,7 +517,7 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">
+            <p className="text-[11px] text-pits-dim font-medium">
               {rateConfig.baseSource === 'custom'
                 ? `${t('Custom rate')}: 1 ${draftCurrencies.reference || 'REF'} = ${rateConfig.customRate || '—'} ${draftCurrencies.local || 'LOC'}`
                 : `${t('Margin %')} · ${t('Official and parallel use Venezuela live rates.')}`}
@@ -526,7 +526,7 @@ export default function PaymentMethodsPage() {
         </div>
 
         <div className="rounded-2xl border border-pits-edge bg-pits-surface-muted px-4 py-3">
-          <p className="text-[10px] font-black uppercase text-pits-dim mb-1">{t('Athlete checkout preview')}</p>
+          <p className="text-[11px] font-black uppercase text-pits-dim mb-1">{t('Athlete checkout preview')}</p>
           {effectiveRate ? (
             <p className="text-xs font-bold text-pits-text">
               {t('Local method example')}: 30 {draftCurrencies.reference} → {(30 * effectiveRate).toLocaleString(undefined, { maximumFractionDigits: 2 })} {draftCurrencies.local}
@@ -558,7 +558,7 @@ export default function PaymentMethodsPage() {
             type="button"
             onClick={handleSaveSupport}
             disabled={savingSupport}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[11px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
           >
             {savingSupport ? t('Processing...') : t('Save WhatsApp')}
           </button>
@@ -586,7 +586,7 @@ export default function PaymentMethodsPage() {
                   placeholder={t('Search methods...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
             </div>
@@ -595,10 +595,10 @@ export default function PaymentMethodsPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-pits-surface-elevated">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Currency')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Status')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Method')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Currency')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Status')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-pits-edge">
@@ -614,16 +614,16 @@ export default function PaymentMethodsPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-pits-text uppercase tracking-tight">{method.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                              <span className="px-1.5 py-0.5 rounded text-[11px] font-black uppercase bg-pits-surface-muted text-pits-dim border border-pits-edge">
                                 {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])}
                               </span>
                             </div>
-                            <div className="text-[10px] text-pits-dim font-medium truncate max-w-[200px]">{methodSummary(method)}</div>
+                            <div className="text-[11px] text-pits-dim font-medium truncate max-w-[200px]">{methodSummary(method)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
+                        <span className={`px-2 py-1 rounded text-[11px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
                           {method.currency === currencies.reference
                             ? `${t('Reference')} · ${method.currency}`
                             : `${t('Local')} · ${method.currency}`}
@@ -632,7 +632,7 @@ export default function PaymentMethodsPage() {
                       <td className="px-6 py-4">
                         <button 
                           onClick={() => handleToggleStatus(method)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${method.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${method.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
                         >
                           {method.is_active ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
                           {method.is_active ? t('Active') : t('Inactive')}
@@ -681,11 +681,11 @@ export default function PaymentMethodsPage() {
               
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">{t('Total Methods')}</span>
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">{t('Total Methods')}</span>
                   <span className="text-sm font-black text-pits-text">{methods.length}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">{t('Active Channels')}</span>
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">{t('Active Channels')}</span>
                   <span className="text-sm font-black text-pits-success">{methods.filter(m => m.is_active).length}</span>
                 </div>
               </div>
@@ -699,11 +699,11 @@ export default function PaymentMethodsPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one REF and one local method active for operational flexibility.')}</p>
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one REF and one local method active for operational flexibility.')}</p>
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Details appear on athlete invoices. Provide clear instructions for bank transfers.')}</p>
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">{t('Details appear on athlete invoices. Provide clear instructions for bank transfers.')}</p>
               </li>
             </ul>
           </div>
@@ -721,7 +721,7 @@ export default function PaymentMethodsPage() {
                   <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">
                     {editingMethod ? t('Edit Method') : t('Add Method')}
                   </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('Payment Channel Configuration')}
                   </p>
                 </div>
@@ -730,7 +730,7 @@ export default function PaymentMethodsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method Name / Label')}</label>
+                   <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Method Name / Label')}</label>
                    <input 
                      type="text" 
                      placeholder={t('e.g. Bank Transfer Zelle')}
@@ -742,7 +742,7 @@ export default function PaymentMethodsPage() {
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method Type')}</label>
+                   <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Method Type')}</label>
                    <select
                      value={formData.method_type}
                      onChange={(e) => {
@@ -763,7 +763,7 @@ export default function PaymentMethodsPage() {
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Athletes pay in')}</label>
+                   <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Athletes pay in')}</label>
                    <div className="grid grid-cols-2 gap-2">
                      <button
                        type="button"
@@ -774,7 +774,7 @@ export default function PaymentMethodsPage() {
                            : 'border-pits-edge bg-pits-surface-muted'
                        }`}
                      >
-                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Local')}</div>
+                       <div className="text-[11px] font-black uppercase text-pits-dim">{t('Local')}</div>
                        <div className="text-xs font-black text-pits-text mt-0.5">
                          {currencies.local} ({currencySymbol(currencies.local)})
                        </div>
@@ -788,13 +788,13 @@ export default function PaymentMethodsPage() {
                            : 'border-pits-edge bg-pits-surface-muted'
                        }`}
                      >
-                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Reference')}</div>
+                       <div className="text-[11px] font-black uppercase text-pits-dim">{t('Reference')}</div>
                        <div className="text-xs font-black text-pits-text mt-0.5">
                          {currencies.reference} ({currencySymbol(currencies.reference)})
                        </div>
                      </button>
                    </div>
-                   <p className="text-[10px] text-pits-dim font-medium">
+                   <p className="text-[11px] text-pits-dim font-medium">
                      {formData.currency === currencies.local
                        ? (effectiveRate
                            ? t('Local method converts the plan. Example: {{plan}} {{ref}} → {{localAmount}} {{local}}', {
@@ -809,7 +809,7 @@ export default function PaymentMethodsPage() {
                 </div>
 
                 <div className="space-y-2">
-                      <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
+                      <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
                       <select 
                         value={String(formData.is_active)}
                         onChange={(e) => setFormData({...formData, is_active: e.target.value === 'true'})}
@@ -822,7 +822,7 @@ export default function PaymentMethodsPage() {
 
                 {formData.method_type === 'otro' ? (
                   <div className="space-y-2">
-                     <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Details / Instructions')}</label>
+                     <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Details / Instructions')}</label>
                      <textarea
                        rows={3}
                        placeholder={t('Account number, bank name, etc.')}
@@ -834,7 +834,7 @@ export default function PaymentMethodsPage() {
                 ) : (
                   PAYMENT_METHOD_FIELD_DEFS[formData.method_type].map((def) => (
                     <div key={def.key} className="space-y-2">
-                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t(def.label)}</label>
+                       <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t(def.label)}</label>
                        <input
                          type="text"
                          value={formData.fields[def.key] || ''}

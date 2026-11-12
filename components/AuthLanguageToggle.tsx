@@ -10,7 +10,7 @@ export function AuthLanguageToggle() {
       <button
         type="button"
         onClick={() => setLanguage('en')}
-        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tighter transition-all ${
           lang === 'en' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
@@ -19,7 +19,7 @@ export function AuthLanguageToggle() {
       <button
         type="button"
         onClick={() => setLanguage('es')}
-        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
+        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tighter transition-all ${
           lang === 'es' ? 'bg-pits-primary text-pits-dark-text shadow-sm' : 'text-gray-400 hover:text-gray-600'
         }`}
       >

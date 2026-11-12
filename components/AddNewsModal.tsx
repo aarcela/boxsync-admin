@@ -51,8 +51,8 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
     if (tag !== t) {
       return 'bg-pits-surface-elevated border-pits-edge text-pits-dim';
     }
-    if (t === 'ALERT') return 'bg-red-950/40 border-red-500 text-red-400';
-    if (t === 'EVENT') return 'bg-blue-950/40 border-blue-500 text-blue-400';
+    if (t === 'ALERT') return 'bg-pits-danger-soft border-pits-danger text-pits-danger';
+    if (t === 'EVENT') return 'bg-pits-info-soft border-pits-info text-pits-info';
     return 'bg-pits-primary-soft border-pits-primary text-pits-primary';
   };
 
@@ -85,7 +85,7 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }: CreateNe
               placeholder="e.g. Gym Closed on Sunday"
               maxLength={60}
             />
-            <p className="text-[10px] text-pits-ink-muted mt-1 text-right">
+            <p className="text-[11px] text-pits-ink-muted mt-1 text-right">
               {title.length}/60 chars
             </p>
           </div>

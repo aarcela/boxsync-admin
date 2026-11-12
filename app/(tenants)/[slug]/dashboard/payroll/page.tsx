@@ -96,9 +96,9 @@ function statusStyles(status: PayrollClassStatus) {
     case 'confirmed':
       return 'bg-pits-primary-soft text-pits-success border-pits-success/30';
     case 'cancelled':
-      return 'bg-red-100 text-red-700 border-red-300';
+      return 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge';
     default:
-      return 'bg-orange-100 text-orange-700 border-orange-300';
+      return 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge';
   }
 }
 
@@ -107,9 +107,9 @@ function blockStyles(status: PayrollClassStatus) {
     case 'confirmed':
       return 'bg-pits-primary-soft border-pits-success/40 text-pits-success';
     case 'cancelled':
-      return 'bg-red-100 border-red-300 text-red-800';
+      return 'bg-pits-danger-soft border-pits-danger-edge text-pits-danger';
     default:
-      return 'bg-orange-100 border-orange-300 text-orange-800';
+      return 'bg-pits-warning-soft border-pits-warning-edge text-pits-warning';
   }
 }
 
@@ -489,10 +489,10 @@ export default function PayrollPage() {
         onClick={() => setSelectedClass(cls)}
         className="flex-1 min-w-0 text-left overflow-hidden hover:opacity-90 transition-opacity"
       >
-        <p className={`${compact ? 'text-[10px] leading-tight' : 'text-[11px] leading-snug'} font-black uppercase truncate`}>
+        <p className={`${compact ? 'text-[11px] leading-tight' : 'text-[11px] leading-snug'} font-black uppercase truncate`}>
           {cls.class_type}
         </p>
-        <p className={`${compact ? 'text-[9px] mt-0.5' : 'text-[10px] mt-1'} font-bold truncate`}>
+        <p className={`${compact ? 'text-[11px] mt-0.5' : 'text-[11px] mt-1'} font-bold truncate`}>
           {getGymTimeLabel(cls.start_time, tz)}
           {cls.coach?.full_name ? ` · ${cls.coach.full_name}` : ''}
         </p>
@@ -505,7 +505,7 @@ export default function PayrollPage() {
       value={cls.payrollStatus}
       onChange={(e) => handleStatusChange(cls.id, e.target.value as PayrollClassStatus)}
       disabled={isPending}
-      className={`${compact ? 'text-[9px] py-1 px-2' : 'text-[10px] py-2 px-3'} font-black uppercase bg-pits-surface-muted border border-pits-edge rounded-xl outline-none focus:ring-2 focus:ring-pits-red`}
+      className={`${compact ? 'text-[11px] py-1 px-2' : 'text-[11px] py-2 px-3'} font-black uppercase bg-pits-surface-muted border border-pits-edge rounded-xl outline-none focus:ring-2 focus:ring-pits-red`}
     >
       <option value="confirmed">{t('confirmed')}</option>
       <option value="pending">{t('pending')}</option>
@@ -521,7 +521,7 @@ export default function PayrollPage() {
             <h1 className="page-title">
               {t('Payroll')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[11px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
               {t('Admin Only')}
             </div>
           </div>
@@ -529,7 +529,7 @@ export default function PayrollPage() {
             {t('Review class payroll and coach compensation')}
           </p>
           {!isAdmin && callerRole && (
-            <p className="text-[10px] font-bold text-pits-secondary uppercase mt-2">
+            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
               {t('Only admins can manage payroll.')}
             </p>
           )}
@@ -540,7 +540,7 @@ export default function PayrollPage() {
               type="button"
               onClick={handleExportPdf}
               disabled={exporting || loading}
-              className="flex items-center gap-2 px-5 py-3 bg-pits-surface-elevated border border-pits-edge rounded-2xl text-[10px] font-black uppercase shadow-sm hover:border-pits-primary/40 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-pits-surface-elevated border border-pits-edge rounded-2xl text-[11px] font-black uppercase shadow-sm hover:border-pits-primary/40 disabled:opacity-50 transition-all"
             >
               <FileDown size={16} className="text-pits-red" />
               {exporting ? t('Processing...') : t('Export PDF')}
@@ -549,7 +549,7 @@ export default function PayrollPage() {
               type="button"
               onClick={handleEmailCoaches}
               disabled={emailing || loading}
-              className="flex items-center gap-2 px-5 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all"
             >
               <Mail size={16} />
               {emailing ? t('Sending...') : t('Email Coaches')}
@@ -567,7 +567,7 @@ export default function PayrollPage() {
                 <button
                   key={mode}
                   onClick={() => setFilterMode(mode)}
-                  className={`h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  className={`h-10 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                     filterMode === mode
                       ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                       : 'bg-pits-surface-muted text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -664,7 +664,7 @@ export default function PayrollPage() {
               <select
                 value={coachFilter}
                 onChange={(e) => setCoachFilter(e.target.value)}
-                className="h-10 sm:ml-auto px-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-black uppercase text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                className="h-10 sm:ml-auto px-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-black uppercase text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
               >
                 <option value="all">{t('All Coaches')}</option>
                 {coaches.map((c) => (
@@ -682,7 +682,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={() => setViewTab('calendar')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                   viewTab === 'calendar'
                     ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                     : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -694,7 +694,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={() => setViewTab('list')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                   viewTab === 'list'
                     ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                     : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -706,14 +706,14 @@ export default function PayrollPage() {
             </div>
             {someSelected && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-black text-pits-dim uppercase">
+                <span className="text-[11px] font-black text-pits-dim uppercase">
                   {selectedIds.size} {t('selected')}
                 </span>
                 <button
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('confirmed')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
                 >
                   {t('confirmed')}
                 </button>
@@ -721,7 +721,7 @@ export default function PayrollPage() {
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('pending')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-orange-100 text-orange-700 border-orange-300 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-warning-soft text-pits-warning border-pits-warning-edge hover:opacity-90 disabled:opacity-50"
                 >
                   {t('pending')}
                 </button>
@@ -729,14 +729,14 @@ export default function PayrollPage() {
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('cancelled')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-red-100 text-red-700 border-red-300 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-danger-soft text-pits-danger border-pits-danger-edge hover:opacity-90 disabled:opacity-50"
                 >
                   {t('cancelled')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted"
                 >
                   {t('Clear selection')}
                 </button>
@@ -775,7 +775,7 @@ export default function PayrollPage() {
                             day === today ? 'bg-pits-primary-soft' : 'bg-pits-surface-muted/40'
                           }`}
                         >
-                          <p className="text-[10px] font-black text-pits-dim uppercase">
+                          <p className="text-[11px] font-black text-pits-dim uppercase">
                             {formatDay(day, { weekday: 'short' })}
                           </p>
                           <p className="text-sm font-black text-pits-text">
@@ -795,7 +795,7 @@ export default function PayrollPage() {
                         {HOURS.map((hour) => (
                           <div
                             key={hour}
-                            className="absolute left-0 right-0 pr-2 text-right text-[10px] font-bold text-pits-dim -translate-y-1/2"
+                            className="absolute left-0 right-0 pr-2 text-right text-[11px] font-bold text-pits-dim -translate-y-1/2"
                             style={{ top: (hour - START_HOUR) * SLOT_HEIGHT }}
                           >
                             {String(hour).padStart(2, '0')}:00
@@ -856,7 +856,7 @@ export default function PayrollPage() {
                           key={label}
                           className="px-2 py-3 text-center bg-pits-surface-muted/40 border-b border-r border-pits-edge last:border-r-0"
                         >
-                          <p className="text-[10px] font-black text-pits-dim uppercase">{label}</p>
+                          <p className="text-[11px] font-black text-pits-dim uppercase">{label}</p>
                         </div>
                       ))}
                       {monthCells.map((day, idx) => {
@@ -878,7 +878,7 @@ export default function PayrollPage() {
                               day === today ? 'bg-pits-primary-soft/30' : 'bg-pits-surface-muted/10'
                             }`}
                           >
-                            <p className="text-[10px] font-black text-pits-dim uppercase mb-2">
+                            <p className="text-[11px] font-black text-pits-dim uppercase mb-2">
                               {formatDay(day, { day: 'numeric' })}
                             </p>
                             <div className="space-y-1.5">
@@ -921,25 +921,25 @@ export default function PayrollPage() {
                             aria-label={t('Select all')}
                           />
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Date & Time')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Class')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Coach')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Athletes')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Status')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Pay (USD)')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Actions')}
                         </th>
                       </tr>
@@ -961,7 +961,7 @@ export default function PayrollPage() {
                         classes.map((cls) => (
                           <tr
                             key={cls.id}
-                            className={`hover:bg-pits-surface-muted/40 ${selectedIds.has(cls.id) ? 'ring-1 ring-inset ring-pits-primary' : ''} ${cls.payrollStatus === 'confirmed' ? 'bg-pits-primary-soft/20' : cls.payrollStatus === 'cancelled' ? 'bg-red-50/50' : 'bg-orange-50/30'}`}
+                            className={`hover:bg-pits-surface-muted/40 ${selectedIds.has(cls.id) ? 'ring-1 ring-inset ring-pits-primary' : ''} ${cls.payrollStatus === 'confirmed' ? 'bg-pits-primary-soft/20' : cls.payrollStatus === 'cancelled' ? 'bg-pits-danger-soft' : 'bg-pits-warning-soft'}`}
                           >
                             <td className="px-4 py-3">
                               <input
@@ -973,25 +973,25 @@ export default function PayrollPage() {
                               />
                             </td>
                             <td className="px-4 py-3">
-                              <div className="text-[10px] font-bold text-pits-ink">
+                              <div className="text-[11px] font-bold text-pits-ink">
                                 {getGymDateFromIso(cls.start_time, tz)}
                               </div>
-                              <div className="text-[9px] text-pits-dim">
+                              <div className="text-[11px] text-pits-dim">
                                 {getGymTimeLabel(cls.start_time, tz)}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-xs font-bold uppercase">
                               {cls.class_type}
                             </td>
-                            <td className="px-4 py-3 text-[10px] font-bold">
+                            <td className="px-4 py-3 text-[11px] font-bold">
                               {cls.coach?.full_name ?? t('Unassigned')}
                             </td>
-                            <td className="px-4 py-3 text-[10px] font-bold">
+                            <td className="px-4 py-3 text-[11px] font-bold">
                               {cls.bookings[0]?.count ?? 0}
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex px-2 py-1 rounded text-[9px] font-black uppercase border ${statusStyles(cls.payrollStatus!)}`}
+                                className={`inline-flex px-2 py-1 rounded text-[11px] font-black uppercase border ${statusStyles(cls.payrollStatus!)}`}
                               >
                                 {statusLabel(cls.payrollStatus!)}
                               </span>
@@ -1001,7 +1001,7 @@ export default function PayrollPage() {
                                 cls.payRateUsd != null ? (
                                   `$${cls.payRateUsd.toFixed(2)}`
                                 ) : (
-                                  <span className="text-[9px] text-pits-dim uppercase">
+                                  <span className="text-[11px] text-pits-dim uppercase">
                                     {t('No rate')}
                                   </span>
                                 )
@@ -1028,13 +1028,13 @@ export default function PayrollPage() {
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                      <span className="text-[10px] font-bold text-pits-dim uppercase">
+                      <span className="text-[11px] font-bold text-pits-dim uppercase">
                         {t('Total Classes')}
                       </span>
                       <span className="text-sm font-black text-pits-ink">{summary.total}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                      <span className="text-[10px] font-bold text-pits-dim uppercase">
+                      <span className="text-[11px] font-bold text-pits-dim uppercase">
                         {t('Confirmed Classes')}
                       </span>
                       <span className="text-sm font-black text-pits-success">
@@ -1042,7 +1042,7 @@ export default function PayrollPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-pits-primary-soft rounded-2xl border border-pits-success/30">
-                      <span className="text-[10px] font-bold text-pits-success uppercase">
+                      <span className="text-[11px] font-bold text-pits-success uppercase">
                         {t('Total Payroll (USD)')}
                       </span>
                       <span className="text-lg font-black text-pits-success">
@@ -1058,7 +1058,7 @@ export default function PayrollPage() {
                   <Users size={14} className="text-pits-red" /> {t('By Coach')}
                 </h3>
                 {coachReports.length === 0 ? (
-                  <p className="text-[10px] text-pits-dim uppercase font-bold">
+                  <p className="text-[11px] text-pits-dim uppercase font-bold">
                     {t('No confirmed classes yet.')}
                   </p>
                 ) : (
@@ -1068,7 +1068,7 @@ export default function PayrollPage() {
                         key={report.coachId}
                         className="flex items-center gap-2 p-2 bg-pits-surface-muted rounded-xl"
                       >
-                        <span className="text-[10px] font-bold text-pits-ink uppercase truncate flex-1 min-w-0">
+                        <span className="text-[11px] font-bold text-pits-ink uppercase truncate flex-1 min-w-0">
                           {report.coachName}
                         </span>
                         <span className="text-xs font-black text-pits-success shrink-0">
@@ -1096,19 +1096,19 @@ export default function PayrollPage() {
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('confirmed')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Confirmed — pay counted')}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('pending')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Pending — awaiting review')}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('cancelled')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Cancelled — no pay')}
                     </span>
                   </li>
@@ -1130,7 +1130,7 @@ export default function PayrollPage() {
                     <h2 className="text-xl font-black text-pits-ink uppercase tracking-tighter">
                       {selectedClass.class_type}
                     </h2>
-                    <p className="text-[10px] font-bold text-pits-dim uppercase mt-1">
+                    <p className="text-[11px] font-bold text-pits-dim uppercase mt-1">
                       {getGymDateFromIso(selectedClass.start_time, tz)} •{' '}
                       {getGymTimeLabel(selectedClass.start_time, tz)}
                     </p>
@@ -1141,13 +1141,13 @@ export default function PayrollPage() {
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span className="text-pits-dim">{t('Coach')}</span>
                     <span className="text-pits-ink">
                       {selectedClass.coach?.full_name ?? t('Unassigned')}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span className="text-pits-dim">{t('Status')}</span>
                     <span
                       className={`px-2 py-0.5 rounded border ${statusStyles(selectedClass.payrollStatus!)}`}
@@ -1155,7 +1155,7 @@ export default function PayrollPage() {
                       {statusLabel(selectedClass.payrollStatus!)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span className="text-pits-dim">{t('Pay (USD)')}</span>
                     <span className="text-pits-success font-black">
                       {selectedClass.payrollStatus === 'confirmed'
@@ -1168,7 +1168,7 @@ export default function PayrollPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase">
+                  <label className="text-[11px] font-black text-pits-dim uppercase">
                     {t('Update Status')}
                   </label>
                   {renderStatusSelect(selectedClass)}

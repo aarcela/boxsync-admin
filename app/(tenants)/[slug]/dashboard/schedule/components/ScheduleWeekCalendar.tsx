@@ -313,14 +313,14 @@ export default function ScheduleWeekCalendar({
           }`}
           aria-hidden={!someSelected}
         >
-          <span className="text-[10px] font-black text-pits-dim uppercase">
+          <span className="text-[11px] font-black text-pits-dim uppercase">
             {selectedIds.size} {t('selected')}
           </span>
           <select
             value={bulkCoach}
             onChange={(e) => setBulkCoach(e.target.value)}
             disabled={!someSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-black uppercase text-pits-ink outline-none"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-black uppercase text-pits-ink outline-none"
           >
             <option value="">{t('Coach')}</option>
             <option value="__none__">{t('Staff')}</option>
@@ -334,7 +334,7 @@ export default function ScheduleWeekCalendar({
             value={bulkType}
             onChange={(e) => setBulkType(e.target.value)}
             disabled={!someSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-black uppercase text-pits-ink outline-none"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-black uppercase text-pits-ink outline-none"
           >
             <option value="">{t('Type')}</option>
             {classTypes.map((row) => (
@@ -350,14 +350,14 @@ export default function ScheduleWeekCalendar({
             value={bulkCapacity}
             onChange={(e) => setBulkCapacity(e.target.value)}
             disabled={!someSelected}
-            className="w-20 px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none"
+            className="w-20 px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none"
           />
           <input
             type="date"
             value={bulkDate}
             onChange={(e) => setBulkDate(e.target.value)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start date')}
           />
           <input
@@ -365,7 +365,7 @@ export default function ScheduleWeekCalendar({
             value={bulkTime}
             onChange={(e) => setBulkTime(e.target.value)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start time')}
           />
           <input
@@ -374,7 +374,7 @@ export default function ScheduleWeekCalendar({
             onChange={(e) => setBulkEndDate(e.target.value)}
             disabled={!singleSelected}
             min={bulkDate || undefined}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('End date')}
           />
           <input
@@ -382,14 +382,14 @@ export default function ScheduleWeekCalendar({
             value={bulkEndTime}
             onChange={(e) => setBulkEndTime(e.target.value)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('End time')}
           />
           <button
             type="button"
             disabled={saving || !someSelected}
             onClick={handleApplyBulk}
-            className="px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-pits-primary-dark transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-pits-primary-dark transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : t('Apply changes')}
           </button>
@@ -397,7 +397,7 @@ export default function ScheduleWeekCalendar({
             type="button"
             onClick={clearSelection}
             disabled={!someSelected}
-            className="px-3 py-2 text-pits-dim hover:text-pits-ink text-[10px] font-black uppercase disabled:opacity-50"
+            className="px-3 py-2 text-pits-dim hover:text-pits-ink text-[11px] font-black uppercase disabled:opacity-50"
           >
             {t('Clear')}
           </button>
@@ -405,7 +405,7 @@ export default function ScheduleWeekCalendar({
             type="button"
             disabled={saving || !someSelected}
             onClick={() => setDeleteConfirmOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-pits-error hover:bg-pits-primary-soft border border-pits-error/30 rounded-lg text-[10px] font-black uppercase transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-pits-error hover:bg-pits-primary-soft border border-pits-error/30 rounded-lg text-[11px] font-black uppercase transition-colors disabled:opacity-50"
           >
             <Trash2 size={14} />
             {t('Delete Class')}
@@ -427,7 +427,7 @@ export default function ScheduleWeekCalendar({
                   key={day}
                   className="px-2 py-3 text-center border-r border-pits-edge last:border-r-0 bg-pits-surface-muted/40"
                 >
-                  <p className="text-[10px] font-black text-pits-dim uppercase">
+                  <p className="text-[11px] font-black text-pits-dim uppercase">
                     {formatGymDay(day, { weekday: 'short' }, locale, tz)}
                   </p>
                   <p className="text-sm font-black text-pits-text">
@@ -442,7 +442,7 @@ export default function ScheduleWeekCalendar({
                 {HOURS.map((hour) => (
                   <div
                     key={hour}
-                    className="absolute left-0 right-0 pr-2 text-right text-[10px] font-bold text-pits-dim -translate-y-1/2"
+                    className="absolute left-0 right-0 pr-2 text-right text-[11px] font-bold text-pits-dim -translate-y-1/2"
                     style={{ top: (hour - START_HOUR) * SLOT_HEIGHT }}
                   >
                     {String(hour).padStart(2, '0')}:00
@@ -503,16 +503,16 @@ export default function ScheduleWeekCalendar({
                             aria-label={t('Select class')}
                           />
                           <div className="flex-1 min-w-0 overflow-hidden">
-                            <p className="text-[10px] font-black uppercase truncate leading-tight">
+                            <p className="text-[11px] font-black uppercase truncate leading-tight">
                               {cls.class_type}
                             </p>
-                            <p className="text-[9px] font-bold truncate opacity-90 mt-0.5">
+                            <p className="text-[11px] font-bold truncate opacity-90 mt-0.5">
                               {getGymTimeLabel(cls.start_time, tz)}
                             </p>
-                            <p className="text-[9px] font-bold truncate opacity-80">
+                            <p className="text-[11px] font-bold truncate opacity-80">
                               {cls.coach?.full_name || t('Staff')}
                             </p>
-                            <p className="text-[9px] font-black opacity-75 mt-0.5">
+                            <p className="text-[11px] font-black opacity-75 mt-0.5">
                               {bookingCount}/{cls.max_capacity}
                               {waitlistCount > 0 ? ` · W${waitlistCount}` : ''}
                             </p>
@@ -528,7 +528,7 @@ export default function ScheduleWeekCalendar({
         </div>
       )}
 
-      <p className="px-4 py-3 text-[9px] font-bold text-pits-dim uppercase border-t border-pits-edge">
+      <p className="px-4 py-3 text-[11px] font-bold text-pits-dim uppercase border-t border-pits-edge">
         {t('Click a slot to schedule · Use checkboxes to multi-select')}
       </p>
 

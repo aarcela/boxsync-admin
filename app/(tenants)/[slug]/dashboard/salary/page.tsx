@@ -247,7 +247,7 @@ export default function SalaryPage() {
             <h1 className="page-title">
               {t('Coach Salaries')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[11px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
               {t('Admin Only')}
             </div>
           </div>
@@ -255,7 +255,7 @@ export default function SalaryPage() {
             {t('Manage pay tiers and coach salary assignments')}
           </p>
           {!isAdmin && callerRole && (
-            <p className="text-[10px] font-bold text-pits-secondary uppercase mt-2">
+            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
               {t('Only admins can manage coach salaries.')}
             </p>
           )}
@@ -291,7 +291,7 @@ export default function SalaryPage() {
                     placeholder={t('Search tiers...')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
                   />
                 </div>
               </div>
@@ -300,16 +300,16 @@ export default function SalaryPage() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-pits-surface-muted/60">
                     <tr>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Tier Name')}
                       </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Rates Configured')}
                       </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Status')}
                       </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
                         {t('Actions')}
                       </th>
                     </tr>
@@ -341,21 +341,21 @@ export default function SalaryPage() {
                                 <div className="text-xs font-bold text-pits-ink uppercase tracking-tight">
                                   {tier.name}
                                 </div>
-                                <div className="text-[10px] text-pits-dim font-medium truncate max-w-[220px]">
+                                <div className="text-[11px] text-pits-dim font-medium truncate max-w-[220px]">
                                   {tier.description || t('No details provided')}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
+                            <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
                               {tier.rates?.length ?? 0} {t('class types')}
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <button
                               onClick={() => handleToggleStatus(tier)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${tier.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${tier.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
                             >
                               {tier.is_active ? (
                                 <CheckCircle2 size={10} />
@@ -411,13 +411,13 @@ export default function SalaryPage() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-pits-surface-muted/60">
                     <tr>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Coach')}
                       </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Role')}
                       </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                         {t('Pay Tier')}
                       </th>
                     </tr>
@@ -453,7 +453,7 @@ export default function SalaryPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
+                            <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
                               {coach.role}
                             </span>
                           </td>
@@ -464,7 +464,7 @@ export default function SalaryPage() {
                                 handleAssignTier(coach.id, e.target.value)
                               }
                               disabled={isPending}
-                              className="w-full max-w-[200px] bg-pits-surface-muted border border-pits-edge rounded-xl px-3 py-2 text-[10px] font-bold uppercase text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
+                              className="w-full max-w-[200px] bg-pits-surface-muted border border-pits-edge rounded-xl px-3 py-2 text-[11px] font-bold uppercase text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
                             >
                               <option value="">{t('Unassigned')}</option>
                               {activeTiers.map((tier) => (
@@ -498,13 +498,13 @@ export default function SalaryPage() {
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Total Tiers')}
                     </span>
                     <span className="text-sm font-black text-pits-ink">{tiers.length}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Assigned Coaches')}
                     </span>
                     <span className="text-sm font-black text-pits-success">
@@ -522,13 +522,13 @@ export default function SalaryPage() {
               <ul className="space-y-3">
                 <li className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                     {t('Set a USD rate for each class type within every pay tier.')}
                   </p>
                 </li>
                 <li className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                     {t('Unassign a coach by selecting Unassigned in the tier dropdown.')}
                   </p>
                 </li>
@@ -551,7 +551,7 @@ export default function SalaryPage() {
                   <h2 className="text-2xl font-black text-pits-ink tracking-tighter uppercase">
                     {editingTier ? t('Edit Pay Tier') : t('Add Pay Tier')}
                   </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('Tier Configuration')}
                   </p>
                 </div>
@@ -562,7 +562,7 @@ export default function SalaryPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Tier Name')}
                   </label>
                   <input
@@ -576,7 +576,7 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Description')}
                   </label>
                   <textarea
@@ -591,13 +591,13 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Rate per Class (USD)')}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {classTypeNames.map((classType) => (
                       <div key={classType} className="space-y-1">
-                        <label className="text-[8px] font-black text-pits-dim uppercase ml-1">
+                        <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                           {classType}
                         </label>
                         <input
@@ -620,7 +620,7 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Status')}
                   </label>
                   <select

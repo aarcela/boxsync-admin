@@ -218,7 +218,7 @@ export default function IncomePage() {
             <h1 className="page-title">
               {t('Income Command')}
             </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-primary border border-pits-edge tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-primary border border-pits-edge tracking-widest uppercase shadow-sm">
               {t('Revenue Ledger')}
             </div>
           </div>
@@ -287,19 +287,19 @@ export default function IncomePage() {
                   placeholder={t('Filter records...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
               <div className="flex bg-pits-surface-muted p-1 rounded-xl">
                 <button
                   onClick={() => setViewCurrency(currencies.reference)}
-                  className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
+                  className={`px-4 py-1.5 text-[11px] font-black rounded-lg transition-all ${viewCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
                 >
                   {t('REF DISPLAY')}
                 </button>
                 <button
                   onClick={() => setViewCurrency(currencies.local)}
-                  className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all ${viewCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
+                  className={`px-4 py-1.5 text-[11px] font-black rounded-lg transition-all ${viewCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
                 >
                   {t('LOCAL DISPLAY')}
                 </button>
@@ -309,13 +309,13 @@ export default function IncomePage() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Registry')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Context / Description')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Sector')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Method')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Status')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Amount')}</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase text-right">{t('Control')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Registry')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Context / Description')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Sector')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Method')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Status')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Amount')}</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase text-right">{t('Control')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-pits-edge">
@@ -337,12 +337,12 @@ export default function IncomePage() {
                         <span className="text-xs font-black text-pits-text uppercase">{inc.description}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-pits-surface-muted text-pits-dim rounded text-[9px] font-black uppercase border border-pits-edge">
+                        <span className="px-2 py-1 bg-pits-surface-muted text-pits-dim rounded text-[11px] font-black uppercase border border-pits-edge">
                           {t(inc.category as TranslationKey)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-[10px] font-bold text-pits-text">
+                        <span className="text-[11px] font-bold text-pits-text">
                           {paymentMethods.find((m) => m.id === inc.payment_method)?.label ||
                             inc.payment_method ||
                             '—'}
@@ -350,7 +350,7 @@ export default function IncomePage() {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${statusStyles[inc.status]}`}
+                          className={`px-2 py-1 rounded text-[11px] font-black uppercase border ${statusStyles[inc.status]}`}
                         >
                           {t(inc.status as TranslationKey)}
                         </span>
@@ -368,7 +368,7 @@ export default function IncomePage() {
                                 : inc.amount * inc.exchange_rate_at_time
                             ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[8px] text-pits-dim font-bold uppercase">
+                          <span className="text-[11px] text-pits-dim font-bold uppercase">
                             ({inc.amount.toLocaleString()} {inc.currency})
                           </span>
                         </div>
@@ -382,7 +382,7 @@ export default function IncomePage() {
                             <Trash2 size={16} />
                           </button>
                         ) : (
-                          <span className="text-[8px] font-black uppercase text-pits-dim">
+                          <span className="text-[11px] font-black uppercase text-pits-dim">
                             {t('From membership')}
                           </span>
                         )}
@@ -415,8 +415,8 @@ export default function IncomePage() {
                 {stats.categoryBreakdown.map(([cat, total]) => (
                   <div key={cat} className="space-y-1.5">
                     <div className="flex justify-between items-end">
-                      <p className="text-[9px] font-black text-pits-dim uppercase">{t(cat as TranslationKey)}</p>
-                      <span className="text-[10px] font-black text-pits-text">
+                      <p className="text-[11px] font-black text-pits-dim uppercase">{t(cat as TranslationKey)}</p>
+                      <span className="text-[11px] font-black text-pits-text">
                         {currencySymbol(currencies.reference)}{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </span>
                     </div>
@@ -429,7 +429,7 @@ export default function IncomePage() {
                   </div>
                 ))}
                 {stats.categoryBreakdown.length === 0 && (
-                  <p className="text-center py-6 text-pits-dim text-[10px] font-black uppercase border border-dashed border-pits-edge rounded-2xl">
+                  <p className="text-center py-6 text-pits-dim text-[11px] font-black uppercase border border-dashed border-pits-edge rounded-2xl">
                     Awaiting data...
                   </p>
                 )}
@@ -473,7 +473,7 @@ export default function IncomePage() {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">{t('Record Income')}</h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('Operational Revenue Registry')}
                   </p>
                 </div>
@@ -484,7 +484,7 @@ export default function IncomePage() {
 
               <form onSubmit={handleAddIncome} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Context / Description')}</label>
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Context / Description')}</label>
                   <input
                     type="text"
                     placeholder={t('e.g. Merch sale - March')}
@@ -497,7 +497,7 @@ export default function IncomePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Sector')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Sector')}</label>
                     <select
                       value={newIncome.category}
                       onChange={(e) => setNewIncome({ ...newIncome, category: e.target.value as IncomeCategory })}
@@ -511,7 +511,7 @@ export default function IncomePage() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
                     <select
                       value={newIncome.currency}
                       onChange={(e) => setNewIncome({ ...newIncome, currency: e.target.value })}
@@ -529,7 +529,7 @@ export default function IncomePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Amount')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Amount')}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -541,7 +541,7 @@ export default function IncomePage() {
                       className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red transition-all placeholder:text-pits-dim"
                     />
                     {newIncome.amount && Number(newIncome.amount) > 0 && (
-                      <p className="text-[10px] text-pits-dim font-medium">
+                      <p className="text-[11px] text-pits-dim font-medium">
                         {isLocalCurrency(newIncome.currency, currencies) && exchangeRate
                           ? t('Counts as {{amount}} {{currency}}', {
                               amount: (Number(newIncome.amount) / exchangeRate).toFixed(2),
@@ -555,10 +555,10 @@ export default function IncomePage() {
                     )}
                   </div>
                   <div className="space-y-2 relative">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Official Rate')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Official Rate')}</label>
                     <div className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-dim cursor-not-allowed flex items-center justify-between">
                       <span>{exchangeRate.toFixed(4)}</span>
-                      <span className="text-[8px] opacity-70">{currencies.local}/{currencies.reference}</span>
+                      <span className="text-[11px] opacity-70">{currencies.local}/{currencies.reference}</span>
                     </div>
                     <div className="absolute -bottom-4 right-2 text-[7px] font-black text-pits-success uppercase tracking-widest">
                       {t('Live Reference')}
@@ -568,7 +568,7 @@ export default function IncomePage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-5">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Registry Date')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Registry Date')}</label>
                     <input
                       type="date"
                       value={newIncome.income_date}
@@ -577,7 +577,7 @@ export default function IncomePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
                     <select
                       value={newIncome.status}
                       onChange={(e) => setNewIncome({ ...newIncome, status: e.target.value as IncomeStatus })}
@@ -591,7 +591,7 @@ export default function IncomePage() {
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method')}</label>
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Method')}</label>
                   <select
                     value={newIncome.payment_method}
                     onChange={(e) => {
@@ -623,7 +623,7 @@ export default function IncomePage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-[1.4] min-w-0 py-4 px-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[10px] sm:text-[11px] font-black uppercase leading-tight shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="flex-[1.4] min-w-0 py-4 px-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] sm:text-[11px] font-black uppercase leading-tight shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     {t('Authorize Income Entry')}
                   </button>
@@ -670,7 +670,7 @@ function StatBlock({ label, value, symbol, info, color, icon }: {
     <div className="bg-pits-surface-elevated p-6 rounded-[32px] border border-pits-edge shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{label}</p>
+          <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest">{label}</p>
           <div className="flex items-baseline gap-1 mt-1">
             <span className="text-sm font-black text-pits-dim">{symbol}</span>
             <h2 className="text-3xl font-black text-pits-text tracking-tighter">
@@ -682,7 +682,7 @@ function StatBlock({ label, value, symbol, info, color, icon }: {
         </div>
         <div className={`p-3 rounded-2xl border ${colors[color]} shadow-sm`}>{icon}</div>
       </div>
-      <p className="text-[9px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1">
+      <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1">
         <Info size={10} /> {info}
       </p>
     </div>
@@ -698,8 +698,8 @@ function InsightRow({ label, text, variant }: { label: string; text: string; var
 
   return (
     <div className={`p-3 rounded-2xl border ${styles[variant]}`}>
-      <p className="text-[8px] font-black uppercase mb-0.5 text-pits-dim">{label}</p>
-      <p className="text-[10px] font-bold uppercase">{text}</p>
+      <p className="text-[11px] font-black uppercase mb-0.5 text-pits-dim">{label}</p>
+      <p className="text-[11px] font-bold uppercase">{text}</p>
     </div>
   );
 }

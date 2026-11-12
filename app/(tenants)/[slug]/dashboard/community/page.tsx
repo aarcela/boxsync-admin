@@ -167,12 +167,12 @@ export default function CommunityPage() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-pits-surface-elevated border-b border-pits-edge">
               <tr>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('User')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Content')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Type')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Stats')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Date')}</th>
-                <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('User')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Content')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Type')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Stats')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Date')}</th>
+                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-pits-edge">
@@ -198,7 +198,7 @@ export default function CommunityPage() {
                         <p className="text-sm font-black text-pits-text">
                           {post.profiles?.full_name || t('Unknown Athlete')}
                         </p>
-                        <p className="text-[10px] text-pits-dim font-bold uppercase tracking-tight">
+                        <p className="text-[11px] text-pits-dim font-bold uppercase tracking-tight">
                           ID: {post.user_id.substring(0, 8)}...
                         </p>
                       </div>
@@ -211,13 +211,13 @@ export default function CommunityPage() {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {post.type === 'wod_share' && post.metadata?.score && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-red/10 text-pits-red rounded-md font-black text-[10px] uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-red/10 text-pits-red rounded-md font-black text-[11px] uppercase tracking-wider">
                             <TrendingUp size={10} />
                             {t('Score')}: {post.metadata.score}
                           </div>
                         )}
                         {post.media_url && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-surface-muted text-pits-dim rounded-md font-bold text-[10px] uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-surface-muted text-pits-dim rounded-md font-bold text-[11px] uppercase tracking-wider">
                             <ImageIcon size={10} />
                             {t('Attached Media')}
                           </div>
@@ -228,7 +228,7 @@ export default function CommunityPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 px-3 py-1 bg-pits-surface-muted rounded-full w-fit">
                       {getPostIcon(post.type)}
-                      <span className="text-[10px] font-black text-pits-text uppercase tracking-tight">
+                      <span className="text-[11px] font-black text-pits-text uppercase tracking-tight">
                         {t(post.type)}
                       </span>
                     </div>

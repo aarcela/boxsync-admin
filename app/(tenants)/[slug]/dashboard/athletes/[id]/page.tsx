@@ -447,7 +447,7 @@ export default function AthleteDetailPage() {
   const sectionTitle =
     'text-[11px] font-black text-pits-dim uppercase tracking-[0.16em] flex items-center gap-2';
   const fieldLabel =
-    'text-[10px] text-pits-dim font-bold uppercase tracking-wider';
+    'text-[11px] text-pits-dim font-bold uppercase tracking-wider';
   const fieldValue = 'text-sm font-bold text-pits-text';
 
   return (
@@ -482,15 +482,15 @@ export default function AthleteDetailPage() {
                   {profile.full_name || t('Unnamed')}
                 </h1>
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider ${
                     profile.is_solvent
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      ? 'bg-pits-positive-soft text-pits-positive border border-pits-positive-edge'
+                      : 'bg-pits-warning-soft text-pits-warning border border-pits-warning-edge'
                   }`}
                 >
                   {profile.is_solvent ? t('Solvent / Paid') : t('Debt / Unpaid')}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
                   {profile.role}
                 </span>
               </div>
@@ -555,7 +555,7 @@ export default function AthleteDetailPage() {
                   href={`https://wa.me/${phoneDigits}`}
                   target="_blank"
                   rel="noreferrer"
-                  className={`${btnBase} bg-emerald-600 text-white hover:bg-emerald-700`}
+                  className={`${btnBase} bg-pits-positive text-white hover:bg-pits-positive/90`}
                 >
                   <MessageCircle size={14} aria-hidden />
                   {t('Open WhatsApp')}
@@ -612,8 +612,8 @@ export default function AthleteDetailPage() {
               onClick={() => setConfirmKind('solvency')}
               className={`${btnSecondary} ${
                 profile.is_solvent
-                  ? 'text-amber-800 border-amber-200 hover:bg-amber-50'
-                  : 'text-green-700 border-green-200 hover:bg-green-50'
+                  ? 'text-pits-warning border-pits-warning-edge hover:bg-pits-warning-soft'
+                  : 'text-pits-positive border-pits-positive-edge hover:bg-pits-positive-soft'
               }`}
             >
               {profile.is_solvent ? t('Revoke Access') : t('Restore Access')}
@@ -673,7 +673,7 @@ export default function AthleteDetailPage() {
               type="button"
               disabled={actionLoading === 'delete'}
               onClick={() => setConfirmKind('delete')}
-              className={`${btnGhost} text-red-600 hover:text-red-700 hover:bg-red-50 lg:ml-auto`}
+              className={`${btnGhost} text-pits-danger hover:text-pits-danger hover:bg-pits-danger-soft lg:ml-auto`}
             >
               {actionLoading === 'delete' ? (
                 <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -789,7 +789,7 @@ export default function AthleteDetailPage() {
                   </p>
                 </div>
                 {profile.last_payment_date && (
-                  <span className="text-[10px] text-pits-dim capitalize shrink-0">
+                  <span className="text-[11px] text-pits-dim capitalize shrink-0">
                     {formatRelative(new Date(profile.last_payment_date), lang)}
                   </span>
                 )}
@@ -802,7 +802,7 @@ export default function AthleteDetailPage() {
                   <label htmlFor="sessions-used" className={fieldLabel}>
                     {t('Sessions used')}
                   </label>
-                  <span className="text-[10px] font-bold text-pits-dim uppercase tracking-wider">
+                  <span className="text-[11px] font-bold text-pits-dim uppercase tracking-wider">
                     {t('Remaining sessions')}: {planUsage.remaining}
                   </span>
                 </div>
@@ -839,11 +839,11 @@ export default function AthleteDetailPage() {
             )}
 
             {profile.admin_note && (
-              <div className="p-3.5 bg-amber-50 border border-amber-100 rounded-lg">
-                <p className="text-[10px] text-amber-700 font-black uppercase tracking-wider mb-1">
+              <div className="p-3.5 bg-pits-warning-soft border border-pits-warning-edge rounded-lg">
+                <p className="text-[11px] text-pits-warning font-black uppercase tracking-wider mb-1">
                   {t('Coach Notes')}
                 </p>
-                <p className="text-sm text-amber-900 leading-relaxed">
+                <p className="text-sm text-pits-warning leading-relaxed">
                   {profile.admin_note}
                 </p>
               </div>
@@ -856,7 +856,7 @@ export default function AthleteDetailPage() {
                 <Calendar size={14} className="text-pits-red" aria-hidden />
                 {t('Recent History')}
               </h2>
-              <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-pits-dim">
+              <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-wider text-pits-dim">
                 <span className="inline-flex items-center gap-1">
                   <TrendingUp size={12} aria-hidden />
                   {attended} {t('Visits')}
@@ -887,7 +887,7 @@ export default function AthleteDetailPage() {
                               ? 'bg-pits-success'
                               : booking.status === 'no_show'
                                 ? 'bg-pits-red'
-                                : 'bg-blue-500'
+                                : 'bg-pits-info'
                           }`}
                           aria-hidden
                         />
@@ -903,12 +903,12 @@ export default function AthleteDetailPage() {
                         </div>
                       </div>
                       <span
-                        className={`text-[10px] font-bold uppercase px-2 py-1 rounded-md shrink-0 ${
+                        className={`text-[11px] font-bold uppercase px-2 py-1 rounded-md shrink-0 ${
                           booking.status === 'attended'
-                            ? 'bg-green-50 text-green-700'
+                            ? 'bg-pits-positive-soft text-pits-positive'
                             : booking.status === 'no_show'
-                              ? 'bg-red-50 text-red-600'
-                              : 'bg-blue-50 text-blue-600'
+                              ? 'bg-pits-danger-soft text-pits-danger'
+                              : 'bg-pits-info-soft text-pits-info'
                         }`}
                       >
                         {booking.status}
@@ -962,8 +962,8 @@ export default function AthleteDetailPage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-red-100 bg-red-50/60 p-5 space-y-3">
-            <h2 className="text-[11px] font-black text-red-600 uppercase tracking-[0.16em] flex items-center gap-2">
+          <section className="rounded-xl border border-pits-danger-edge bg-pits-danger-soft p-5 space-y-3">
+            <h2 className="text-[11px] font-black text-pits-danger uppercase tracking-[0.16em] flex items-center gap-2">
               <Activity size={14} aria-hidden />
               {t('Health & Safety')}
             </h2>
@@ -988,12 +988,12 @@ export default function AthleteDetailPage() {
             ).map(([label, flagged, text]) => (
               <div
                 key={label}
-                className="p-3 bg-pits-surface-elevated rounded-lg border border-red-100/80"
+                className="p-3 bg-pits-surface-elevated rounded-lg border border-pits-danger-edge"
               >
                 <div className="flex justify-between items-center mb-1">
                   <p className={fieldLabel}>{label}</p>
                   {flagged ? (
-                    <XCircle size={14} className="text-red-500" aria-hidden />
+                    <XCircle size={14} className="text-pits-danger" aria-hidden />
                   ) : (
                     <CheckCircle2 size={14} className="text-pits-success" aria-hidden />
                   )}

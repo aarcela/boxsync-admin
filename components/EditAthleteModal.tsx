@@ -263,7 +263,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                 className={`${inputClass} font-mono`}
                 placeholder="Leave blank to keep current password"
               />
-              <p className="text-[10px] text-pits-ink-muted mt-1">
+              <p className="text-[11px] text-pits-ink-muted mt-1">
                 Only fill this if you want to change the password. Leave blank to keep the current one.
               </p>
             </div>
@@ -385,8 +385,8 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
 
             {/* Show plan info for coaches/managers/admins */}
             {isStaffProfileRole(formData.role) && (
-              <div className="p-3 bg-blue-950/40 border border-blue-900/50 rounded-lg">
-                <p className="text-xs font-bold text-blue-400 uppercase tracking-wide">
+              <div className="p-3 bg-pits-info-soft border border-pits-info-edge rounded-lg">
+                <p className="text-xs font-bold text-pits-info uppercase tracking-wide">
                   Plan: Unlimited (Auto-assigned for {formData.role}s)
                 </p>
               </div>
@@ -404,7 +404,7 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
                   <div className="text-xs font-bold text-pits-dim uppercase tracking-wider">
                     Active Status (Solvent)
                   </div>
-                  <div className="text-[10px] text-pits-ink-muted mt-0.5">
+                  <div className="text-[11px] text-pits-ink-muted mt-0.5">
                     Active members have full access to the gym
                   </div>
                 </div>

@@ -428,7 +428,7 @@ export default function ProfilePage() {
             <h2 className="text-xl font-black text-pits-ink truncate">
               {profile.full_name || t('Admin')}
             </h2>
-            <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-pits-primary/15 text-pits-primary text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-pits-primary/15 text-pits-primary text-[11px] font-black uppercase tracking-wider">
               <Shield size={12} />
               {roleLabel(profile.role, t)}
             </span>
@@ -439,7 +439,7 @@ export default function ProfilePage() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
             <Mail size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
             <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <dt className="text-[11px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Email')}
               </dt>
               <dd className="text-sm font-bold text-pits-ink truncate mt-0.5">
@@ -451,7 +451,7 @@ export default function ProfilePage() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge sm:col-span-2">
             <Phone size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <dt className="text-[11px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Phone')}
               </dt>
               <p className="text-[11px] text-pits-ink-muted mt-0.5">
@@ -483,7 +483,7 @@ export default function ProfilePage() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
             <User size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
             <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <dt className="text-[11px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Full name')}
               </dt>
               <dd className="text-sm font-bold text-pits-ink mt-0.5">
@@ -495,7 +495,7 @@ export default function ProfilePage() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
             <Calendar size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
             <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <dt className="text-[11px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Member since')}
               </dt>
               <dd className="text-sm font-bold text-pits-ink mt-0.5">
@@ -510,7 +510,7 @@ export default function ProfilePage() {
 
       <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-6">
         {!emailConfirmed && (
-          <p className="mb-4 text-sm font-bold text-orange-700">
+          <p className="mb-4 text-sm font-bold text-pits-warning">
             {t('Verify your email before sharing the join link.')}
           </p>
         )}
@@ -551,7 +551,7 @@ export default function ProfilePage() {
 
           <div className="flex-1 w-full space-y-3">
             <div className="rounded-xl border border-pits-edge bg-pits-surface-muted/50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <p className="text-[11px] font-black uppercase tracking-wider text-pits-ink-muted">
                 {t('Gym code')}
               </p>
               <p className="text-lg font-black text-pits-primary tracking-wide mt-1">
@@ -679,7 +679,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => setRotateConfirmOpen(true)}
                   disabled={rotatingCode || checkinQrGenerating}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-orange-300 bg-orange-50 text-orange-800 text-sm font-bold uppercase tracking-widest hover:bg-orange-100 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-pits-warning-edge bg-pits-warning-soft text-pits-warning text-sm font-bold uppercase tracking-widest hover:bg-pits-warning-soft transition-colors disabled:opacity-50"
                 >
                   {rotatingCode ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -776,7 +776,7 @@ export default function ProfilePage() {
           </div>
 
           {passwordError && (
-            <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg">
+            <div className="bg-pits-danger-soft text-pits-danger text-sm font-bold p-3 rounded-lg">
               {passwordError}
             </div>
           )}

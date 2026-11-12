@@ -115,7 +115,7 @@ export default function NewsPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded
+                      <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded
                         ${item.tag === 'ALERT' ? 'bg-pits-primary-soft text-pits-error' : 
                           item.tag === 'EVENT' ? 'bg-pits-surface-muted text-pits-text' : 
                           'bg-pits-surface-muted text-pits-text'}

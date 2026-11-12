@@ -164,7 +164,7 @@ export default function GymSetupPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+        <p className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
           {t('Setup assistant')}
         </p>
         <h1 className="page-title">
@@ -182,7 +182,7 @@ export default function GymSetupPage() {
       </div>
 
       {!verified && (
-        <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
+        <div className="rounded-2xl border border-pits-warning-edge bg-pits-warning-soft p-4 text-sm text-pits-warning">
           {t('Check your email to activate your account.')}{' '}
           <button
             type="button"
@@ -202,7 +202,7 @@ export default function GymSetupPage() {
       )}
 
       {readOnly && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-2xl border border-pits-danger-edge bg-pits-danger-soft p-4 text-sm text-pits-danger">
           {t('Your trial has ended. The dashboard is read-only.')}
         </div>
       )}
@@ -218,7 +218,7 @@ export default function GymSetupPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                     {index + 1}
                   </p>
                   <h2 className="font-black uppercase italic text-pits-ink">
@@ -227,12 +227,12 @@ export default function GymSetupPage() {
                   <p className="text-sm text-pits-ink-muted">{t(meta.hint)}</p>
                 </div>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full border ${
+                  className={`text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded-full border ${
                     status === 'done'
-                      ? 'bg-green-50 text-green-700 border-green-200'
+                      ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
                       : status === 'skipped'
                         ? 'bg-gray-50 text-gray-600 border-gray-200'
-                        : 'bg-orange-50 text-orange-700 border-orange-200'
+                        : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
                   }`}
                 >
                   {status === 'done'
@@ -360,7 +360,7 @@ export default function GymSetupPage() {
                   </button>
                 )}
                 {status === 'done' && (
-                  <span className="inline-flex items-center gap-1 text-green-700 text-xs font-bold uppercase">
+                  <span className="inline-flex items-center gap-1 text-pits-positive text-xs font-bold uppercase">
                     <Check size={14} /> {t('Detected from your data')}
                   </span>
                 )}
@@ -373,7 +373,7 @@ export default function GymSetupPage() {
                 <p className="mt-2 text-xs font-mono text-pits-ink-muted break-all">{joinUrl}</p>
               )}
               {step === 'share' && !verified && (
-                <p className="mt-3 text-sm text-orange-800">
+                <p className="mt-3 text-sm text-pits-warning">
                   {t('Verify your email before sharing the join link.')}
                 </p>
               )}

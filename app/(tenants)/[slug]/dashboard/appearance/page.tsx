@@ -97,7 +97,7 @@ function AppPreview({
         style={{ backgroundColor: colors.background, color: colors.textMain }}
       >
         <div className="px-4 pt-3 pb-2">
-          <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: colors.textSub }}>
+          <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: colors.textSub }}>
             {t('App preview')}
           </p>
           <p className="text-lg font-black italic leading-tight">{showWod ? t("Today's WOD") : t('Home')}</p>
@@ -108,13 +108,13 @@ function AppPreview({
               className="rounded-2xl p-3"
               style={{ backgroundColor: colors.card, border: `1px solid ${colors.border}` }}
             >
-              <p className="text-[10px] font-bold" style={{ color: colors.textSub }}>
+              <p className="text-[11px] font-bold" style={{ color: colors.textSub }}>
                 {t("Today's WOD")}
               </p>
               <p className="mt-1 text-xs font-black">Fran — 21-15-9</p>
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl py-2 text-[10px] font-black uppercase"
+                className="mt-3 w-full rounded-xl py-2 text-[11px] font-black uppercase"
                 style={{ backgroundColor: colors.primary, color: colors.darkText }}
               >
                 {t('Book')}
@@ -125,13 +125,13 @@ function AppPreview({
               className="rounded-2xl p-3"
               style={{ backgroundColor: colors.card, border: `1px solid ${colors.border}` }}
             >
-              <p className="text-[10px] font-bold" style={{ color: colors.textSub }}>
+              <p className="text-[11px] font-bold" style={{ color: colors.textSub }}>
                 {t('Schedule')}
               </p>
               <p className="mt-1 text-xs font-black">18:00 — {terms.workout}</p>
               <button
                 type="button"
-                className="mt-3 w-full rounded-xl py-2 text-[10px] font-black uppercase"
+                className="mt-3 w-full rounded-xl py-2 text-[11px] font-black uppercase"
                 style={{ backgroundColor: colors.primary, color: colors.darkText }}
               >
                 {t('Book')}
@@ -147,7 +147,7 @@ function AppPreview({
               }}
             >
               <p
-                className="text-[10px] font-black uppercase tracking-wider"
+                className="text-[11px] font-black uppercase tracking-wider"
                 style={{ color: colors.primary }}
               >
                 {t('New PR!')}
@@ -160,7 +160,7 @@ function AppPreview({
               className="rounded-2xl p-3"
               style={{ backgroundColor: colors.card, border: `1px solid ${colors.border}` }}
             >
-              <p className="text-[10px] font-bold" style={{ color: colors.textSub }}>
+              <p className="text-[11px] font-bold" style={{ color: colors.textSub }}>
                 {t('Weekly attendance')}
               </p>
               <p className="mt-1 text-sm font-black">4 / 4</p>
@@ -168,7 +168,7 @@ function AppPreview({
           ) : null}
         </div>
         <div
-          className="flex justify-around px-2 py-2 text-[8px] font-black uppercase"
+          className="flex justify-around px-2 py-2 text-[11px] font-black uppercase"
           style={{ backgroundColor: colors.card, borderTop: `1px solid ${colors.border}` }}
         >
           <span style={{ color: colors.primary }}>{t('Home')}</span>
@@ -436,7 +436,7 @@ export default function AppearancePage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                   {t('Term member singular')}
                 </span>
                 <input
@@ -453,7 +453,7 @@ export default function AppearancePage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                   {t('Term member plural')}
                 </span>
                 <input
@@ -471,7 +471,7 @@ export default function AppearancePage() {
               </label>
               {TERM_FIELDS.map((field) => (
                 <label key={field.key} className="block">
-                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                  <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                     {t(field.label)}
                   </span>
                   <input
@@ -609,7 +609,7 @@ export default function AppearancePage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-black text-pits-ink">{t(paletteNameKey(id))}</p>
                     {isSaved && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-pits-primary">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wide text-pits-primary">
                         <Check size={12} />
                         {t('Currently saved')}
                       </span>
@@ -637,7 +637,7 @@ export default function AppearancePage() {
         </div>
 
         <div className="lg:sticky lg:top-6 rounded-2xl bg-pits-card border border-pits-edge p-4">
-          <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+          <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
             {t('App color palette')}
           </p>
           {loading ? (

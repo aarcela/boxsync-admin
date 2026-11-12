@@ -368,7 +368,7 @@ export default function WodEditorPage() {
             <ChevronLeft size={20} />
           </button>
           <div className="text-center min-w-0">
-            <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Week of')}</p>
+            <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Week of')}</p>
             <p className="text-sm sm:text-base font-black text-pits-text uppercase tracking-tight truncate">
               {weekRangeLabel}
             </p>
@@ -403,7 +403,7 @@ export default function WodEditorPage() {
                       : 'bg-pits-surface-muted border-pits-edge text-pits-text hover:bg-pits-surface-elevated hover:border-pits-edge'
                   }`}
               >
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-pits-dark-text/80' : 'text-pits-dim'}`}>
+                <span className={`text-[11px] sm:text-[11px] font-black uppercase tracking-wider mb-0.5 sm:mb-1 ${selected ? 'text-pits-dark-text/80' : 'text-pits-dim'}`}>
                   {formatWeekdayShort(day, lang)}
                 </span>
                 <span className={`text-base sm:text-lg font-black leading-none ${selected ? 'text-pits-dark-text' : 'text-pits-text'}`}>
@@ -423,7 +423,7 @@ export default function WodEditorPage() {
             <button
               type="button"
               onClick={goToToday}
-              className="text-[10px] font-black uppercase tracking-widest text-pits-red hover:text-pits-red-dark transition-colors"
+              className="text-[11px] font-black uppercase tracking-widest text-pits-red hover:text-pits-red-dark transition-colors"
             >
               {t('Jump to today')}
             </button>
@@ -527,7 +527,7 @@ export default function WodEditorPage() {
                   className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all placeholder:font-normal disabled:cursor-not-allowed"
                 />
                 <div className="text-right mt-1.5">
-                  <span className={`text-[10px] font-bold ${title.length > 180 ? 'text-pits-error' : 'text-pits-dim'}`}>
+                  <span className={`text-[11px] font-bold ${title.length > 180 ? 'text-pits-error' : 'text-pits-dim'}`}>
                     {200 - title.length}
                   </span>
                 </div>
@@ -714,7 +714,7 @@ export default function WodEditorPage() {
                   <div className="uppercase font-black text-2xl italic tracking-tighter text-pits-text leading-none">
                     {title || t("TODAY'S WORKOUT")}
                   </div>
-                  <div className="text-[10px] font-bold text-pits-dim tracking-widest uppercase">
+                  <div className="text-[11px] font-bold text-pits-dim tracking-widest uppercase">
                     {selectedDate.toDateString()}
                   </div>
 
@@ -725,7 +725,7 @@ export default function WodEditorPage() {
                   {metcon && <PreviewBlock label={t('Metcon')} color="border-pits-red" content={metcon} />}
                   {(stimulus || scaling) && (
                     <div className="bg-pits-primary-soft p-4 rounded-xl border border-pits-edge">
-                       <div className="text-[9px] font-black text-pits-success uppercase mb-1">{t('Stimulus & Scaling')}</div>
+                       <div className="text-[11px] font-black text-pits-success uppercase mb-1">{t('Stimulus & Scaling')}</div>
                        <p className="text-[11px] font-bold text-pits-success leading-relaxed whitespace-pre-line">
                          {stimulus ? `💡 ${stimulus}\n` : ''}
                          {scaling ? `⚖️ ${scaling}` : ''}
@@ -784,9 +784,9 @@ export default function WodEditorPage() {
               <div className="mt-4 flex items-center justify-between px-2">
                  <div className="flex items-center gap-1.5 opacity-40">
                    <div className="w-2 h-2 bg-pits-success rounded-full animate-pulse"></div>
-                   <span className="text-[10px] font-bold uppercase tracking-wider text-pits-text">{t('Connected')}</span>
+                   <span className="text-[11px] font-bold uppercase tracking-wider text-pits-text">{t('Connected')}</span>
                  </div>
-                 <p className="text-[10px] text-pits-dim font-bold uppercase text-right">
+                 <p className="text-[11px] text-pits-dim font-bold uppercase text-right">
                    {t('Auto-scales for iOS/Android')}
                  </p>
               </div>
@@ -857,7 +857,7 @@ function Section({ label, color, icon, value, onChange, placeholder, rows = 4, d
 function PreviewBlock({ label, color, content }: { label: string, color: string, content: string }) {
   return (
     <div className={`border-l-4 ${color} pl-4 py-1`}>
-      <div className="text-[9px] font-black uppercase text-pits-dim mb-1 tracking-widest">{label}</div>
+      <div className="text-[11px] font-black uppercase text-pits-dim mb-1 tracking-widest">{label}</div>
       <p className="text-[12px] font-bold text-pits-text leading-snug whitespace-pre-line">
         {content}
       </p>

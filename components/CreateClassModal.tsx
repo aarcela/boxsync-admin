@@ -423,7 +423,7 @@ export default function CreateClassModal({
               {isRecurring && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Repeat on</label>
+                    <label className="block text-[11px] font-bold text-pits-dim uppercase mb-2">Repeat on</label>
                     <div className="flex justify-between">
                       {DAYS_OF_WEEK.map(day => (
                         <button
@@ -438,7 +438,7 @@ export default function CreateClassModal({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Until Date</label>
+                    <label className="block text-[11px] font-bold text-pits-dim uppercase mb-2">Until Date</label>
                     <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className={inputClass} />
                   </div>
                 </div>

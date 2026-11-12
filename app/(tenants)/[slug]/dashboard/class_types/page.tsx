@@ -170,7 +170,7 @@ export default function ClassTypesPage() {
             <h1 className="page-title">
               {t('Class Types')}
             </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
               {t('System Config')}
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function ClassTypesPage() {
                   placeholder={t('Search class types...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
             </div>
@@ -208,16 +208,16 @@ export default function ClassTypesPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-pits-surface-elevated">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Type')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Duration')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Status')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
                       {t('Actions')}
                     </th>
                   </tr>
@@ -248,7 +248,7 @@ export default function ClassTypesPage() {
                               <div className="text-xs font-bold text-pits-text uppercase tracking-tight">
                                 {row.name}
                               </div>
-                              <div className="text-[10px] text-pits-dim font-medium">
+                              <div className="text-[11px] text-pits-dim font-medium">
                                 {row.is_open_box ? t('Open Box plan type') : t('Standard class type')}
                                 {' · '}
                                 {t('Order')}: {row.sort_order}
@@ -257,7 +257,7 @@ export default function ClassTypesPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-[10px] font-black uppercase text-pits-text">
+                          <span className="text-[11px] font-black uppercase text-pits-text">
                             {row.default_duration_min} {t('min')}
                           </span>
                         </td>
@@ -265,7 +265,7 @@ export default function ClassTypesPage() {
                           <button
                             onClick={() => handleToggleStatus(row)}
                             disabled={isPending}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${
                               row.is_active
                                 ? 'bg-pits-primary-soft text-pits-success border-pits-edge'
                                 : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
@@ -346,7 +346,7 @@ export default function ClassTypesPage() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Name')}</label>
+                <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Name')}</label>
                 <input
                   required
                   value={formData.name}
@@ -357,7 +357,7 @@ export default function ClassTypesPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Color')}</label>
+                <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Color')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -379,7 +379,7 @@ export default function ClassTypesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Duration (min)')}
                   </label>
                   <input
@@ -397,7 +397,7 @@ export default function ClassTypesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Sort order')}</label>
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Sort order')}</label>
                   <input
                     type="number"
                     value={formData.sort_order}
@@ -422,7 +422,7 @@ export default function ClassTypesPage() {
                     }
                     className="rounded border-pits-edge"
                   />
-                  <span className="text-[10px] font-black uppercase text-pits-text">
+                  <span className="text-[11px] font-black uppercase text-pits-text">
                     {t('Open Box type (plan restriction)')}
                   </span>
                 </label>
@@ -435,7 +435,7 @@ export default function ClassTypesPage() {
                     }
                     className="rounded border-pits-edge"
                   />
-                  <span className="text-[10px] font-black uppercase text-pits-text">{t('Active')}</span>
+                  <span className="text-[11px] font-black uppercase text-pits-text">{t('Active')}</span>
                 </label>
               </div>
 

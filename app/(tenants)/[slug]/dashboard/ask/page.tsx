@@ -165,13 +165,13 @@ export default function AskAiPage() {
           </div>
         </div>
         <div className="shrink-0 min-w-[9rem] max-w-[14rem]">
-          <p className={`text-[11px] font-bold text-right leading-snug ${atLimit ? 'text-red-700' : 'text-pits-dim'}`}>
+          <p className={`text-[11px] font-bold text-right leading-snug ${atLimit ? 'text-pits-danger' : 'text-pits-dim'}`}>
             {loadingQuota ? '…' : usedLabel}
           </p>
           {quota && !quota.disabled && (
             <div className="mt-2 h-1.5 rounded-full bg-pits-surface overflow-hidden">
               <div
-                className={`h-full rounded-full ${pct >= 100 ? 'bg-red-600' : 'bg-pits-primary'}`}
+                className={`h-full rounded-full ${pct >= 100 ? 'bg-pits-danger' : 'bg-pits-primary'}`}
                 style={{ width: `${pct}%` }}
               />
             </div>

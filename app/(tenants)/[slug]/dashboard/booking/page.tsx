@@ -175,7 +175,7 @@ function CloseWindowEditor({
         <div className="rounded-xl border border-pits-edge bg-pits-surface px-3 py-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                 {t('Booking custom hours')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -195,7 +195,7 @@ function CloseWindowEditor({
               </div>
             </label>
             <label className="space-y-1">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                 {t('Booking custom minutes')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -304,7 +304,7 @@ function ReminderEditor({
         <div className="rounded-xl border border-pits-edge bg-pits-surface px-3 py-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                 {t('Booking custom hours')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -324,7 +324,7 @@ function ReminderEditor({
               </div>
             </label>
             <label className="space-y-1">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                 {t('Booking custom minutes')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -490,9 +490,9 @@ export default function BookingSettingsPage() {
       ) : (
         <div className="rounded-2xl bg-pits-card border border-pits-edge overflow-hidden">
           {!windowsValid ? (
-            <div className="flex items-start gap-2 border-b border-amber-600/40 bg-amber-100 px-5 py-3">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-800" />
-              <p className="text-sm font-bold text-amber-950">
+            <div className="flex items-start gap-2 border-b border-pits-warning-edge bg-pits-warning-soft px-5 py-3">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-pits-warning" />
+              <p className="text-sm font-bold text-pits-warning">
                 {t('Booking windows overlap warning')}
               </p>
             </div>
@@ -601,7 +601,7 @@ export default function BookingSettingsPage() {
             </div>
 
             <label className="block space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                 {t('Grace days')}
               </span>
               <input
@@ -627,7 +627,7 @@ export default function BookingSettingsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                   {t('Check-in when overdue')}
                 </span>
                 <select
@@ -649,7 +649,7 @@ export default function BookingSettingsPage() {
                 </select>
               </label>
               <label className="space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
+                <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
                   {t('Booking when overdue')}
                 </span>
                 <select

@@ -136,7 +136,7 @@ export default function AccountabilityPage() {
           <div className="flex w-full sm:w-auto bg-pits-surface-muted p-1 rounded-2xl border border-pits-edge">
             <button 
               onClick={() => setActiveCurrency(currencies.reference)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[10px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
                 activeCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -144,7 +144,7 @@ export default function AccountabilityPage() {
             </button>
             <button 
               onClick={() => setActiveCurrency(currencies.local)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[10px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
                 activeCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -228,7 +228,7 @@ export default function AccountabilityPage() {
               <h3 className="text-sm font-black text-pits-text uppercase tracking-tighter flex items-center gap-2 min-w-0">
                 <Scale size={18} className="text-pits-red shrink-0" /> {t('Monthly P&L')} · {activeCurrency}
               </h3>
-              <span className="inline-flex items-center gap-1.5 max-w-full shrink-0 px-2.5 py-1 rounded-lg border border-pits-edge bg-pits-surface-muted text-[9px] sm:text-[10px] font-black uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1.5 max-w-full shrink-0 px-2.5 py-1 rounded-lg border border-pits-edge bg-pits-surface-muted text-[11px] sm:text-[11px] font-black uppercase tracking-wide">
                 <span className="text-pits-dim">{t('Exchange Base')}</span>
                 <span className="text-pits-text truncate">
                   {currencySymbol(currencies.reference)}1 = {stats.exchangeRate?.toFixed(2) || '---'} {currencies.local}
@@ -272,16 +272,16 @@ export default function AccountabilityPage() {
                   {/* Rows */}
                   <div className="flex-1 space-y-2">
                     <div className="flex justify-between items-center bg-pits-surface-muted rounded-xl p-2.5 border border-pits-edge">
-                      <span className="text-[9px] font-black text-pits-dim uppercase">{t('Total expenses label')}</span>
+                      <span className="text-[11px] font-black text-pits-dim uppercase">{t('Total expenses label')}</span>
                       <span className="text-xs font-black text-pits-error">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                     </div>
                     <div className="flex justify-between items-center bg-pits-surface-muted rounded-xl p-2.5 border border-pits-edge">
-                      <span className="text-[9px] font-black text-pits-dim uppercase">{t('Current income label')}</span>
+                      <span className="text-[11px] font-black text-pits-dim uppercase">{t('Current income label')}</span>
                       <span className="text-xs font-black text-pits-success">{symbol}{currentStats.income.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                     </div>
                     {breakEvenGap > 0 && (
                       <div className="flex justify-between items-center bg-pits-primary-soft rounded-xl p-2.5 border border-pits-edge">
-                        <span className="text-[9px] font-black text-pits-error uppercase">{t('Deficit')}</span>
+                        <span className="text-[11px] font-black text-pits-error uppercase">{t('Deficit')}</span>
                         <span className="text-xs font-black text-pits-error">{symbol}{breakEvenGap.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                       </div>
                     )}
@@ -300,13 +300,13 @@ export default function AccountabilityPage() {
                           <Wallet size={18} />
                        </div>
                        <div className="min-w-0">
-                          <p className="text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Sustainability Report')}</p>
+                          <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Sustainability Report')}</p>
                           <h4 className="text-sm sm:text-lg font-black tracking-tighter uppercase">{t('Net Balance')}</h4>
                        </div>
                     </div>
                     
                     <div className="sm:text-right min-w-0">
-                       <p className="text-[9px] font-black text-pits-dim uppercase mb-0.5">{t('Total')} {activeCurrency}</p>
+                       <p className="text-[11px] font-black text-pits-dim uppercase mb-0.5">{t('Total')} {activeCurrency}</p>
                        <p className={`text-xl sm:text-2xl font-black tracking-tighter break-all ${currentStats.net >= 0 ? 'text-pits-success' : 'text-pits-error'}`}>
                          {symbol}{formatMoney(currentStats.net)}
                        </p>
@@ -351,10 +351,10 @@ export default function AccountabilityPage() {
              </div>
              
              <div className="mt-8 p-4 bg-pits-surface-muted/50 rounded-2xl border border-pits-edge/50">
-                <p className="text-[9px] font-bold text-blue-700 uppercase tracking-tight flex items-center gap-2">
+                <p className="text-[11px] font-bold text-pits-info uppercase tracking-tight flex items-center gap-2">
                    <Info size={12} /> {t('Strategic Insight')}
                 </p>
-                <p className="text-[10px] font-bold text-pits-text mt-2 leading-relaxed">
+                <p className="text-[11px] font-bold text-pits-text mt-2 leading-relaxed">
                    {currentStats.margin > 30 
                      ? t('Strong margin. Consider reinvesting in gear or marketing.') 
                      : currentStats.margin > 0 
@@ -391,7 +391,7 @@ export default function AccountabilityPage() {
               <span className="text-lg sm:text-xl font-black text-pits-dim mb-0.5">%</span>
             </div>
 
-            <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-3">
+            <p className="text-[11px] font-bold text-pits-dim uppercase tracking-wide mb-3">
               {t('Spending per income tip', { symbol, amount: spendingRatio.toFixed(0) })}
             </p>
 
@@ -406,17 +406,17 @@ export default function AccountabilityPage() {
               />
             </div>
             <div className="flex justify-between mt-1">
-              <span className="text-[8px] font-bold text-pits-dim uppercase">0%</span>
-              <span className="text-[8px] font-bold text-pits-dim uppercase">{t('100% breakeven')}</span>
+              <span className="text-[11px] font-bold text-pits-dim uppercase">0%</span>
+              <span className="text-[11px] font-bold text-pits-dim uppercase">{t('100% breakeven')}</span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="bg-pits-surface-muted rounded-2xl p-3 border border-pits-edge">
-                <p className="text-[8px] font-black text-pits-dim uppercase">{t('Income')}</p>
+                <p className="text-[11px] font-black text-pits-dim uppercase">{t('Income')}</p>
                 <p className="text-sm font-black text-pits-success mt-0.5">{symbol}{currentStats.income.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
               </div>
               <div className="bg-pits-surface-muted rounded-2xl p-3 border border-pits-edge">
-                <p className="text-[8px] font-black text-pits-dim uppercase">{t('Expenses')}</p>
+                <p className="text-[11px] font-black text-pits-dim uppercase">{t('Expenses')}</p>
                 <p className="text-sm font-black text-pits-error mt-0.5">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
               </div>
             </div>
@@ -439,12 +439,12 @@ export default function AccountabilityPage() {
               </span>
               <span className="text-xs sm:text-sm font-black text-pits-dim mb-0.5 shrink-0">{t('per_day')}</span>
             </div>
-            <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-4">
+            <p className="text-[11px] font-bold text-pits-dim uppercase tracking-wide mb-4">
               {t('Average daily spend · {{days}} days in month', { days: daysInMonth })}
             </p>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-[9px] font-black text-pits-dim uppercase">
+              <div className="flex justify-between text-[11px] font-black text-pits-dim uppercase">
                 <span>{t('Burned through day {{day}}', { day: currentDay })}</span>
                 <span>{symbol}{burnToDate.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
               </div>
@@ -454,14 +454,14 @@ export default function AccountabilityPage() {
                   style={{ width: `${Math.min(burnProgress, 100)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[8px] font-bold text-pits-dim uppercase">
+              <div className="flex justify-between text-[11px] font-bold text-pits-dim uppercase">
                 <span>{t('Day 1')}</span>
                 <span>{t('Day {{day}}', { day: daysInMonth })}</span>
               </div>
             </div>
 
             <div className="mt-4 p-4 bg-pits-primary-soft/60 rounded-2xl border border-pits-edge">
-              <p className="text-[9px] font-black text-pits-text uppercase tracking-wide">{t('Projected monthly burn label')}</p>
+              <p className="text-[11px] font-black text-pits-text uppercase tracking-wide">{t('Projected monthly burn label')}</p>
               <p className="text-lg font-black text-pits-text mt-1">{symbol}{projectedMonthlyBurn.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
             </div>
           </div>
@@ -495,9 +495,9 @@ export default function AccountabilityPage() {
                 return (
                   <div key={category} className="space-y-1.5">
                     <div className="flex justify-between items-end">
-                      <span className="text-[9px] font-black text-pits-text uppercase tracking-wide">{category}</span>
+                      <span className="text-[11px] font-black text-pits-text uppercase tracking-wide">{category}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-pits-dim">{pct.toFixed(1)}%</span>
+                        <span className="text-[11px] font-bold text-pits-dim">{pct.toFixed(1)}%</span>
                         <span className="text-xs font-black text-pits-text">{symbol}{amount.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                       </div>
                     </div>
@@ -514,7 +514,7 @@ export default function AccountabilityPage() {
           )}
 
           <div className="mt-6 pt-4 border-t border-pits-edge flex items-center justify-between">
-            <span className="text-[9px] font-black text-pits-dim uppercase tracking-wide">
+            <span className="text-[11px] font-black text-pits-dim uppercase tracking-wide">
               {t('{{count}} categories · Total expenses', { count: categoryBreakdown.length })}
             </span>
             <span className="text-sm font-black text-pits-text">
@@ -541,21 +541,21 @@ export default function AccountabilityPage() {
               </span>
               <span className="text-xs sm:text-sm font-black text-pits-dim mb-0.5 shrink-0">{t('per_athlete')}</span>
             </div>
-            <p className="text-[9px] font-bold text-pits-dim uppercase tracking-wide mb-4">
+            <p className="text-[11px] font-bold text-pits-dim uppercase tracking-wide mb-4">
               {t('Operating cost per active athlete this month')}
             </p>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center bg-pits-surface-muted rounded-xl p-3 border border-pits-edge">
-                <span className="text-[9px] font-black text-pits-dim uppercase">{t('Paying athletes')}</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase">{t('Paying athletes')}</span>
                 <span className="text-xs font-black text-pits-text">{uniquePayingAthletes}</span>
               </div>
               <div className="flex justify-between items-center bg-pits-surface-muted rounded-xl p-3 border border-pits-edge">
-                <span className="text-[9px] font-black text-pits-dim uppercase">Total gastos</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase">Total gastos</span>
                 <span className="text-xs font-black text-pits-error">{symbol}{currentStats.outcome.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
               </div>
               <div className="flex justify-between items-center bg-pits-primary-soft rounded-xl p-3 border border-pits-edge">
-                <span className="text-[9px] font-black text-pits-primary uppercase">{t('Revenue per athlete')}</span>
+                <span className="text-[11px] font-black text-pits-primary uppercase">{t('Revenue per athlete')}</span>
                 <span className="text-xs font-black text-pits-text">
                   {symbol}{(uniquePayingAthletes > 0 ? currentStats.income / uniquePayingAthletes : 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </span>
@@ -563,7 +563,7 @@ export default function AccountabilityPage() {
             </div>
 
             <div className="mt-4 p-3 bg-pits-surface-muted rounded-2xl border border-pits-edge">
-              <p className="text-[9px] font-bold text-pits-dim uppercase">{t('Net margin per athlete')}</p>
+              <p className="text-[11px] font-bold text-pits-dim uppercase">{t('Net margin per athlete')}</p>
               <p className={`text-lg font-black mt-0.5 ${
                 uniquePayingAthletes > 0 && currentStats.net / uniquePayingAthletes >= 0 ? 'text-pits-success' : 'text-pits-error'
               }`}>
@@ -594,7 +594,7 @@ function StatusBadge({ tone, children }: { tone: 'success' | 'warning' | 'error'
   };
 
   return (
-    <span className={`inline-flex items-center justify-center text-center shrink-0 px-2 py-1 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}>
+    <span className={`inline-flex items-center justify-center text-center shrink-0 px-2 py-1 rounded-lg text-[11px] sm:text-[11px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -613,18 +613,18 @@ function BalanceCard({ label, value, symbol, type, info, color, highlight }: any
   return (
     <div className={`p-3 sm:p-5 rounded-2xl sm:rounded-[28px] border shadow-sm transition-all hover:shadow-md relative overflow-hidden group min-w-0 ${highlight ? 'bg-pits-surface-muted border-pits-edge ring-2 ring-pits-red/5' : 'bg-pits-surface-elevated border-pits-edge'}`}>
       <div className="flex justify-between items-start gap-2 mb-4">
-        <p className="text-[9px] sm:text-[10px] font-black text-pits-dim uppercase tracking-widest leading-tight min-w-0">{label}</p>
+        <p className="text-[11px] sm:text-[11px] font-black text-pits-dim uppercase tracking-widest leading-tight min-w-0">{label}</p>
         <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border shrink-0 ${colors[color] ?? colors.slate}`}>
           {type === 'plus' ? <TrendingUp size={14} /> : type === 'minus' ? <TrendingDown size={14} /> : <Zap size={14} />}
         </div>
       </div>
       <div className="flex items-baseline gap-0.5 min-w-0">
-        <span className="text-[10px] sm:text-xs font-black text-pits-dim shrink-0">{symbol}</span>
+        <span className="text-[11px] sm:text-xs font-black text-pits-dim shrink-0">{symbol}</span>
         <h2 className="text-sm sm:text-xl font-black text-pits-text tracking-tighter leading-none break-all">
           {formatMoney(value)}
         </h2>
       </div>
-      <p className="text-[8px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1 mt-3">
+      <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tighter flex items-center gap-1 mt-3">
         <Info size={10} className="shrink-0" /> <span className="truncate">{info}</span>
       </p>
     </div>
@@ -645,8 +645,8 @@ function SustainabilityMetric({ label, value, total, symbol, color, t }: any) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-end">
-        <p className="text-[9px] font-black text-pits-dim uppercase">{t(label)}</p>
-        <span className="text-[10px] font-black text-pits-text">{symbol}{value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+        <p className="text-[11px] font-black text-pits-dim uppercase">{t(label)}</p>
+        <span className="text-[11px] font-black text-pits-text">{symbol}{value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
       </div>
       <div className="h-1.5 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge flex items-center p-0.5">
         <div 
@@ -655,7 +655,7 @@ function SustainabilityMetric({ label, value, total, symbol, color, t }: any) {
         />
       </div>
       <div className="flex justify-between">
-         <span className="text-[8px] font-bold text-pits-dim uppercase">{percentage.toFixed(1)}% of total</span>
+         <span className="text-[11px] font-bold text-pits-dim uppercase">{percentage.toFixed(1)}% of total</span>
       </div>
     </div>
   );

@@ -124,7 +124,7 @@ export default function NotificationsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm p-5 space-y-4">
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+            <span className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
               {t('Notification title')}
             </span>
             <input
@@ -136,7 +136,7 @@ export default function NotificationsPage() {
             />
           </label>
           <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+            <span className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
               {t('Notification message')}
             </span>
             <textarea
@@ -153,7 +153,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={() => setAudience('all')}
-              className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition-colors ${
+              className={`flex-1 py-3 rounded-lg text-[11px] font-black uppercase tracking-widest border-2 transition-colors ${
                 audience === 'all'
                   ? 'border-pits-primary bg-pits-primary-soft text-pits-text'
                   : 'border-pits-edge text-pits-dim hover:border-pits-primary'
@@ -164,7 +164,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={() => setAudience('selected')}
-              className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 transition-colors ${
+              className={`flex-1 py-3 rounded-lg text-[11px] font-black uppercase tracking-widest border-2 transition-colors ${
                 audience === 'selected'
                   ? 'border-pits-primary bg-pits-primary-soft text-pits-text'
                   : 'border-pits-edge text-pits-dim hover:border-pits-primary'
@@ -229,7 +229,7 @@ export default function NotificationsPage() {
                       </p>
                     </div>
                     <span
-                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                      className={`text-[11px] font-black uppercase px-2 py-0.5 rounded ${
                         row.has_token
                           ? 'bg-pits-primary-soft text-pits-text'
                           : 'bg-pits-surface-muted text-pits-dim'

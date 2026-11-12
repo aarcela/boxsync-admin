@@ -142,7 +142,7 @@ export default function DashboardPage() {
         type="button"
         onClick={() => setReviewId(payment.id)}
         title={t('Review')}
-        className={`inline-flex items-center justify-center rounded-xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft font-black text-[10px] tracking-[0.05em] transition-all shadow-sm active:scale-95 ${
+        className={`inline-flex items-center justify-center rounded-xl bg-pits-primary text-pits-dark-text hover:bg-pits-primary-soft font-black text-[11px] tracking-[0.05em] transition-all shadow-sm active:scale-95 ${
           compact ? 'h-9 w-full px-3' : 'h-9 px-3'
         }`}
       >
@@ -160,10 +160,10 @@ export default function DashboardPage() {
           <h1 className="page-title truncate">
             {t('Today')}
           </h1>
-          <p className="text-pits-dim font-bold text-[10px] sm:text-xs mt-1.5 sm:mt-2 uppercase tracking-wide">
+          <p className="text-pits-dim font-bold text-[11px] sm:text-xs mt-1.5 sm:mt-2 uppercase tracking-wide">
             {formatDateLong(new Date(), lang)}
             {lastSynced && (
-              <span className="ml-3 text-[10px] text-gray-400 font-normal normal-case">
+              <span className="ml-3 text-[11px] text-gray-400 font-normal normal-case">
                 <Clock size={10} className="inline mr-1 -mt-0.5" />
                 {t('Updated {{time}}', { time: formatTime(lastSynced, lang) })}
               </span>
@@ -173,7 +173,7 @@ export default function DashboardPage() {
         
         <div className="flex gap-3 shrink-0">
           <div className="hidden lg:flex flex-col items-end mr-4 border-r pr-4">
-             <span className="text-[10px] font-black text-pits-dim uppercase">{t('Box Load')}</span>
+             <span className="text-[11px] font-black text-pits-dim uppercase">{t('Box Load')}</span>
              <span className="text-xl font-black text-pits-text leading-none">{loaded ? `${stats.dailyUsagePercent}%` : '—'}</span>
           </div>
           <button 
@@ -223,10 +223,10 @@ export default function DashboardPage() {
         className="block bg-pits-surface-elevated rounded-2xl border shadow-sm p-4 sm:p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
       >
         <div className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+          <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
             {t('Daily Attendance')}
           </p>
-          <span className="text-[10px] font-black uppercase tracking-wider text-pits-dim flex items-center gap-1">
+          <span className="text-[11px] font-black uppercase tracking-wider text-pits-dim flex items-center gap-1">
             {t('Today')}
             <ChevronRight size={12} />
           </span>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">
               {show(stats.todayAttendance.classes)}
             </p>
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+            <p className="text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
               {t('Classes')}
             </p>
           </div>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">
               {show(stats.todayAttendance.booked)}
             </p>
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+            <p className="text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
               {t('booked')}
             </p>
           </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
             <p className={`text-2xl sm:text-3xl font-black ${active(stats.todayAttendance.attended) ? 'text-pits-positive' : loaded ? 'text-pits-text' : 'text-pits-dim'} leading-none`}>
               {show(stats.todayAttendance.attended)}
             </p>
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+            <p className="text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
               {t('attended')}
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             <p className={`text-2xl sm:text-3xl font-black ${active(stats.todayAttendance.noShow) ? 'text-pits-danger' : loaded ? 'text-pits-text' : 'text-pits-dim'} leading-none`}>
               {show(stats.todayAttendance.noShow)}
             </p>
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
+            <p className="text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim mt-1.5">
               {t('no_show')}
             </p>
           </div>
@@ -275,14 +275,14 @@ export default function DashboardPage() {
           className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stripe(stats.pendingPayments.length, 'warning')}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Payments')}</p>
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Payments')}</p>
             <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${chip(stats.pendingPayments.length, 'warning')}`}>
               {!loaded ? <Clock size={16} /> : stats.pendingPayments.length > 0 ? <AlertTriangle size={16} /> : <CheckCircle size={16} />}
             </div>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.pendingPayments.length)}</p>
-            <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
+            <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
                <span className="truncate pr-1">{t('Awaiting Review')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </div>
@@ -295,14 +295,14 @@ export default function DashboardPage() {
           className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stripe(stats.overdueMembers.length, 'danger')}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Overdue today')}</p>
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Overdue today')}</p>
             <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${chip(stats.overdueMembers.length, 'danger')}`}>
               <ShieldAlert size={16} />
             </div>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.overdueMembers.length)}</p>
-            <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
+            <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
                <span className="truncate pr-1">{t('Overdue today help')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
@@ -315,14 +315,14 @@ export default function DashboardPage() {
           className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stripe(stats.inactiveAthletes.length, 'warning')}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Retention')}</p>
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Retention')}</p>
             <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${chip(stats.inactiveAthletes.length, 'warning')}`}>
               <Zap size={16} />
             </div>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.inactiveAthletes.length)}</p>
-            <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
+            <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
                <span className="truncate pr-1">{t('Out of box 10+ days')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
@@ -335,14 +335,14 @@ export default function DashboardPage() {
           className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] ${stripe(stats.lowOccupancyClasses.length, 'info')}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Occupancy')}</p>
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Occupancy')}</p>
             <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${chip(stats.lowOccupancyClasses.length, 'info')}`}>
               <TrendingUp size={16} />
             </div>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.lowOccupancyClasses.length)}</p>
-            <div className="flex items-center justify-between mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
+            <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
                <span className="truncate pr-1">{t('Low occupancy today')}</span>
                <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
             </div>
@@ -355,14 +355,14 @@ export default function DashboardPage() {
            className="bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 border-b-pits-edge group transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] col-span-2 lg:col-span-1"
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[9px] sm:text-[10px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Roster')}</p>
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Roster')}</p>
             <div className="p-1.5 sm:p-2 rounded-xl border bg-pits-surface-muted text-pits-dim border-pits-edge">
               <CheckCircle size={16} />
             </div>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.totalMembers.filter(m => m.is_solvent).length)}</p>
-            <p className="text-[9px] sm:text-[10px] text-pits-dim font-black uppercase tracking-widest mt-1.5 flex items-center justify-between group-hover:text-pits-text transition-colors">
+            <p className="text-[11px] sm:text-[11px] text-pits-dim font-black uppercase tracking-widest mt-1.5 flex items-center justify-between group-hover:text-pits-text transition-colors">
               <span className="truncate pr-1">{t('Active Athletes')}</span>
               <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
             </p>
@@ -378,10 +378,10 @@ export default function DashboardPage() {
               <Zap size={18} className="mr-2 sm:mr-3 text-pits-dim shrink-0" />
               <span className="truncate">{t('Payments to review')}</span>
             </h3>
-            <p className="hidden sm:block text-[10px] text-pits-dim font-bold uppercase tracking-widest mt-2">{t('Approve or reject each payment proof.')}</p>
+            <p className="hidden sm:block text-[11px] text-pits-dim font-bold uppercase tracking-widest mt-2">{t('Approve or reject each payment proof.')}</p>
           </div>
           {loaded ? (
-            <span className={`shrink-0 border text-[10px] sm:text-xs font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-tighter ${chip(stats.pendingPayments.length, 'warning')}`}>
+            <span className={`shrink-0 border text-[11px] sm:text-xs font-black px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-tighter ${chip(stats.pendingPayments.length, 'warning')}`}>
               {t('{{count}} pending', { count: stats.pendingPayments.length })}
             </span>
           ) : null}
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                       <p className="font-black text-pits-text uppercase tracking-tighter text-sm truncate">
                         {payment.profiles?.full_name || t('Unknown Athlete')}
                       </p>
-                      <p className="text-[10px] font-bold text-pits-dim uppercase mt-0.5 flex items-center gap-1.5">
+                      <p className="text-[11px] font-bold text-pits-dim uppercase mt-0.5 flex items-center gap-1.5">
                         <Calendar size={11} className="opacity-40 shrink-0" />
                         <span className="truncate">
                           {formatDateShort(payment.created_at, lang)}
@@ -449,7 +449,7 @@ export default function DashboardPage() {
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm text-left border-separate border-spacing-0">
-                <thead className="text-[10px] text-pits-dim uppercase bg-gray-50/30 font-black tracking-[0.15em]">
+                <thead className="text-[11px] text-pits-dim uppercase bg-gray-50/30 font-black tracking-[0.15em]">
                   <tr>
                     <th className="px-4 lg:px-6 py-3.5 border-b border-gray-50">{t('Date')}</th>
                     <th className="px-4 lg:px-6 py-3.5 border-b border-gray-50">{t('Athlete')}</th>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4">
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-pits-surface-elevated border text-pits-dim shadow-sm group-hover:border-pits-text group-hover:text-pits-text transition-all whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-pits-surface-elevated border text-pits-dim shadow-sm group-hover:border-pits-text group-hover:text-pits-text transition-all whitespace-nowrap">
                           {payment.method || t('Direct Transfer')}
                         </span>
                       </td>

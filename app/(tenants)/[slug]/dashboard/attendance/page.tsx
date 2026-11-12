@@ -126,28 +126,28 @@ export default function AttendancePage() {
     if (!payment) return null;
     if (payment.has_pending_proof || payment.status === 'pending_review') {
       return (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-sky-600">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-pits-info">
           {t('Proof in review')}
         </span>
       );
     }
     if (payment.status === 'in_grace') {
       return (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-500">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-pits-warning">
           {t('Plan in grace', { days: payment.days_overdue })}
         </span>
       );
     }
     if (payment.status === 'no_plan') {
       return (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-red-600">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-pits-danger">
           {t('No plan')}
         </span>
       );
     }
     if (payment.status === 'overdue') {
       return (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-red-600">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-pits-danger">
           {payment.reason === 'unpaid' || payment.reason === 'revoked'
             ? t('Payment pending')
             : t('Plan expired days', { days: payment.days_overdue })}
@@ -232,7 +232,7 @@ export default function AttendancePage() {
             {!isToday && (
               <button
                 onClick={() => setDate(getGymDate(new Date(), timezone))}
-                className="px-3 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all"
+                className="px-3 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[11px] font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all"
               >
                 {t('Today')}
               </button>
@@ -272,27 +272,27 @@ export default function AttendancePage() {
                     onKeyDown={(e) => e.key === 'Enter' && setSelectedClassId(cls.id)}
                     className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md cursor-pointer group
                       ${selectedClassId === cls.id 
-                        ? 'bg-pits-primary-dark/80 ring-1 ring-pits-red' 
+                        ? 'bg-pits-primary-soft border-pits-primary ring-1 ring-pits-primary' 
                         : 'bg-gray-50 border-gray-100 hover:bg-white'}
                     `}
                   >
                     <div className="flex justify-between items-start mb-1">
                       <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white"
+                        className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider text-white"
                         style={classTypeBadgeStyle(colorByName[cls.class_type])}
                       >
                         {cls.class_type}
                       </span>
                       <div className="flex flex-col items-end">
-                        <span className={`flex items-center text-[10px] font-black tracking-tighter
-                          ${isFull ? 'text-pits-red' : isVeryFull ? 'text-orange-600' : 'text-gray-700'}
+                        <span className={`flex items-center text-[11px] font-black tracking-tighter
+                          ${isFull ? 'text-pits-red' : isVeryFull ? 'text-pits-warning' : 'text-gray-700'}
                         `}>
                           <Users size={10} className="mr-1" />
                           {count} / {cls.max_capacity}
                         </span>
                         <div className="w-12 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
                           <div 
-                            className={`h-full transition-all duration-500 ${isFull ? 'bg-pits-red' : isVeryFull ? 'bg-orange-500' : 'bg-green-500'}`}
+                            className={`h-full transition-all duration-500 ${isFull ? 'bg-pits-red' : isVeryFull ? 'bg-pits-warning' : 'bg-pits-positive'}`}
                             style={{ width: `${Math.min(occupancy, 100)}%` }}
                           />
                         </div>
@@ -304,7 +304,7 @@ export default function AttendancePage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center text-[10px] font-bold text-gray-600 uppercase tracking-tight">
+                      <div className="flex items-center text-[11px] font-bold text-gray-600 uppercase tracking-tight">
                         <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center mr-1.5 text-gray-700">
                           {cls.coach?.full_name?.charAt(0) || 'S'}
                         </div>
@@ -340,14 +340,14 @@ export default function AttendancePage() {
                         onClick={() => setSelectedClassId(cls.id)}
                         className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-all ${
                           selected
-                            ? 'bg-pits-primary-dark/80 ring-1 ring-pits-red border-transparent'
+                            ? 'bg-pits-primary-soft border-pits-primary ring-1 ring-pits-primary'
                             : 'bg-gray-50 border-gray-100'
                         }`}
                       >
                         <div className="text-sm font-black italic text-gray-900 leading-none">
                           {classTime(cls.start_time)}
                         </div>
-                        <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-gray-500">
                           {cls.class_type} · {count}/{cls.max_capacity}
                         </div>
                       </button>
@@ -365,7 +365,7 @@ export default function AttendancePage() {
                     : t('Class Roster')}
                 </h3>
                 {selectedClass && (
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase">
                     {t('Coach')}: <span className="text-pits-dim">{selectedClass.coach?.full_name || t('Staff')}</span>
                   </p>
                 )}
@@ -385,30 +385,29 @@ export default function AttendancePage() {
                       />
                     </div>
                   )}
-                  {!isClassFull && (
-                    <Tooltip content={t('Add athlete to class')}>
-                      <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="p-2 bg-pits-primary text-pits-dark-text rounded-lg hover:bg-pits-primary-dark transition-all shadow-sm active:scale-95"
-                      >
-                        <UserPlus size={16} />
-                      </button>
-                    </Tooltip>
+                  {!isClassFull && totalRosterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-2 bg-pits-primary text-pits-dark-text rounded-lg hover:bg-pits-primary-dark transition-all shadow-sm active:scale-95 text-xs font-semibold"
+                    >
+                      <UserPlus size={14} />
+                      {t('Add Athlete')}
+                    </button>
                   )}
-                  {!isClassFull && (
-                    <Tooltip content={t('Add guest to class')}>
-                      <button
-                        onClick={() => setIsAddGuestOpen(true)}
-                        className="px-2.5 py-2 bg-pits-surface-muted border border-pits-edge text-pits-text rounded-lg hover:bg-pits-surface-elevated transition-all shadow-sm active:scale-95 text-[10px] font-black uppercase tracking-wider"
-                      >
-                        {t('Add Guest')}
-                      </button>
-                    </Tooltip>
+                  {!isClassFull && totalRosterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddGuestOpen(true)}
+                      className="px-2.5 py-2 bg-pits-surface-muted border border-pits-edge text-pits-text rounded-lg hover:bg-pits-surface-elevated transition-all shadow-sm active:scale-95 text-xs font-semibold"
+                    >
+                      {t('Add Guest')}
+                    </button>
                   )}
                   {pendingCount > 0 && (
                     <button
                       onClick={() => markRemaining('attended')}
-                      className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-green-700 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                      className="flex items-center px-3 py-2 bg-pits-positive text-white rounded-lg text-[11px] font-black uppercase tracking-wider hover:bg-pits-positive/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
                     >
                       <CheckCheck size={14} className="mr-1.5" />
                       {t('Check in {{count}} remaining', { count: pendingCount })}
@@ -421,25 +420,25 @@ export default function AttendancePage() {
             {selectedClassId && totalRosterCount > 0 && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t  ">
                 <div className="flex items-center gap-1.5 text-xs font-bold">
-                  <CheckCircle size={14} className="text-green-600" />
-                  <span className="text-green-700">{presentCount}</span>
+                  <CheckCircle size={14} className="text-pits-positive" />
+                  <span className="text-pits-positive">{presentCount}</span>
                   <span className="text-gray-400">{t('Present')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-bold">
-                  <XCircle size={14} className="text-red-500" />
-                  <span className="text-red-600">{missedCount}</span>
+                  <XCircle size={14} className="text-pits-danger" />
+                  <span className="text-pits-danger">{missedCount}</span>
                   <span className="text-gray-400">{t('Missed')}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-bold">
-                  <Clock size={14} className="text-blue-500" />
-                  <span className="text-blue-600">{pendingCount}</span>
+                  <Clock size={14} className="text-pits-info" />
+                  <span className="text-pits-info">{pendingCount}</span>
                   <span className="text-gray-400">{t('pending')}</span>
                 </div>
                 {pendingCount > 0 && (
                   <button
                     type="button"
                     onClick={() => markRemaining('no_show')}
-                    className="ml-auto text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-red-600 transition-colors"
+                    className="ml-auto text-[11px] font-black uppercase tracking-wider text-gray-400 hover:text-pits-danger transition-colors"
                   >
                     {t('Mark remaining missed')}
                   </button>
@@ -499,7 +498,7 @@ export default function AttendancePage() {
                     <div
                       key={booking.id}
                       className={`group flex items-center gap-1 pr-2 sm:pr-3 transition-colors ${
-                        attended ? 'bg-green-50/50' : missed ? 'opacity-60' : 'hover:bg-gray-50'
+                        attended ? 'bg-pits-positive-soft' : missed ? 'opacity-60' : 'hover:bg-gray-50'
                       }`}
                     >
                       <button
@@ -516,8 +515,8 @@ export default function AttendancePage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-pits-text truncate">{booking.profiles.full_name}</p>
-                          <p className={`text-[10px] font-black uppercase tracking-wide ${
-                            attended ? 'text-green-700' : missed ? 'text-red-600' : 'text-blue-600'
+                          <p className={`text-[11px] font-black uppercase tracking-wide ${
+                            attended ? 'text-pits-positive' : missed ? 'text-pits-danger' : 'text-pits-info'
                           }`}>
                             {t(bookingStatusKey(booking.status))}
                           </p>
@@ -525,7 +524,7 @@ export default function AttendancePage() {
                         </div>
                         <CheckCircle
                           size={22}
-                          className={attended ? 'text-green-600 shrink-0' : 'text-gray-200 shrink-0'}
+                          className={attended ? 'text-pits-positive shrink-0' : 'text-gray-200 shrink-0'}
                         />
                       </button>
 
@@ -534,7 +533,7 @@ export default function AttendancePage() {
                           type="button"
                           onClick={() => toggleMissed(booking)}
                           className={`p-2 rounded-lg transition-colors ${
-                            missed ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-red-50 hover:text-red-600'
+                            missed ? 'bg-pits-danger text-white' : 'text-gray-300 hover:bg-pits-danger-soft hover:text-pits-danger'
                           }`}
                         >
                           <XCircle size={18} />
@@ -545,7 +544,7 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name, kind: 'member' })}
-                          className="p-2 rounded-lg text-gray-300 hover:bg-orange-50 hover:text-orange-600 transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                          className="p-2 rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                         >
                           <UserMinus size={18} />
                         </button>
@@ -561,7 +560,7 @@ export default function AttendancePage() {
                     <div
                       key={`guest-${guest.id}`}
                       className={`group flex items-center gap-1 pr-2 sm:pr-3 transition-colors ${
-                        attended ? 'bg-green-50/50' : missed ? 'opacity-60' : 'hover:bg-gray-50'
+                        attended ? 'bg-pits-positive-soft' : missed ? 'opacity-60' : 'hover:bg-gray-50'
                       }`}
                     >
                       <button
@@ -569,18 +568,18 @@ export default function AttendancePage() {
                         onClick={() => updateGuestStatus(guest.id, attended ? 'booked' : 'attended')}
                         className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left"
                       >
-                        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700 shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-pits-warning-soft flex items-center justify-center text-xs font-bold text-pits-warning shrink-0">
                           {guest.full_name?.charAt(0) || 'G'}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 min-w-0">
                             <p className="font-bold text-pits-text truncate">{guest.full_name}</p>
-                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                            <span className="shrink-0 text-[11px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-pits-warning-soft text-pits-warning">
                               {t('Guest')}
                             </span>
                           </div>
-                          <p className={`text-[10px] font-black uppercase tracking-wide ${
-                            attended ? 'text-green-700' : missed ? 'text-red-600' : 'text-blue-600'
+                          <p className={`text-[11px] font-black uppercase tracking-wide ${
+                            attended ? 'text-pits-positive' : missed ? 'text-pits-danger' : 'text-pits-info'
                           }`}>
                             {t(bookingStatusKey(guest.status))}
                             {contact ? <span className="normal-case tracking-normal font-semibold text-gray-400"> · {contact}</span> : null}
@@ -588,7 +587,7 @@ export default function AttendancePage() {
                         </div>
                         <CheckCircle
                           size={22}
-                          className={attended ? 'text-green-600 shrink-0' : 'text-gray-200 shrink-0'}
+                          className={attended ? 'text-pits-positive shrink-0' : 'text-gray-200 shrink-0'}
                         />
                       </button>
 
@@ -597,7 +596,7 @@ export default function AttendancePage() {
                           type="button"
                           onClick={() => updateGuestStatus(guest.id, missed ? 'booked' : 'no_show')}
                           className={`p-2 rounded-lg transition-colors ${
-                            missed ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-red-50 hover:text-red-600'
+                            missed ? 'bg-pits-danger text-white' : 'text-gray-300 hover:bg-pits-danger-soft hover:text-pits-danger'
                           }`}
                         >
                           <XCircle size={18} />
@@ -608,7 +607,7 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => setRemoveConfirm({ id: guest.id, name: guest.full_name, kind: 'guest' })}
-                          className="p-2 rounded-lg text-gray-300 hover:bg-orange-50 hover:text-orange-600 transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                          className="p-2 rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                         >
                           <UserMinus size={18} />
                         </button>

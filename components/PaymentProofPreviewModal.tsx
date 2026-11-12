@@ -31,7 +31,7 @@ export default function PaymentProofPreviewModal({
               {t('Check Proof')}
             </h3>
             {athleteName ? (
-              <p className="text-pits-dim text-[10px] font-bold uppercase tracking-widest mt-1 truncate">
+              <p className="text-pits-dim text-[11px] font-bold uppercase tracking-widest mt-1 truncate">
                 {athleteName}
               </p>
             ) : null}

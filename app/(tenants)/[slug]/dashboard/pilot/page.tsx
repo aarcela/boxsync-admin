@@ -174,7 +174,7 @@ export default function PilotPage() {
           </div>
 
           <label className="mt-8 block">
-            <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-pits-dim">
+            <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-pits-dim">
               {lang === 'es' ? 'Contexto y objetivos' : 'Context and goals'}
             </span>
             <textarea
@@ -218,7 +218,7 @@ export default function PilotPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-primary">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-primary">
             {lang === 'es' ? `Día ${day} de 60` : `Day ${day} of 60`}
           </span>
           <h1 className="mt-1 text-3xl font-black uppercase italic tracking-tighter text-pits-text">
@@ -231,7 +231,7 @@ export default function PilotPage() {
         <button
           type="button"
           onClick={() => void copyCaseStudy()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-pits-primary hover:text-pits-dark-text"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[11px] font-black uppercase tracking-widest text-white hover:bg-pits-primary hover:text-pits-dark-text"
         >
           <Clipboard size={15} />
           {lang === 'es' ? 'Copiar reporte' : 'Copy case-study report'}
@@ -306,14 +306,14 @@ export default function PilotPage() {
           <button
             type="button"
             onClick={() => void saveNotes()}
-            className="mt-3 min-h-10 rounded-xl bg-pits-primary px-4 text-[10px] font-black uppercase tracking-widest text-pits-dark-text"
+            className="mt-3 min-h-10 rounded-xl bg-pits-primary px-4 text-[11px] font-black uppercase tracking-widest text-pits-dark-text"
           >
             {lang === 'es' ? 'Guardar notas' : 'Save notes'}
           </button>
         </div>
       </section>
 
-      <p className="text-center text-[9px] font-bold uppercase tracking-widest text-pits-dim">
+      <p className="text-center text-[11px] font-bold uppercase tracking-widest text-pits-dim">
         {lang === 'es'
           ? 'Solo se reportan eventos registrados en WODUS. Correlación no implica causalidad.'
           : 'Only WODUS-recorded events are reported. Correlation does not imply causation.'}
@@ -331,7 +331,7 @@ function PreviewMetric({
 }) {
   return (
     <div className="rounded-xl bg-pits-surface-muted p-4">
-      <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">
+      <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
         {label}
       </p>
       <p className="mt-1 text-2xl font-black italic text-pits-text">{value}</p>
@@ -353,13 +353,13 @@ function OutcomeCard({
   return (
     <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated p-5 shadow-sm">
       <div className="flex items-start justify-between">
-        <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">
+        <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
           {label}
         </p>
         <Icon size={18} className="text-pits-primary" />
       </div>
       <p className="mt-4 text-3xl font-black italic text-pits-text">{value}</p>
-      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-pits-dim">
+      <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-pits-dim">
         {detail}
       </p>
     </div>

@@ -410,7 +410,7 @@ export default function AthletesPage() {
             {t('Add Athlete')}
           </button>
         ) : (
-          <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+          <p className="text-xs font-bold uppercase tracking-wider text-pits-warning">
             {t('Check your email to activate your account.')}
           </p>
         )}
@@ -498,7 +498,7 @@ export default function AthletesPage() {
       {someSelected && (
         <div className="flex flex-col gap-3 bg-pits-surface-elevated p-3 sm:p-4 rounded-xl border border-pits-primary/30 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black text-pits-dim uppercase tracking-wider">
+            <span className="text-[11px] font-black text-pits-dim uppercase tracking-wider">
               {t('{{count}} selected', { count: selectedIds.size })}
               {selectedMemberCount < selectedIds.size
                 ? ` · ${t('{{count}} members', { count: selectedMemberCount })}`
@@ -508,7 +508,7 @@ export default function AthletesPage() {
               type="button"
               onClick={() => setSelectedIds(new Set())}
               disabled={bulkBusy}
-              className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted disabled:opacity-50"
             >
               {t('Clear selection')}
             </button>
@@ -533,7 +533,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || !bulkPlanId || selectedMemberCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'plan' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
               >
                 {t('Apply plan')}
               </button>
@@ -551,7 +551,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || !bulkRenewDate || selectedMemberCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'renew' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Set renew date')}
               </button>
@@ -561,7 +561,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedInviteCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'invite' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Resend invites')} ({selectedInviteCount})
               </button>
@@ -569,7 +569,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedResetCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'reset' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Send password resets')} ({selectedResetCount})
               </button>
@@ -577,7 +577,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedReminderCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'reminder' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-orange-100 text-orange-700 border-orange-300 hover:opacity-90 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-warning-soft text-pits-warning border-pits-warning-edge hover:opacity-90 disabled:opacity-50"
               >
                 {t('Send expiry reminders')} ({selectedReminderCount})
               </button>
@@ -597,7 +597,7 @@ export default function AthletesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-[10px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
+              <thead className="text-[11px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
                 <tr>
                   <th className="px-3 sm:px-4 py-3 w-10">
                     <input
@@ -681,7 +681,7 @@ export default function AthletesPage() {
                         }${
                           profile.is_solvent
                             ? 'hover:bg-pits-surface-muted/70'
-                            : 'bg-amber-50/40 hover:bg-amber-50/70'
+                            : 'bg-pits-warning-soft hover:bg-pits-warning-soft'
                         }`}
                       >
                         <td
@@ -714,7 +714,7 @@ export default function AthletesPage() {
                                     href={`https://wa.me/${phoneDigits}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors shrink-0"
+                                    className="p-1 text-pits-positive hover:bg-pits-positive-soft rounded-md transition-colors shrink-0"
                                     title={t('Text on WhatsApp')}
                                     aria-label={t('Text on WhatsApp')}
                                     onClick={(e) => e.stopPropagation()}
@@ -729,11 +729,11 @@ export default function AthletesPage() {
                                 </p>
                               )}
                               <div className="flex items-center gap-1.5 mt-1">
-                                <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                                <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
                                   {profile.role}
                                 </span>
                                 {profile.created_at && (
-                                  <span className="text-[10px] text-pits-dim">
+                                  <span className="text-[11px] text-pits-dim">
                                     {formatRelative(new Date(profile.created_at), lang)}
                                   </span>
                                 )}
@@ -775,10 +775,10 @@ export default function AthletesPage() {
                               ))}
                             </select>
                             <span
-                              className={`inline-flex text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                              className={`inline-flex text-[11px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                                 profile.inscription_paid
                                   ? 'bg-pits-surface-muted text-pits-dim border-pits-edge'
-                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
                               }`}
                             >
                               {profile.inscription_plan || 'standard'}
@@ -815,7 +815,7 @@ export default function AthletesPage() {
                                 </button>
                               ) : null}
                             </div>
-                            <p className="text-[10px] text-pits-dim">
+                            <p className="text-[11px] text-pits-dim">
                               {profile.last_payment_date
                                 ? formatRelative(new Date(profile.last_payment_date), lang)
                                 : t('No payments')}
@@ -851,7 +851,7 @@ export default function AthletesPage() {
                             <p
                               className={`inline-flex items-center gap-1 text-[11px] ${
                                 inactiveDays != null && inactiveDays > 10
-                                  ? 'text-red-600 font-bold'
+                                  ? 'text-pits-danger font-bold'
                                   : 'text-pits-dim'
                               }`}
                             >

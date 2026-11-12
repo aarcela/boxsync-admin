@@ -130,7 +130,7 @@ export default function AddToClassModal({
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-pits-text text-sm truncate">{member.full_name}</p>
                     {!member.is_solvent && (
-                      <span className="text-[10px] font-bold uppercase text-orange-400 tracking-wide">
+                      <span className="text-[11px] font-bold uppercase text-pits-warning tracking-wide">
                         Unpaid
                       </span>
                     )}

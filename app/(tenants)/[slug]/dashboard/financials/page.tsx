@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import Link from 'next/link';
 import { 
   DollarSign, Search, CheckCircle, 
   ExternalLink, RefreshCw, Clock, 
@@ -61,7 +62,6 @@ export default function FinancialsPage() {
     loading,
     stats,
     exchangeRate,
-    setExchangeRate,
     activeCurrency,
     setActiveCurrency,
     statusFilter,
@@ -193,23 +193,15 @@ export default function FinancialsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          {/* Exchange Rate Master */}
-          <div className="flex items-center bg-pits-surface-elevated border border-pits-edge rounded-xl px-3 py-1.5 shadow-sm group hover:border-pits-red transition-all">
-             <div className="text-[10px] font-black text-pits-dim uppercase mr-3 group-hover:text-pits-red flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-pits-success animate-pulse"></div>
-                {t('Official Rate')}
-             </div>
-             <div className="flex items-center gap-1.5 font-bold text-sm">
-                <span className="text-pits-dim">{refSymbol}1 = </span>
-                <input 
-                  type="number" 
-                  step="0.0001"
-                  value={exchangeRate}
-                  onChange={(e) => setExchangeRate(Number(e.target.value))}
-                  className="w-20 bg-transparent text-pits-text focus:outline-none focus:text-pits-red font-black"
-                />
-                <span className="text-pits-dim">{currencies.local}</span>
-             </div>
+          {/* Exchange rate: read-only here; the gym's rate is saved in Settings → How they pay */}
+          <div className="flex items-center gap-3 bg-pits-surface-elevated border border-pits-edge rounded-xl px-3 py-1.5 shadow-sm">
+            <span className="text-xs font-semibold text-pits-dim">{t('Official Rate')}</span>
+            <span className="text-sm font-bold text-pits-text tabular-nums">
+              {refSymbol}1 = {exchangeRate > 0 ? exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'} {currencies.local}
+            </span>
+            <Link href="/dashboard/payment_methods" className="text-xs font-semibold text-pits-info hover:underline">
+              {t('Change')}
+            </Link>
           </div>
 
           <div className="flex items-center gap-2 ml-auto lg:ml-0">
@@ -227,7 +219,7 @@ export default function FinancialsPage() {
       <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-pits-edge shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
         <div className="flex items-center gap-2 text-pits-dim shrink-0">
           <Calendar size={16} className="text-pits-red" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-pits-text">{t('Filters')}</span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-pits-text">{t('Filters')}</span>
         </div>
         <div className="flex flex-wrap gap-1.5 bg-pits-surface-muted p-1 rounded-xl">
           {([
@@ -243,7 +235,7 @@ export default function FinancialsPage() {
                 setPeriod(id);
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase transition-all ${
+              className={`px-3 py-1.5 text-[11px] font-black rounded-lg uppercase transition-all ${
                 period === id ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim hover:text-pits-text'
               }`}
             >
@@ -254,7 +246,7 @@ export default function FinancialsPage() {
         {period === 'custom' && (
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <label className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-pits-dim uppercase">{t('From')}</span>
+              <span className="text-[11px] font-black text-pits-dim uppercase">{t('From')}</span>
               <input
                 type="date"
                 value={toDateInputValue(customRange.start)}
@@ -271,7 +263,7 @@ export default function FinancialsPage() {
               />
             </label>
             <label className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-pits-dim uppercase">{t('To')}</span>
+              <span className="text-[11px] font-black text-pits-dim uppercase">{t('To')}</span>
               <input
                 type="date"
                 value={toDateInputValue(customRange.end)}
@@ -342,7 +334,7 @@ export default function FinancialsPage() {
              </div>
              <div className="flex gap-2 w-full md:w-auto">
                 <select 
-                  className="bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-2.5 text-[10px] font-black text-pits-text uppercase outline-none flex-1 md:w-40"
+                  className="bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-2.5 text-[11px] font-black text-pits-text uppercase outline-none flex-1 md:w-40"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -354,11 +346,11 @@ export default function FinancialsPage() {
                 <div className="flex bg-pits-surface-muted p-1 rounded-xl">
                    <button 
                      onClick={() => setActiveCurrency(currencies.reference)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === currencies.reference ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
+                     className={`px-3 py-1.5 text-[11px] font-black rounded-lg transition-all ${activeCurrency === currencies.reference ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
                    >REF</button>
                    <button 
                      onClick={() => setActiveCurrency(currencies.local)}
-                     className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCurrency === currencies.local ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
+                     className={`px-3 py-1.5 text-[11px] font-black rounded-lg transition-all ${activeCurrency === currencies.local ? 'bg-pits-surface-elevated shadow-sm text-pits-primary' : 'text-pits-dim'}`}
                    >{currencies.local}</button>
                 </div>
              </div>
@@ -370,12 +362,12 @@ export default function FinancialsPage() {
              <table className="w-full min-w-[720px] text-left border-collapse">
                 <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Date')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Athlete')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Amount')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase">{t('Proof')}</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-pits-dim uppercase text-right">{t('Action')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Date')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Athlete')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Method')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Amount')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase">{t('Proof')}</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase text-right">{t('Action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-pits-edge">
@@ -385,7 +377,7 @@ export default function FinancialsPage() {
                     <tr key={p.id} className="hover:bg-pits-surface-muted/40 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="text-[11px] font-black text-pits-text">{formatDate(p.created_at, lang)}</div>
-                        <div className="text-[9px] text-pits-dim font-bold">{formatTime(p.created_at, lang)}</div>
+                        <div className="text-[11px] text-pits-dim font-bold">{formatTime(p.created_at, lang)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-xs font-black text-pits-text uppercase">{p.profiles?.full_name || t('Unknown Athlete')}</div>
@@ -393,7 +385,7 @@ export default function FinancialsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
                           <div className="p-1 bg-pits-surface-muted rounded text-pits-dim"><CreditCard size={10}/></div>
-                          <span className="text-[10px] font-black text-pits-text uppercase">{p.method || t('Unknown')}</span>
+                          <span className="text-[11px] font-black text-pits-text uppercase">{p.method || t('Unknown')}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -410,12 +402,12 @@ export default function FinancialsPage() {
                              href={p.proof_image_url}
                              target="_blank"
                              rel="noreferrer"
-                             className="inline-flex items-center px-2 py-1 bg-pits-surface-muted text-pits-primary rounded-lg text-[9px] font-black uppercase hover:bg-pits-primary-soft transition-colors"
+                             className="inline-flex items-center px-2 py-1 bg-pits-surface-muted text-pits-primary rounded-lg text-[11px] font-black uppercase hover:bg-pits-primary-soft transition-colors"
                            >
                               {t('Check Proof')} <ExternalLink size={10} className="ml-1" />
                            </a>
                          ) : (
-                           <span className="text-[9px] font-black uppercase text-pits-dim">—</span>
+                           <span className="text-[11px] font-black uppercase text-pits-dim">—</span>
                          )}
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -431,7 +423,7 @@ export default function FinancialsPage() {
                                 </button>
                               </>
                             ) : (
-                              <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${p.status === 'approved' ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge' : 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge'}`}>
+                              <div className={`px-2 py-0.5 rounded text-[11px] font-black uppercase border ${p.status === 'approved' ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge' : 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge'}`}>
                                 {p.status}
                               </div>
                             )}
@@ -449,7 +441,7 @@ export default function FinancialsPage() {
              {/* PAGINATION */}
              {totalPages > 1 && (
                <div className="px-6 py-4 bg-pits-surface-elevated border-t border-pits-edge flex justify-between items-center">
-                  <p className="text-[10px] font-black text-pits-dim uppercase">{t('{{count}} payments', { count: filteredPayments.length })}</p>
+                  <p className="text-[11px] font-black text-pits-dim uppercase">{t('{{count}} payments', { count: filteredPayments.length })}</p>
                   <nav className="flex gap-1.5">
                      <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-1.5 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-dim disabled:opacity-30"><ChevronLeft size={16}/></button>
                      <div className="flex bg-pits-surface-muted border border-pits-edge rounded-lg p-0.5 px-3 items-center text-[11px] font-black text-pits-text">
@@ -517,7 +509,7 @@ export default function FinancialsPage() {
                 <div className="mt-8 pt-6 border-t border-pits-edge">
                    <div className="flex justify-between items-end">
                       <div>
-                         <p className="text-[10px] font-black text-pits-dim uppercase mb-1">{t('Result')}</p>
+                         <p className="text-[11px] font-black text-pits-dim uppercase mb-1">{t('Result')}</p>
                          <p className={`text-xs font-bold flex items-center gap-1 ${(reconDifference === 0) ? 'text-pits-positive' : 'text-pits-danger'}`}>
                             {(reconDifference === 0) ? <CheckCircle size={12}/> : <AlertTriangle size={12}/>}
                             {(reconDifference === 0) ? t('Balanced') : t("Doesn't match")}
@@ -525,7 +517,7 @@ export default function FinancialsPage() {
                       </div>
                       <button 
                         onClick={handleAudit}
-                        className="bg-pits-primary text-pits-dark-text px-4 py-2 font-black rounded-xl text-[10px] uppercase shadow-lg active:scale-95 transition-all"
+                        className="bg-pits-primary text-pits-dark-text px-4 py-2 font-black rounded-xl text-[11px] uppercase shadow-lg active:scale-95 transition-all"
                       >
                          {t('Check')}
                       </button>
@@ -564,14 +556,14 @@ export default function FinancialsPage() {
                    <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
                    {t('Lock expired memberships')}
                    {dueCount > 0 && (
-                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-danger text-white text-[10px] font-black leading-none flex items-center justify-center">
+                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-danger text-white text-[11px] font-black leading-none flex items-center justify-center">
                        {dueCount > 99 ? '99+' : dueCount}
                      </span>
                    )}
                 </button>
                 <div className="flex items-start gap-2 p-3 bg-pits-primary-soft rounded-2xl border border-pits-edge">
                    <Info size={14} className="text-pits-primary mt-0.5 shrink-0" />
-                   <p className="text-[9px] font-bold text-pits-text leading-relaxed uppercase">
+                   <p className="text-[11px] font-bold text-pits-text leading-relaxed uppercase">
                       {t('Sync solvency expiry tip')}
                    </p>
                 </div>
@@ -636,7 +628,7 @@ function StatCard({ label, value, symbol, trend, color, info }: StatCardProps) {
   return (
     <div className="bg-pits-surface-elevated p-4 rounded-3xl border border-pits-edge shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
       <div className="flex justify-between items-start mb-4">
-        <p className="text-[9px] font-black text-pits-dim uppercase tracking-widest leading-tight">{label}</p>
+        <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest leading-tight">{label}</p>
         <div className={`p-1.5 rounded-lg border ${accents[color] ?? accents.muted}`}>
           {trend === 'positive' && <TrendingUp size={14} />}
           {trend === 'neutral' && <DollarSign size={14} />}
@@ -648,7 +640,7 @@ function StatCard({ label, value, symbol, trend, color, info }: StatCardProps) {
         <span className="text-sm font-black text-pits-dim mb-1">{symbol}</span>
         <span className="text-xl font-black text-pits-text tracking-tighter">{value.toLocaleString()}</span>
       </div>
-      {info && <p className="text-[8px] font-bold text-pits-dim uppercase mt-1 tracking-tighter">{info}</p>}
+      {info && <p className="text-[11px] font-bold text-pits-dim uppercase mt-1 tracking-tighter">{info}</p>}
     </div>
   );
 }
@@ -679,7 +671,7 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, pendingLa
     >
       <div className="flex justify-between items-start relative z-10">
         <div>
-          <h3 className="text-[10px] font-black uppercase tracking-widest mb-1 text-pits-dim">{title}</h3>
+          <h3 className="text-[11px] font-black uppercase tracking-widest mb-1 text-pits-dim">{title}</h3>
           <p className="text-2xl font-black tracking-tighter text-pits-text">
             {symbol}{stats.totalRevenue.toLocaleString()}
           </p>
@@ -691,9 +683,9 @@ function CurrencyPanel({ title, stats, symbol, color, active, onClick, pendingLa
 
       <div className="mt-6 flex items-center justify-between relative z-10">
         <div className="space-y-0.5">
-           <p className="text-[9px] font-black text-pits-dim uppercase">{pendingLabel}</p>
+           <p className="text-[11px] font-black text-pits-dim uppercase">{pendingLabel}</p>
            <p className="text-xs font-black text-pits-primary">
-             {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[10px] text-pits-dim">({t('{{count}} payments', { count: stats.pendingCount })})</span>
+             {symbol}{stats.pendingAmount.toLocaleString()} <span className="opacity-50 text-[11px] text-pits-dim">({t('{{count}} payments', { count: stats.pendingCount })})</span>
            </p>
         </div>
         <div className="h-1.5 w-24 rounded-full overflow-hidden bg-pits-surface-muted">
@@ -721,9 +713,9 @@ function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, h
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
-        <label className="text-[9px] font-black text-pits-dim uppercase">{label}</label>
+        <label className="text-[11px] font-black text-pits-dim uppercase">{label}</label>
         {!hideExpected && !isReadOnly && (
-          <span className={`text-[9px] font-black uppercase ${diff === 0 ? 'text-pits-dim' : diff < 0 ? 'text-pits-danger' : 'text-pits-warning'}`}>
+          <span className={`text-[11px] font-black uppercase ${diff === 0 ? 'text-pits-dim' : diff < 0 ? 'text-pits-danger' : 'text-pits-warning'}`}>
              {diff === 0 ? t('Balanced') : diff < 0 ? t('{{amount}} short', { amount: `${symbol}${Math.abs(diff)}` }) : t('{{amount}} over', { amount: `${symbol}${diff}` })}
           </span>
         )}
@@ -739,7 +731,7 @@ function ReconInput({ label, symbol, value, onChange, systemValue, isReadOnly, h
           className={`w-full max-w-full border rounded-2xl pl-10 pr-4 py-3 text-sm font-black transition-all placeholder:text-pits-dim focus:outline-none ${isReadOnly ? 'bg-pits-surface-muted border-pits-edge text-pits-dim cursor-not-allowed' : 'bg-pits-surface-muted border-pits-edge text-pits-text focus:border-pits-red'}`}
         />
         {!hideExpected && (
-          <p className="mt-1.5 text-[8px] font-black text-pits-dim uppercase text-right truncate">
+          <p className="mt-1.5 text-[11px] font-black text-pits-dim uppercase text-right truncate">
             {t('Expected')}: {systemValue.toLocaleString()}
           </p>
         )}
@@ -767,14 +759,14 @@ function MetricRow({ label, value, color, progress, tooltip }: MetricRowProps) {
     <div className="space-y-1.5">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-1.5">
-           <p className="text-[9px] font-black text-pits-dim uppercase">{label}</p>
+           <p className="text-[11px] font-black text-pits-dim uppercase">{label}</p>
            {tooltip && (
              <Tooltip content={tooltip}>
                 <Info size={10} className="text-pits-dim cursor-help" />
              </Tooltip>
            )}
         </div>
-        <span className="text-[10px] font-black text-pits-text">{value}</span>
+        <span className="text-[11px] font-black text-pits-text">{value}</span>
       </div>
       <div className="h-1 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
         <div className={`h-full rounded-full ${barColors[color] ?? barColors.muted} transition-all duration-1000`} style={{ width: `${progress}%` }} />

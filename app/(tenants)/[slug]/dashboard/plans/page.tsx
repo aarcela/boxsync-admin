@@ -251,7 +251,7 @@ export default function MembershipPlansPage() {
             <h1 className="page-title">
               {t('Membership Plans')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
+            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[11px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
               {t('System Config')}
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function MembershipPlansPage() {
             {t('Manage membership plans and pricing for your box')}
           </p>
           {!isAdmin && callerRole && (
-            <p className="text-[10px] font-bold text-pits-secondary uppercase mt-2">
+            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
               {t('Only admins can manage membership plans.')}
             </p>
           )}
@@ -290,7 +290,7 @@ export default function MembershipPlansPage() {
                   placeholder={t('Search plans...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
             </div>
@@ -299,23 +299,23 @@ export default function MembershipPlansPage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-pits-surface-muted/60">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Plan Name')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Price (USD)')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Booking Limit')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Athletes')}
                     </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
+                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
                       {t('Status')}
                     </th>
                     {isAdmin && (
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
+                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
                         {t('Actions')}
                       </th>
                     )}
@@ -348,7 +348,7 @@ export default function MembershipPlansPage() {
                               <div className="text-xs font-bold text-pits-ink uppercase tracking-tight">
                                 {plan.name}
                               </div>
-                              <div className="text-[10px] text-pits-dim font-medium truncate max-w-[220px]">
+                              <div className="text-[11px] text-pits-dim font-medium truncate max-w-[220px]">
                                 {plan.description || t('No details provided')}
                               </div>
                             </div>
@@ -360,12 +360,12 @@ export default function MembershipPlansPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
+                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
                             {formatBookingLimit(plan)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black text-pits-dim uppercase">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-black text-pits-dim uppercase">
                             <Users size={12} />
                             {plan.member_count}
                           </span>
@@ -374,7 +374,7 @@ export default function MembershipPlansPage() {
                           {isAdmin ? (
                             <button
                               onClick={() => handleToggleStatus(plan)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
                             >
                               {plan.is_active ? (
                                 <CheckCircle2 size={10} />
@@ -385,7 +385,7 @@ export default function MembershipPlansPage() {
                             </button>
                           ) : (
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
+                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
                             >
                               {plan.is_active ? t('Active') : t('Inactive')}
                             </span>
@@ -443,13 +443,13 @@ export default function MembershipPlansPage() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">
                     {t('Total Plans')}
                   </span>
                   <span className="text-sm font-black text-pits-ink">{plans.length}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">
                     {t('Active Plans')}
                   </span>
                   <span className="text-sm font-black text-pits-success">
@@ -467,13 +467,13 @@ export default function MembershipPlansPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                   {t('Choose Unlimited, Weekly, or Session pack for booking limits.')}
                 </p>
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                   {t('Inactive plans stay hidden from new athlete sign-ups.')}
                 </p>
               </li>
@@ -495,7 +495,7 @@ export default function MembershipPlansPage() {
                   <h2 className="text-2xl font-black text-pits-ink tracking-tighter uppercase">
                     {editingPlan ? t('Edit Plan') : t('Add Plan')}
                   </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('Plan Configuration')}
                   </p>
                 </div>
@@ -506,7 +506,7 @@ export default function MembershipPlansPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Plan Name')}
                   </label>
                   <input
@@ -521,7 +521,7 @@ export default function MembershipPlansPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Price (USD)')}
                     </label>
                     <input
@@ -537,7 +537,7 @@ export default function MembershipPlansPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Limit Type')}
                     </label>
                     <select
@@ -562,7 +562,7 @@ export default function MembershipPlansPage() {
 
                 {formData.limit_type === 'weekly' && (
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                       {t('Weekly Limit')}
                     </label>
                     <input
@@ -582,7 +582,7 @@ export default function MembershipPlansPage() {
                 {formData.limit_type === 'period' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                      <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                         {t('Session limit')}
                       </label>
                       <input
@@ -598,7 +598,7 @@ export default function MembershipPlansPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                      <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                         {t('Validity (days)')}
                       </label>
                       <input
@@ -617,7 +617,7 @@ export default function MembershipPlansPage() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Description')}
                   </label>
                   <textarea
@@ -632,7 +632,7 @@ export default function MembershipPlansPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Status')}
                   </label>
                   <select
@@ -647,7 +647,7 @@ export default function MembershipPlansPage() {
                   </select>
                 </div>
 
-                <p className="text-[9px] font-bold text-pits-dim uppercase">
+                <p className="text-[11px] font-bold text-pits-dim uppercase">
                   {t('Session packs reset when payment is approved or the athlete is assigned this plan.')}
                 </p>
 

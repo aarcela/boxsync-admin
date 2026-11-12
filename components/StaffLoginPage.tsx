@@ -163,7 +163,7 @@ export default function StaffLoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg text-center space-y-2">
+            <div className="bg-pits-danger-soft text-pits-danger text-sm font-bold p-3 rounded-lg text-center space-y-2">
               <p>{error}</p>
               {error === t('Check your email to activate your account.') && (
                 <button

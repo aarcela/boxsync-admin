@@ -232,7 +232,7 @@ export default function FeedbackPage() {
           <h1 className="page-title mb-1">
             {t('Service Quality Control')}
           </h1>
-          <p className="text-pits-dim font-bold text-[10px] uppercase tracking-widest opacity-60">
+          <p className="text-pits-dim font-bold text-[11px] uppercase tracking-widest opacity-60">
             {t('Strategic monitoring and coach evaluation')}
           </p>
         </div>
@@ -241,14 +241,14 @@ export default function FeedbackPage() {
         <div className="flex gap-2 w-full md:w-auto">
           <div className="flex items-center gap-3 px-3 py-1.5 bg-pits-surface-muted rounded-lg border border-pits-edge min-w-[110px]">
              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Avg Rating')}</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Avg Rating')}</span>
                 <span className="text-lg font-black text-pits-text leading-none">{globalAvg.toFixed(1)}</span>
              </div>
              <TrendingUp size={14} className="text-pits-success" />
           </div>
           <div className="flex items-center gap-3 px-3 py-1.5 bg-pits-surface-muted rounded-lg border border-pits-edge min-w-[110px]">
              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Critical')}</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Critical')}</span>
                 <span className={`text-lg font-black leading-none ${criticalCount > 0 ? 'text-pits-error' : 'text-pits-text'}`}>{criticalCount}</span>
              </div>
              <AlertTriangle size={14} className={criticalCount > 0 ? 'text-pits-error animate-pulse' : 'text-pits-dim'} />
@@ -274,7 +274,7 @@ export default function FeedbackPage() {
                 <div className="flex items-center gap-1.5">
                    {val.trend === 'up' && <TrendingUp size={12} className="text-pits-success" />}
                    {val.trend === 'down' && <TrendingDown size={12} className="text-pits-error" />}
-                   <span className={`text-[10px] font-black uppercase tracking-widest ${
+                   <span className={`text-[11px] font-black uppercase tracking-widest ${
                      val.trend === 'up' ? 'text-pits-success' : val.trend === 'down' ? 'text-pits-error' : 'text-pits-dim'
                    }`}>
                      {val.trend === 'up' ? 'Improving' : val.trend === 'down' ? 'Declining' : 'Stable'}
@@ -285,7 +285,7 @@ export default function FeedbackPage() {
                 <span className={`text-xl font-black leading-none ${getARColor(val.monthAR)}`}>
                   {val.monthAR > 0 ? val.monthAR.toFixed(1) : "N/A"}
                 </span>
-                <span className="text-[9px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">30D Avg</span>
+                <span className="text-[11px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">30D Avg</span>
               </div>
             </div>
 
@@ -297,7 +297,7 @@ export default function FeedbackPage() {
                  { l: 'All Time', v: val.allTimeAR }
                ].map((p, i) => (
                  <div key={i} className="flex flex-col items-center border-r last:border-0 border-pits-edge/50">
-                    <span className="text-[8px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l.split(' ')[0]}</span>
+                    <span className="text-[11px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l.split(' ')[0]}</span>
                     <span className={`text-[13px] font-black ${getARColor(p.v)}`}>{p.v > 0 ? p.v.toFixed(1) : '-'}</span>
                  </div>
                ))}
@@ -306,7 +306,7 @@ export default function FeedbackPage() {
         ))}
         {evaluations.length === 0 && Array.from({length: 3}).map((_, i) => (
            <div key={i} className="bg-pits-surface-elevated border border-dashed border-pits-edge p-3 rounded-xl flex flex-col items-center justify-center min-h-[70px]">
-              <div className="text-[8px] font-bold text-pits-dim uppercase tracking-widest">{t('N/A')}</div>
+              <div className="text-[11px] font-bold text-pits-dim uppercase tracking-widest">{t('N/A')}</div>
            </div>
         ))}
       </div>
@@ -328,7 +328,7 @@ export default function FeedbackPage() {
              <select
                value={filterCoach}
                onChange={(e) => { setFilterCoach(e.target.value); setCurrentPage(1); }}
-               className="flex-1 md:flex-none bg-pits-surface-muted border border-pits-edge rounded-lg px-2 py-2 text-[10px] font-bold text-pits-text outline-none focus:border-pits-red cursor-pointer"
+               className="flex-1 md:flex-none bg-pits-surface-muted border border-pits-edge rounded-lg px-2 py-2 text-[11px] font-bold text-pits-text outline-none focus:border-pits-red cursor-pointer"
              >
                <option value="all" className="text-black">All Coaches</option>
                {coaches.map(c => (
@@ -339,7 +339,7 @@ export default function FeedbackPage() {
              <div className="flex items-center gap-1 bg-pits-ink/5 border border-pits-edge rounded-lg p-1">
                 <button
                   onClick={() => { setFilterRating(null); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${
+                  className={`px-3 py-1 rounded-md text-[11px] font-black uppercase transition-all ${
                     filterRating === null ? 'bg-pits-surface-elevated text-pits-text' : 'text-pits-dim hover:text-pits-text'
                   }`}
                 >
@@ -349,7 +349,7 @@ export default function FeedbackPage() {
                   <button
                     key={r}
                     onClick={() => { setFilterRating(r); setCurrentPage(1); }}
-                    className={`px-2 py-1 rounded-md text-[9px] font-black flex items-center gap-1 transition-all ${
+                    className={`px-2 py-1 rounded-md text-[11px] font-black flex items-center gap-1 transition-all ${
                       filterRating === r ? 'bg-pits-surface-elevated text-pits-text font-black' : 'text-pits-dim hover:text-pits-text font-bold'
                     }`}
                   >
@@ -364,12 +364,12 @@ export default function FeedbackPage() {
       <div className="flex-1 bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden flex flex-col">
         <div className="p-3 bg-pits-surface-muted border-b border-pits-edge flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-black text-pits-text text-[10px] uppercase tracking-widest italic">
+            <h3 className="font-black text-pits-text text-[11px] uppercase tracking-widest italic">
               {t('All Feedback')}
             </h3>
-            <span className="bg-pits-panel text-pits-text text-[9px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
+            <span className="bg-pits-panel text-pits-text text-[11px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
           </div>
-          <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-wider text-pits-dim">
+          <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-wider text-pits-dim">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-error" /> {t('Critical')}</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-primary-soft0" /> {t('Neutral')}</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-success" /> {t('Excellent')}</span>
@@ -410,7 +410,7 @@ export default function FeedbackPage() {
                           <h4 className="font-black text-pits-text uppercase italic tracking-tighter text-xl leading-none">
                             {item.athlete?.full_name || t('Anonymous')}
                           </h4>
-                          <span className="text-[9px] font-black text-pits-dim border border-pits-edge px-2 py-0.5 rounded uppercase tracking-tighter">
+                          <span className="text-[11px] font-black text-pits-dim border border-pits-edge px-2 py-0.5 rounded uppercase tracking-tighter">
                             {t('Athlete')}
                           </span>
                         </div>
@@ -463,7 +463,7 @@ export default function FeedbackPage() {
                           </button>
                         )}
                         
-                        <span className="text-[10px] font-bold text-pits-dim uppercase tracking-widest ml-2">
+                        <span className="text-[11px] font-bold text-pits-dim uppercase tracking-widest ml-2">
                           {formatDateShort(item.created_at, lang)}
                         </span>
                       </div>
@@ -477,7 +477,7 @@ export default function FeedbackPage() {
 
         {/* FOOTER PAGINATION */}
         <div className="p-4 bg-pits-surface-muted border-t border-pits-edge flex items-center justify-between">
-          <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest italic">
+          <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest italic">
             {t('Showing {{count}} of {{total}} entries', { count: feedback.length, total: totalCount })}
           </p>
           <div className="flex items-center gap-2">

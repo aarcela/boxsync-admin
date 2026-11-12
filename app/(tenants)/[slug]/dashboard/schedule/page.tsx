@@ -168,10 +168,10 @@ export default function SchedulePage() {
               key={insight.id}
               className={`rounded-xl border p-4 ${
                 insight.kind === 'no_show'
-                  ? 'border-red-500/30 bg-red-500/5'
+                  ? 'border-pits-danger-edge bg-pits-danger-soft'
                   : insight.kind === 'high_demand'
-                    ? 'border-green-500/30 bg-green-500/5'
-                  : 'border-amber-500/30 bg-amber-500/5'
+                    ? 'border-pits-positive-edge bg-pits-positive-soft'
+                  : 'border-pits-warning-edge bg-pits-warning-soft'
               }`}
             >
               <div className="flex items-start gap-3">
@@ -179,10 +179,10 @@ export default function SchedulePage() {
                   size={18}
                   className={
                     insight.kind === 'no_show'
-                      ? 'text-red-400'
+                      ? 'text-pits-danger'
                       : insight.kind === 'high_demand'
-                        ? 'text-green-400'
-                        : 'text-amber-400'
+                        ? 'text-pits-positive'
+                        : 'text-pits-warning'
                   }
                 />
                 <div>
@@ -199,7 +199,7 @@ export default function SchedulePage() {
         <button
           type="button"
           onClick={() => setViewTab('list')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
             viewTab === 'list'
               ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
               : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -211,7 +211,7 @@ export default function SchedulePage() {
         <button
           type="button"
           onClick={() => setViewTab('calendar')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
             viewTab === 'calendar'
               ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
               : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -261,14 +261,14 @@ export default function SchedulePage() {
                       flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 shrink-0
                       ${isToday ? 'bg-pits-card border-pits-red/20 text-pits-red animate-pulse-subtle' : 'bg-pits-background border-pits-border text-pits-primary'}
                     `}>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{dayStr}</span>
+                      <span className="text-[11px] font-black uppercase tracking-widest">{dayStr}</span>
                       <span className="text-2xl font-black">{dateNumStr}</span>
                     </div>
 
                     <div className="space-y-1.5">
                        <div className="flex items-center gap-2">
                           <span
-                            className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white shadow-sm"
+                            className="px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-widest text-white shadow-sm"
                             style={classTypeBadgeStyle(colorByName[session.class_type])}
                           >
                             {session.class_type}
@@ -278,8 +278,8 @@ export default function SchedulePage() {
                             {timeStr}
                           </span>
                        </div>
-                       <div className={`flex items-center text-xs font-bold transition-colors ${!session.coach?.full_name ? 'text-orange-400 bg-orange-950/40 px-2 py-1 rounded-lg border border-orange-900/50' : 'text-pits-dim'}`}>
-                         <User size={12} className={`mr-1.5 ${!session.coach?.full_name ? 'text-orange-400' : 'text-pits-dim'}`} />
+                       <div className={`flex items-center text-xs font-bold transition-colors ${!session.coach?.full_name ? 'text-pits-warning bg-pits-warning-soft px-2 py-1 rounded-lg border border-pits-warning-edge' : 'text-pits-dim'}`}>
+                         <User size={12} className={`mr-1.5 ${!session.coach?.full_name ? 'text-pits-warning' : 'text-pits-dim'}`} />
                          {session.coach?.full_name ? session.coach.full_name.toUpperCase() : t('Staff')}
                          {!session.coach?.full_name && <AlertCircle size={12} className="ml-1.5" />}
                        </div>
@@ -291,12 +291,12 @@ export default function SchedulePage() {
                     <div className="flex justify-between items-end mb-2">
                       <div className="flex items-center gap-2">
                         <Users size={14} className="text-pits-dim" />
-                        <span className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Bookings')}</span>
+                        <span className="text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Bookings')}</span>
                       </div>
                       <div className="text-right">
                         <span className={`text-lg font-black italic ${
                           bookingCount >= session.max_capacity ? 'text-pits-red' : 
-                          isHighOccupancy ? 'text-orange-500' : 'text-pits-text'
+                          isHighOccupancy ? 'text-pits-warning' : 'text-pits-text'
                         }`}>
                           {bookingCount}
                         </span>
@@ -309,23 +309,23 @@ export default function SchedulePage() {
                       <div 
                         className={`h-full transition-all duration-500 rounded-full ${
                           bookingCount >= session.max_capacity ? 'bg-pits-red' :
-                          isHighOccupancy ? 'bg-orange-500' :
-                          bookingCount > 0 ? 'bg-green-500' : 'bg-pits-edge'
+                          isHighOccupancy ? 'bg-pits-warning' :
+                          bookingCount > 0 ? 'bg-pits-positive' : 'bg-pits-edge'
                         }`}
                         style={{ width: `${Math.min(100, occupancyRate)}%` }}
                       />
                     </div>
                     
                     <div className="flex justify-between mt-1">
-                      <span className="text-[9px] font-bold text-pits-dim uppercase tracking-tighter">
+                      <span className="text-[11px] font-bold text-pits-dim uppercase tracking-tighter">
                         {occupancyRate.toFixed(0)}% {t('Capacity')}
                       </span>
                       {bookingCount >= session.max_capacity ? (
-                        <span className="text-[9px] font-black text-pits-red uppercase italic animate-pulse">
+                        <span className="text-[11px] font-black text-pits-red uppercase italic animate-pulse">
                           {t('Full')}{waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ''}
                         </span>
                       ) : (
-                        <span className="text-[9px] font-bold text-pits-dim uppercase italic">
+                        <span className="text-[11px] font-bold text-pits-dim uppercase italic">
                           {session.max_capacity - bookingCount} {t('Spots')}
                         </span>
                       )}
@@ -339,7 +339,7 @@ export default function SchedulePage() {
                         setSelectedClassId(session.id);
                         setIsDetailsModalOpen(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-2 text-pits-text hover:bg-pits-surface-muted border border-transparent hover:border-pits-edge rounded-lg transition-all font-black text-[10px] uppercase tracking-widest italic"
+                      className="flex items-center gap-1 px-3 py-2 text-pits-text hover:bg-pits-surface-muted border border-transparent hover:border-pits-edge rounded-lg transition-all font-black text-[11px] uppercase tracking-widest italic"
                       title={t('DETAILS')}
                     >
                       {t('DETAILS')}
@@ -423,21 +423,21 @@ export default function SchedulePage() {
                   <div className="space-y-6">
                     <div className="bg-pits-background p-4 rounded-xl border border-pits-border grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Type')}</p>
+                        <p className="text-[11px] text-pits-primary uppercase font-black tracking-wider">{t('Type')}</p>
                         <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.class_type}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Class Time')}</p>
+                        <p className="text-[11px] text-pits-primary uppercase font-black tracking-wider">{t('Class Time')}</p>
                         <p className="font-bold text-pits-text text-sm italic">
                           {getGymTimeLabel(cls.start_time, tz)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Coach')}</p>
+                        <p className="text-[11px] text-pits-primary uppercase font-black tracking-wider">{t('Coach')}</p>
                         <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.coach?.full_name || t('Staff')}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Capacity')}</p>
+                        <p className="text-[11px] text-pits-primary uppercase font-black tracking-wider">{t('Capacity')}</p>
                         <p className="font-bold text-pits-text text-sm italic">{cls.bookings[0]?.count || 0} / {cls.max_capacity}</p>
                       </div>
                     </div>
@@ -457,7 +457,7 @@ export default function SchedulePage() {
                         <div className="space-y-4">
                           <p className="text-pits-text text-xs leading-relaxed">{coachBrief.notice}</p>
                           <div className="rounded-lg border border-pits-edge bg-pits-surface-muted p-3">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
+                            <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
                               {t("Today's WOD")}
                             </p>
                             <p className="text-pits-text font-bold mt-1">
@@ -468,7 +468,7 @@ export default function SchedulePage() {
                             <div key={athlete.userId} className="rounded-lg border border-pits-edge bg-pits-background p-4">
                               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                 <p className="font-black text-pits-text">{athlete.name}</p>
-                                <span className="text-[10px] uppercase tracking-widest text-pits-dim">
+                                <span className="text-[11px] uppercase tracking-widest text-pits-dim">
                                   {athlete.level || t('Level not set')}
                                 </span>
                               </div>
@@ -528,10 +528,10 @@ export default function SchedulePage() {
                                 </div>
                                 <span className="font-bold text-pits-text text-sm">{booking.profiles.full_name}</span>
                               </div>
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
-                                ${booking.status === 'attended' ? 'bg-green-100 text-green-700' : 
-                                  booking.status === 'no_show' ? 'bg-red-100 text-red-700' :
-                                  'bg-blue-100 text-blue-700'}
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wide
+                                ${booking.status === 'attended' ? 'bg-pits-positive-soft text-pits-positive' : 
+                                  booking.status === 'no_show' ? 'bg-pits-danger-soft text-pits-danger' :
+                                  'bg-pits-info-soft text-pits-info'}
                               `}>
                                 {booking.status}
                               </span>
@@ -542,25 +542,25 @@ export default function SchedulePage() {
                       {guestRoster.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {guestRoster.map((guest) => (
-                            <div key={guest.id} className="flex justify-between items-center p-3 rounded-lg border border-amber-200 bg-amber-50/40 shadow-sm">
+                            <div key={guest.id} className="flex justify-between items-center p-3 rounded-lg border border-pits-warning-edge bg-pits-warning-soft shadow-sm">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="relative w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700">
+                                <div className="relative w-8 h-8 rounded-full bg-pits-warning-soft flex items-center justify-center text-xs font-bold text-pits-warning">
                                   {guest.full_name?.charAt(0) || 'G'}
                                 </div>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold text-pits-text text-sm truncate">{guest.full_name}</span>
-                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{t('Guest')}</span>
+                                    <span className="text-[11px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-pits-warning-soft text-pits-warning">{t('Guest')}</span>
                                   </div>
-                                  <p className="text-[10px] text-pits-dim truncate">
+                                  <p className="text-[11px] text-pits-dim truncate">
                                     {[guest.whatsapp, guest.instagram].filter(Boolean).join(' · ') || t('No contact saved')}
                                   </p>
                                 </div>
                               </div>
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
-                                ${guest.status === 'attended' ? 'bg-green-100 text-green-700' :
-                                  guest.status === 'no_show' ? 'bg-red-100 text-red-700' :
-                                  'bg-blue-100 text-blue-700'}
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wide
+                                ${guest.status === 'attended' ? 'bg-pits-positive-soft text-pits-positive' :
+                                  guest.status === 'no_show' ? 'bg-pits-danger-soft text-pits-danger' :
+                                  'bg-pits-info-soft text-pits-info'}
                               `}>
                                 {guest.status}
                               </span>
@@ -592,7 +592,7 @@ export default function SchedulePage() {
                               </span>
                               <div>
                                 <p className="font-bold text-pits-text text-sm">{entry.profiles.full_name}</p>
-                                <p className="text-[10px] text-pits-dim">
+                                <p className="text-[11px] text-pits-dim">
                                   {t('Joined {{date}}', { date: formatDateTime(entry.joined_at, lang) })}
                                 </p>
                               </div>
