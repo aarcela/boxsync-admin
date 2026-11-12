@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
+import { useState, type ReactNode } from 'react';
 import { 
   TrendingUp,
   TrendingDown,
@@ -37,15 +38,7 @@ export default function AccountabilityPage() {
 
   const periodString = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
   const { loading, stats, refresh, expenses, payments, currencies } = useAccountability(periodString);
-  const [activeCurrency, setActiveCurrency] = useState(currencies.reference);
-
-  useEffect(() => {
-    setActiveCurrency((prev) =>
-      prev === currencies.reference || prev === currencies.local
-        ? prev
-        : currencies.reference
-    );
-  }, [currencies.reference, currencies.local]);
+  const { code: activeCurrency } = useMoneyCurrency();
 
   const changeMonth = (direction: number) => {
     let newMonth = selectedMonth + direction;
@@ -123,7 +116,7 @@ export default function AccountabilityPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="page-title">
-              {t('Accountability')}
+              {t('Month result')}
             </h1>
             <StatusBadge tone="info">{t('Monthly P&L')}</StatusBadge>
           </div>
@@ -133,24 +126,6 @@ export default function AccountabilityPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto min-w-0">
-          <div className="flex w-full sm:w-auto bg-pits-surface-muted p-1 rounded-2xl border border-pits-edge">
-            <button 
-              onClick={() => setActiveCurrency(currencies.reference)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
-                activeCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
-              }`}
-            >
-              {t('REF OPERATIONS')}
-            </button>
-            <button 
-              onClick={() => setActiveCurrency(currencies.local)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-[11px] font-black uppercase rounded-xl whitespace-nowrap transition-all ${
-                activeCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-red shadow-sm' : 'text-pits-dim hover:text-pits-text'
-              }`}
-            >
-              {t('LOCAL OPERATIONS')}
-            </button>
-          </div>
 
           <div className="flex items-center justify-center gap-2 bg-pits-surface-elevated border border-pits-edge rounded-2xl p-1 shadow-sm w-full sm:w-auto">
             <button 

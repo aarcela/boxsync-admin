@@ -12,6 +12,7 @@ import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { isLocalCurrency } from '@/lib/currency';
+import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
 
 function isCashMethod(methodRef: string | undefined, methods: PaymentMethod[]): boolean {
   if (!methodRef) return false;
@@ -32,7 +33,7 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
-  const [activeCurrency, setActiveCurrency] = useState(currencies.reference);
+  const { code: activeCurrency, setCode: setActiveCurrency } = useMoneyCurrency();
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,14 +50,6 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     overdueAmountREF: 0,
     solvencyRate: 0
   });
-
-  useEffect(() => {
-    setActiveCurrency((prev) =>
-      prev === currencies.reference || prev === currencies.local
-        ? prev
-        : currencies.reference
-    );
-  }, [currencies.reference, currencies.local]);
 
   const fetchFinancials = useCallback(async () => {
     setLoading(true);

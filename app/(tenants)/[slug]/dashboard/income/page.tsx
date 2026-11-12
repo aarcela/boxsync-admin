@@ -28,6 +28,7 @@ import {
   PaymentMethod,
 } from '@/lib/types/gym';
 import type { TranslationKey } from '@/lib/translations';
+import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
 import { useTenant } from '@/components/TenantContext';
 import { getGymDate } from '@/lib/utils/date';
 import {
@@ -58,7 +59,7 @@ export default function IncomePage() {
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewCurrency, setViewCurrency] = useState(currencies.reference);
+  const { code: viewCurrency } = useMoneyCurrency();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null);
 
@@ -73,11 +74,6 @@ export default function IncomePage() {
   });
 
   useEffect(() => {
-    setViewCurrency((prev) =>
-      prev === currencies.reference || prev === currencies.local
-        ? prev
-        : currencies.reference
-    );
     setNewIncome((prev) => ({
       ...prev,
       currency:
@@ -120,7 +116,7 @@ export default function IncomePage() {
 
   const handleAddIncome = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newIncome.description || !newIncome.amount) return;
+    if (!newIncome.amount) return;
 
     try {
       const amountNum = parseFloat(newIncome.amount);
@@ -129,7 +125,7 @@ export default function IncomePage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       await incomeService.addIncome({
-        description: newIncome.description,
+        description: newIncome.description.trim() || t(newIncome.category as TranslationKey),
         category: newIncome.category,
         amount: amountNum,
         currency: newIncome.currency,
@@ -290,20 +286,6 @@ export default function IncomePage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
-              </div>
-              <div className="flex bg-pits-surface-muted p-1 rounded-xl">
-                <button
-                  onClick={() => setViewCurrency(currencies.reference)}
-                  className={`px-4 py-1.5 text-[11px] font-black rounded-lg transition-all ${viewCurrency === currencies.reference ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
-                >
-                  {t('REF DISPLAY')}
-                </button>
-                <button
-                  onClick={() => setViewCurrency(currencies.local)}
-                  className={`px-4 py-1.5 text-[11px] font-black rounded-lg transition-all ${viewCurrency === currencies.local ? 'bg-pits-surface-elevated text-pits-primary shadow-sm' : 'text-pits-dim'}`}
-                >
-                  {t('LOCAL DISPLAY')}
-                </button>
               </div>
             </div>
 
@@ -474,35 +456,56 @@ export default function IncomePage() {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">{t('Record Income')}</h2>
-                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
-                    {t('Operational Revenue Registry')}
-                  </p>
                 </div>
                 <div className="p-3 bg-pits-primary-soft text-pits-red rounded-2xl">
                   <DollarSign size={20} />
                 </div>
               </div>
 
-              <form onSubmit={handleAddIncome} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Context / Description')}</label>
-                  <input
-                    type="text"
-                    placeholder={t('e.g. Merch sale - March')}
-                    required
-                    value={newIncome.description}
-                    onChange={(e) => setNewIncome({ ...newIncome, description: e.target.value })}
-                    className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red transition-all placeholder:text-pits-dim"
-                  />
+              <form onSubmit={handleAddIncome} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-pits-dim">{t('Amount')}</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.00"
+                      required
+                      autoFocus
+                      value={newIncome.amount}
+                      onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+                      className="min-w-0 flex-1 bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 text-base"
+                    />
+                    {currencies.local !== currencies.reference ? (
+                      <select
+                        value={newIncome.currency}
+                        onChange={(e) => setNewIncome({ ...newIncome, currency: e.target.value })}
+                        aria-label={t('Currency')}
+                        className="w-28 shrink-0 bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                      >
+                        <option value={currencies.reference}>{currencies.reference}</option>
+                        <option value={currencies.local}>{currencies.local}</option>
+                      </select>
+                    ) : null}
+                  </div>
+                  {newIncome.currency === currencies.local && currencies.local !== currencies.reference && exchangeRate > 0 && Number(newIncome.amount) > 0 ? (
+                    <p className="text-xs text-pits-dim">
+                      {t('Counts as {{amount}} {{currency}}', {
+                        amount: (Number(newIncome.amount) / exchangeRate).toFixed(2),
+                        currency: currencies.reference,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Sector')}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-pits-dim">{t('Category')}</label>
                     <select
                       value={newIncome.category}
                       onChange={(e) => setNewIncome({ ...newIncome, category: e.target.value as IncomeCategory })}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -511,108 +514,67 @@ export default function IncomePage() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Currency')}</label>
-                    <select
-                      value={newIncome.currency}
-                      onChange={(e) => setNewIncome({ ...newIncome, currency: e.target.value })}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                    >
-                      <option value={currencies.local}>
-                        {t('Local')} · {currencies.local}
-                      </option>
-                      <option value={currencies.reference}>
-                        {t('Reference')} · {currencies.reference}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Amount')}</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      required
-                      value={newIncome.amount}
-                      onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red transition-all placeholder:text-pits-dim"
-                    />
-                    {newIncome.amount && Number(newIncome.amount) > 0 && (
-                      <p className="text-[11px] text-pits-dim font-medium">
-                        {isLocalCurrency(newIncome.currency, currencies) && exchangeRate
-                          ? t('Counts as {{amount}} {{currency}}', {
-                              amount: (Number(newIncome.amount) / exchangeRate).toFixed(2),
-                              currency: currencies.reference,
-                            })
-                          : t('Counts as {{amount}} {{currency}}', {
-                              amount: Number(newIncome.amount).toFixed(2),
-                              currency: currencies.reference,
-                            })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2 relative">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Official Rate')}</label>
-                    <div className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-dim cursor-not-allowed flex items-center justify-between">
-                      <span>{exchangeRate.toFixed(4)}</span>
-                      <span className="text-[11px] opacity-70">{currencies.local}/{currencies.reference}</span>
-                    </div>
-                    <div className="absolute -bottom-4 right-2 text-[7px] font-black text-pits-success uppercase tracking-widest">
-                      {t('Live Reference')}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-5">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Registry Date')}</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-pits-dim">{t('Date')}</label>
                     <input
                       type="date"
                       value={newIncome.income_date}
                       onChange={(e) => setNewIncome({ ...newIncome, income_date: e.target.value })}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
+                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
-                    <select
-                      value={newIncome.status}
-                      onChange={(e) => setNewIncome({ ...newIncome, status: e.target.value as IncomeStatus })}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                    >
-                      <option value="confirmed">{t('confirmed' as TranslationKey)}</option>
-                      <option value="pending">{t('pending' as TranslationKey)}</option>
-                      <option value="cancelled">{t('cancelled' as TranslationKey)}</option>
-                    </select>
                   </div>
                 </div>
 
-                <div className="space-y-2 mt-4">
-                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Method')}</label>
-                  <select
-                    value={newIncome.payment_method}
-                    onChange={(e) => {
-                      const method = paymentMethods.find((m) => m.id === e.target.value);
-                      setNewIncome({
-                        ...newIncome,
-                        payment_method: e.target.value,
-                        currency: method?.currency || newIncome.currency,
-                      });
-                    }}
-                    className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                  >
-                    <option value="">— {t('Select method')} —</option>
-                    {paymentMethods.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label} ({m.currency})
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-pits-dim">{t('Description (optional)')}</label>
+                  <input
+                    type="text"
+                    placeholder={t('e.g. Merch sale - March')}
+                    value={newIncome.description}
+                    onChange={(e) => setNewIncome({ ...newIncome, description: e.target.value })}
+                    className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 placeholder:text-pits-dim"
+                  />
                 </div>
+
+                <details className="rounded-xl border border-pits-edge px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-pits-text">{t('More details')}</summary>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-pits-dim">{t('Status')}</label>
+                      <select
+                        value={newIncome.status}
+                        onChange={(e) => setNewIncome({ ...newIncome, status: e.target.value as IncomeStatus })}
+                        className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                      >
+                        <option value="confirmed">{t('confirmed' as TranslationKey)}</option>
+                        <option value="pending">{t('pending' as TranslationKey)}</option>
+                        <option value="cancelled">{t('cancelled' as TranslationKey)}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-pits-dim">{t('Payment Method')}</label>
+                      <select
+                        value={newIncome.payment_method}
+                        onChange={(e) => {
+                          const method = paymentMethods.find((m) => m.id === e.target.value);
+                          setNewIncome({
+                            ...newIncome,
+                            payment_method: e.target.value,
+                            currency: method?.currency || newIncome.currency,
+                          });
+                        }}
+                        className="w-full bg-pits-surface-muted border border-pits-edge rounded-xl px-4 py-3 text-sm font-semibold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                      >
+                        <option value="">{t('Select method')}</option>
+                        {paymentMethods.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.label} ({m.currency})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </details>
 
                 <div className="pt-4 flex gap-3">
                   <button

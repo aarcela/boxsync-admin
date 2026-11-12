@@ -51,6 +51,7 @@ import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import CommandPalette, { type PaletteLink } from '@/components/CommandPalette';
+import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
 import Tooltip from '@/components/Tooltip';
 import { financialService } from '@/lib/services/financialService';
 import {
@@ -116,6 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
+  const moneyCurrency = useMoneyCurrency();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(null);
   const [runningExpiry, setRunningExpiry] = useState(false);
@@ -201,10 +203,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         tip: t('Nav tip Money'),
         tabs: [
           tab('Money overview', '/dashboard/financials', DollarSign, 'Nav tip Money overview'),
-          tab('Who has paid', '/dashboard/accountability', Scale, 'Nav tip Who has paid'),
+          tab('Month result', '/dashboard/accountability', Scale, 'Nav tip Month result'),
           tab('Income', '/dashboard/income', TrendingUp, 'Nav tip Income'),
           tab('Expenses', '/dashboard/expenses', Wallet, 'Nav tip Expenses'),
-          tab('Reports', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
           ...(userRole === 'admin'
             ? [
                 tab('Salary', '/dashboard/salary', Banknote, 'Nav tip Salary'),
@@ -235,6 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         tabs: [
           tab('Box health', '/dashboard/performance', TrendingUp, 'Nav tip Box health'),
           tab('Ask AI', '/dashboard/ask', Sparkles, 'Nav tip Ask AI'),
+          tab('Revenue Rescue', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
           tab('Founding Pilot', '/dashboard/pilot', Rocket, 'Nav tip Founding Pilot'),
         ],
       },
@@ -623,6 +625,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               aria-label={activeNav.group.name}
               className="-mx-4 lg:-mx-6 -mt-4 lg:-mt-6 mb-4 lg:mb-6 px-4 lg:px-6 border-b border-pits-border bg-pits-surface-elevated shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
+              <div className="flex items-center gap-3 min-w-max">
               <ul className="flex gap-1 min-w-max">
                 {activeNav.group.tabs.map((navTab) => {
                   const selected = navTab.href === activeNav.tab.href;
@@ -644,6 +647,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   );
                 })}
               </ul>
+              {activeNav.group.id === 'money' && moneyCurrency.hasTwo ? (
+                <div
+                  className="ml-auto flex rounded-lg border border-pits-edge bg-pits-surface-muted p-0.5"
+                  role="group"
+                  aria-label={t('Currency')}
+                >
+                  {(['reference', 'local'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={moneyCurrency.mode === mode}
+                      onClick={() => moneyCurrency.setMode(mode)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
+                        moneyCurrency.mode === mode
+                          ? 'bg-pits-surface-elevated text-pits-text shadow-sm'
+                          : 'text-pits-dim hover:text-pits-text'
+                      }`}
+                    >
+                      {mode === 'reference' ? moneyCurrency.currencies.reference : moneyCurrency.currencies.local}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              </div>
             </nav>
           ) : null}
           {children}
