@@ -293,6 +293,14 @@ export const classService = {
         title: `${value.slot} averages ${Math.round(value.rate * 100)}% occupancy`,
         detail: `Based on ${value.classes} completed classes (${value.booked}/${value.capacity} spots), estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Consider consolidating, moving, or promoting this slot.`,
         sampleSize: value.classes,
+        params: {
+          slot: value.slot,
+          rate: Math.round(value.rate * 100),
+          classes: value.classes,
+          booked: value.booked,
+          capacity: value.capacity,
+          amount: Math.round(value.contribution),
+        },
       }));
 
     const highDemand = Array.from(slots.entries())
@@ -314,6 +322,12 @@ export const classService = {
         title: `${value.slot} is running at ${Math.round(value.rate * 100)}% occupancy`,
         detail: `Across ${value.classes} classes, estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Test added capacity or an adjacent time slot.`,
         sampleSize: value.classes,
+        params: {
+          slot: value.slot,
+          rate: Math.round(value.rate * 100),
+          classes: value.classes,
+          amount: Math.round(value.contribution),
+        },
       }));
 
     const noShows = Array.from(types.entries())
@@ -331,6 +345,12 @@ export const classService = {
         title: `${value.classType}: ${Math.round(value.rate * 100)}% no-show rate`,
         detail: `${value.noShows} no-shows across ${value.bookings} bookings in the last 30 days. Review reminders or cancellation policy.`,
         sampleSize: value.bookings,
+        params: {
+          type: value.classType,
+          rate: Math.round(value.rate * 100),
+          noShows: value.noShows,
+          bookings: value.bookings,
+        },
       }));
 
     return [...highDemand, ...lowOccupancy, ...noShows];

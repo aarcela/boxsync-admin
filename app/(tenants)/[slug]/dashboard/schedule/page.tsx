@@ -15,7 +15,8 @@ import { useTenant } from '@/components/TenantContext';
 import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
 import Tooltip from '@/components/Tooltip';
 import { classTypeService } from '@/lib/services/classTypeService';
-import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
+import { CapacityInsight, ClassSession, ClassTypeRow } from '@/lib/types/gym';
+import { currencySymbol } from '@/lib/currency';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 import { getGymDate, getGymTimeLabel } from '@/lib/utils/date';
 
@@ -41,7 +42,7 @@ export default function SchedulePage() {
   } = useSchedule();
 
   const { toast } = useToast();
-  const { tenantId, timezone: tz } = useTenant();
+  const { tenantId, timezone: tz, currencies } = useTenant();
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
   const searchParams = useSearchParams();
@@ -88,6 +89,20 @@ export default function SchedulePage() {
     setModalInitialDate(date);
     setModalInitialTime(time);
     setIsModalOpen(true);
+  };
+
+  const insightText = (insight: CapacityInsight) => {
+    const params = {
+      ...insight.params,
+      amount: `${currencySymbol(currencies.reference)}${Number(insight.params.amount ?? 0).toLocaleString()}`,
+    };
+    if (insight.kind === 'low_occupancy') {
+      return { title: t('Insight low occupancy title', params), detail: t('Insight low occupancy detail', params) };
+    }
+    if (insight.kind === 'high_demand') {
+      return { title: t('Insight high demand title', params), detail: t('Insight high demand detail', params) };
+    }
+    return { title: t('Insight no-show title', params), detail: t('Insight no-show detail', params) };
   };
 
   usePaletteCommand('new-class', () => openCreateModal());
@@ -186,8 +201,8 @@ export default function SchedulePage() {
                   }
                 />
                 <div>
-                  <p className="text-xs font-black uppercase text-pits-text">{insight.title}</p>
-                  <p className="mt-1 text-xs text-pits-dim">{insight.detail}</p>
+                  <p className="text-xs font-black uppercase text-pits-text">{insightText(insight).title}</p>
+                  <p className="mt-1 text-xs text-pits-dim">{insightText(insight).detail}</p>
                 </div>
               </div>
             </div>
