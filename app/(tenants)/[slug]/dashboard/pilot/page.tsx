@@ -152,7 +152,7 @@ export default function PilotPage() {
           <div className="mb-6 inline-flex rounded-2xl bg-pits-primary-soft p-4 text-pits-primary">
             <Rocket size={30} />
           </div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+          <h1 className="page-title">
             {lang === 'es' ? 'Piloto Fundador de 60 Días' : '60-Day Founding Gym Pilot'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-pits-dim">

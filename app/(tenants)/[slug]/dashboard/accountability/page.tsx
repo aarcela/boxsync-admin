@@ -122,7 +122,7 @@ export default function AccountabilityPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-pits-text tracking-tighter uppercase">
+            <h1 className="page-title">
               {t('Accountability')}
             </h1>
             <StatusBadge tone="info">{t('Monthly P&L')}</StatusBadge>

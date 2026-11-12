@@ -79,12 +79,12 @@ export async function POST(request: Request) {
     }
 
     if (!row.proof_image_url) {
-      return NextResponse.json({ error: 'No payment proof attached.' }, { status: 400 });
+      return NextResponse.json({ error: 'No payment proof attached.', code: 'no_proof' }, { status: 400 });
     }
 
     const path = getPaymentProofPath(row.proof_image_url);
     if (!path) {
-      return NextResponse.json({ error: 'Invalid payment proof path.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid payment proof path.', code: 'no_proof' }, { status: 400 });
     }
 
     const { data: profile } = await staffAuth.supabase
@@ -129,6 +129,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: 'Ask AI is disabled for this box.',
+          code: 'ai_disabled',
           unavailable: true,
           proofUrl,
           comparison: {
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: 'Ask AI monthly limit reached.',
+          code: 'quota',
           unavailable: true,
           proofUrl,
           comparison: {
@@ -171,7 +173,7 @@ export async function POST(request: Request) {
       if (downloadError || !file) {
         await tenantAiService.releaseQuestion(tenantId, supabaseAdmin);
         return NextResponse.json(
-          { error: 'Could not load payment proof image.', unavailable: true, proofUrl },
+          { error: 'Could not load payment proof image.', code: 'image_unavailable', unavailable: true, proofUrl },
           { status: 502 }
         );
       }
@@ -300,28 +302,29 @@ export async function POST(request: Request) {
       });
     } catch (error: unknown) {
       await tenantAiService.releaseQuestion(tenantId, supabaseAdmin);
-      const message = error instanceof Error ? error.message : '';
-      if (/api key|oidc|unauthorized|401/i.test(message)) {
-        return NextResponse.json(
-          {
-            error: 'Proof reader is unavailable.',
-            unavailable: true,
-            proofUrl,
-            comparison: {
-              claimedAmount,
-              claimedCurrency,
-              amountMatch: 'unknown' as const,
-              periodRemaining,
-            },
-            quota,
+      console.error('Payment proof read failed:', error);
+      return NextResponse.json(
+        {
+          error: 'Proof reader is unavailable.',
+          code: 'reader_unavailable',
+          unavailable: true,
+          proofUrl,
+          comparison: {
+            claimedAmount,
+            claimedCurrency,
+            amountMatch: 'unknown' as const,
+            periodRemaining,
           },
-          { status: 503 }
-        );
-      }
-      throw error;
+          quota,
+        },
+        { status: 503 }
+      );
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Payment proof route failed:', error);
+    return NextResponse.json(
+      { error: 'Proof reader is unavailable.', code: 'reader_unavailable', unavailable: true },
+      { status: 500 }
+    );
   }
 }

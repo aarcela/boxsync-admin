@@ -1,7 +1,8 @@
 import { supabase } from '../supabase';
 import { parseMemberPaymentStatus } from '../member-payment-status';
 import { ClassSession, Booking, BookingStatus, CapacityInsight, WaitlistEntry } from '../types/gym';
-import { getCaracasDayRange, getCaracasDate } from '../utils/date';
+import { getGymDayRange, getGymDate, getGymTimeLabel } from '../utils/date';
+import { DEFAULT_GYM_TIMEZONE } from '../gym-timezone';
 
 export type ClassUpdateFields = {
   coach_id?: string | null;
@@ -51,8 +52,8 @@ export const classService = {
   /**
    * Fetches classes for a specific date (YYYY-MM-DD)
    */
-  async getClassesByDate(dateStr: string): Promise<ClassSession[]> {
-    const { startUtc, endUtc } = getCaracasDayRange(dateStr);
+  async getClassesByDate(dateStr: string, tz: string = DEFAULT_GYM_TIMEZONE): Promise<ClassSession[]> {
+    const { startUtc, endUtc } = getGymDayRange(dateStr, tz);
     
     const { data, error } = await supabase
       .from('classes')
@@ -66,11 +67,10 @@ export const classService = {
   },
 
   /**
-   * Fetches upcoming classes (from start of today in Caracas onwards)
+   * Fetches upcoming classes (from the start of today in the gym's timezone onwards)
    */
-  async getUpcomingClasses(): Promise<ClassSession[]> {
-    const today = getCaracasDate();
-    const { startUtc } = getCaracasDayRange(today);
+  async getUpcomingClasses(tz: string = DEFAULT_GYM_TIMEZONE): Promise<ClassSession[]> {
+    const { startUtc } = getGymDayRange(getGymDate(new Date(), tz), tz);
     
     const { data, error } = await supabase
       .from('classes')
@@ -169,7 +169,7 @@ export const classService = {
     }));
   },
 
-  async getCapacityInsights(): Promise<CapacityInsight[]> {
+  async getCapacityInsights(tz: string = DEFAULT_GYM_TIMEZONE): Promise<CapacityInsight[]> {
     const now = new Date();
     const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const [classesResult, profilesResult, plansResult, ratesResult] =
@@ -241,11 +241,7 @@ export const classService = {
     const types = new Map<string, { noShows: number; bookings: number }>();
 
     for (const cls of data) {
-      const slot = new Date(cls.start_time).toLocaleTimeString('en-US', {
-        timeZone: 'America/Caracas',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const slot = getGymTimeLabel(cls.start_time, tz);
       const bookings = cls.bookings || [];
       const slotData = slots.get(slot) || {
         booked: 0,

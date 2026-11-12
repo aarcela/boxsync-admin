@@ -7,12 +7,17 @@ import { classTypeService } from '@/lib/services/classTypeService';
 import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 import {
-  getCaracasDate,
-  getCaracasTimeLabel,
-  getCaracasDateFromIso,
-  getCaracasWeekDays,
-  getCaracasWeekRange,
+  addDaysToDateStr,
+  formatGymDay,
+  getGymDate,
+  getGymDateFromIso,
+  getGymHourMinute,
+  getGymTimeLabel,
+  getGymWeekDays,
+  getGymWeekRange,
+  gymDateTimeToUtc,
 } from '@/lib/utils/date';
+import { useTenant } from '@/components/TenantContext';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -34,19 +39,6 @@ interface ScheduleWeekCalendarProps {
   onClassesChanged?: () => void;
 }
 
-function getCaracasHourMinute(iso: string): { hour: number; minute: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  return {
-    hour: Number(parts.find((p) => p.type === 'hour')?.value ?? 0),
-    minute: Number(parts.find((p) => p.type === 'minute')?.value ?? 0),
-  };
-}
-
 function getDurationMinutes(startIso: string, endIso: string): number {
   const diff = new Date(endIso).getTime() - new Date(startIso).getTime();
   return Math.max(30, Math.round(diff / 60000));
@@ -57,10 +49,12 @@ export default function ScheduleWeekCalendar({
   refreshKey = 0,
   onClassesChanged,
 }: ScheduleWeekCalendarProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
+  const { timezone: tz } = useTenant();
+  const locale = lang === 'es' ? 'es' : 'en-US';
 
-  const [anchorDate, setAnchorDate] = useState(getCaracasDate);
+  const [anchorDate, setAnchorDate] = useState(() => getGymDate(new Date(), tz));
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -78,30 +72,25 @@ export default function ScheduleWeekCalendar({
 
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
 
-  const weekDays = useMemo(() => getCaracasWeekDays(anchorDate), [anchorDate]);
-  const weekRange = useMemo(() => getCaracasWeekRange(anchorDate), [anchorDate]);
+  const weekDays = useMemo(() => getGymWeekDays(anchorDate), [anchorDate]);
+  const weekRange = useMemo(() => getGymWeekRange(anchorDate, tz), [anchorDate, tz]);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const periodLabel = useMemo(() => {
-    const fmt = (d: string) =>
-      new Date(`${d}T12:00:00-04:00`).toLocaleDateString('en-US', {
-        timeZone: 'America/Caracas',
-        month: 'short',
-        day: 'numeric',
-      });
+    const fmt = (d: string) => formatGymDay(d, { month: 'short', day: 'numeric' }, locale, tz);
     return `${t('Week of')} ${fmt(weekRange.startDate)} – ${fmt(weekRange.endDate)}`;
-  }, [weekRange.startDate, weekRange.endDate, t]);
+  }, [weekRange.startDate, weekRange.endDate, t, locale, tz]);
 
   const classesByDay = useMemo(() => {
     const map = new Map<string, ClassSession[]>();
     for (const day of weekDays) map.set(day, []);
     for (const cls of classes) {
-      const day = getCaracasDateFromIso(cls.start_time);
+      const day = getGymDateFromIso(cls.start_time, tz);
       const list = map.get(day);
       if (list) list.push(cls);
     }
     return map;
-  }, [classes, weekDays]);
+  }, [classes, weekDays, tz]);
 
   const selectedClasses = useMemo(
     () => classes.filter((c) => selectedIds.has(c.id)),
@@ -112,17 +101,17 @@ export default function ScheduleWeekCalendar({
 
   useEffect(() => {
     if (singleSelected) {
-      setBulkDate(getCaracasDateFromIso(singleSelected.start_time));
-      setBulkTime(getCaracasTimeLabel(singleSelected.start_time));
-      setBulkEndDate(getCaracasDateFromIso(singleSelected.end_time));
-      setBulkEndTime(getCaracasTimeLabel(singleSelected.end_time));
+      setBulkDate(getGymDateFromIso(singleSelected.start_time, tz));
+      setBulkTime(getGymTimeLabel(singleSelected.start_time, tz));
+      setBulkEndDate(getGymDateFromIso(singleSelected.end_time, tz));
+      setBulkEndTime(getGymTimeLabel(singleSelected.end_time, tz));
     } else {
       setBulkDate('');
       setBulkTime('');
       setBulkEndDate('');
       setBulkEndTime('');
     }
-  }, [singleSelected]);
+  }, [singleSelected, tz]);
 
   const loadWeek = useCallback(async () => {
     setLoading(true);
@@ -172,9 +161,7 @@ export default function ScheduleWeekCalendar({
   }, []);
 
   const shiftWeek = (weeks: number) => {
-    const d = new Date(`${anchorDate}T12:00:00-04:00`);
-    d.setDate(d.getDate() + weeks * 7);
-    setAnchorDate(getCaracasDate(d));
+    setAnchorDate(addDaysToDateStr(anchorDate, weeks * 7));
   };
 
   const toggleSelected = (classId: string) => {
@@ -212,16 +199,16 @@ export default function ScheduleWeekCalendar({
       bulkEndDate &&
       bulkEndTime
     ) {
-      const originalDate = getCaracasDateFromIso(singleSelected.start_time);
-      const originalTime = getCaracasTimeLabel(singleSelected.start_time);
-      const originalEndDate = getCaracasDateFromIso(singleSelected.end_time);
-      const originalEndTime = getCaracasTimeLabel(singleSelected.end_time);
+      const originalDate = getGymDateFromIso(singleSelected.start_time, tz);
+      const originalTime = getGymTimeLabel(singleSelected.start_time, tz);
+      const originalEndDate = getGymDateFromIso(singleSelected.end_time, tz);
+      const originalEndTime = getGymTimeLabel(singleSelected.end_time, tz);
       const startChanged = bulkDate !== originalDate || bulkTime !== originalTime;
       const endChanged = bulkEndDate !== originalEndDate || bulkEndTime !== originalEndTime;
 
       if (startChanged || endChanged) {
-        const newStart = new Date(`${bulkDate}T${bulkTime}:00-04:00`);
-        const newEnd = new Date(`${bulkEndDate}T${bulkEndTime}:00-04:00`);
+        const newStart = gymDateTimeToUtc(bulkDate, bulkTime, tz);
+        const newEnd = gymDateTimeToUtc(bulkEndDate, bulkEndTime, tz);
         if (newEnd <= newStart) {
           toast(t('End must be after start'), 'error');
           return;
@@ -441,16 +428,10 @@ export default function ScheduleWeekCalendar({
                   className="px-2 py-3 text-center border-r border-pits-edge last:border-r-0 bg-pits-surface-muted/40"
                 >
                   <p className="text-[10px] font-black text-pits-dim uppercase">
-                    {new Date(`${day}T12:00:00-04:00`).toLocaleDateString('en-US', {
-                      timeZone: 'America/Caracas',
-                      weekday: 'short',
-                    })}
+                    {formatGymDay(day, { weekday: 'short' }, locale, tz)}
                   </p>
                   <p className="text-sm font-black text-pits-text">
-                    {new Date(`${day}T12:00:00-04:00`).toLocaleDateString('en-US', {
-                      timeZone: 'America/Caracas',
-                      day: 'numeric',
-                    })}
+                    {formatGymDay(day, { day: 'numeric' }, locale, tz)}
                   </p>
                 </div>
               ))}
@@ -492,7 +473,7 @@ export default function ScheduleWeekCalendar({
                     ))}
 
                     {dayClasses.map((cls) => {
-                      const { hour, minute } = getCaracasHourMinute(cls.start_time);
+                      const { hour, minute } = getGymHourMinute(cls.start_time, tz);
                       const durationMin = getDurationMinutes(cls.start_time, cls.end_time);
                       const top = (hour - START_HOUR) * SLOT_HEIGHT + (minute / 60) * SLOT_HEIGHT;
                       const height = Math.max((durationMin / 60) * SLOT_HEIGHT - 4, 28);
@@ -511,7 +492,7 @@ export default function ScheduleWeekCalendar({
                             top: top + 2,
                             height,
                           }}
-                          title={`${cls.class_type} · ${getCaracasTimeLabel(cls.start_time)}`}
+                          title={`${cls.class_type} · ${getGymTimeLabel(cls.start_time, tz)}`}
                         >
                           <input
                             type="checkbox"
@@ -526,7 +507,7 @@ export default function ScheduleWeekCalendar({
                               {cls.class_type}
                             </p>
                             <p className="text-[9px] font-bold truncate opacity-90 mt-0.5">
-                              {getCaracasTimeLabel(cls.start_time)}
+                              {getGymTimeLabel(cls.start_time, tz)}
                             </p>
                             <p className="text-[9px] font-bold truncate opacity-80">
                               {cls.coach?.full_name || t('Staff')}

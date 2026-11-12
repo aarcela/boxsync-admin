@@ -1,110 +1,126 @@
 /**
- * Returns the current date in YYYY-MM-DD format based on America/Caracas timezone.
- * Useful for filtering Supabase queries by date without relying on client browser timezone.
+ * Gym-local calendar helpers. Every function takes the gym's IANA timezone (from
+ * `useTenant().timezone` / `parseGymTimezone(settings)`); it defaults to Caracas so older
+ * callers keep their behaviour. Offsets are computed per date, so daylight saving is handled.
+ *
+ * Day strings are `YYYY-MM-DD` in the gym's timezone; ranges are UTC ISO strings for Supabase.
  */
-export const getCaracasDate = (date: Date = new Date()): string => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
+import { DEFAULT_GYM_TIMEZONE } from '@/lib/gym-timezone';
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+function zonedParts(date: Date, tz: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
-  });
-  const parts = formatter.formatToParts(date);
-  const ye = parts.find((p) => p.type === 'year')?.value;
-  const mo = parts.find((p) => p.type === 'month')?.value;
-  const da = parts.find((p) => p.type === 'day')?.value;
-  return `${ye}-${mo}-${da}`;
-};
-
-/**
- * Returns the UTC range (ISO strings) for a full day in Caracas.
- * Useful for Supabase .gte and .lte comparisons.
- * @param dateStr Format: YYYY-MM-DD
- */
-export const getCaracasDayRange = (dateStr: string) => {
-  // Caracas is UTC-4. To get a full day for Caracas:
-  // Start: YYYY-MM-DDT00:00:00-04:00
-  // End: YYYY-MM-DDT23:59:59-04:00
-  const startUtc = new Date(`${dateStr}T00:00:00-04:00`).toISOString();
-  const endUtc = new Date(`${dateStr}T23:59:59-04:00`).toISOString();
-  
-  return { startUtc, endUtc };
-};
-
-function parseCaracasAnchor(dateStr: string): Date {
-  return new Date(`${dateStr}T12:00:00-04:00`);
-}
-
-function addDaysToDateStr(dateStr: string, days: number): string {
-  const d = parseCaracasAnchor(dateStr);
-  d.setDate(d.getDate() + days);
-  return getCaracasDate(d);
-}
-
-function getCaracasWeekdayIndex(dateStr: string): number {
-  const d = parseCaracasAnchor(dateStr);
-  const wd = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    weekday: 'short',
-  }).format(d);
-  const map: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+    second: get('second'),
   };
-  return map[wd] ?? 0;
 }
 
-/**
- * Returns UTC range for Mon–Sun week containing anchorDate (Caracas).
- */
-export const getCaracasWeekRange = (anchorDate: string) => {
-  const weekday = getCaracasWeekdayIndex(anchorDate);
+/** Minutes the zone is ahead of UTC at `date` (e.g. Caracas → -240). */
+function offsetMinutes(date: Date, tz: string): number {
+  const p = zonedParts(date, tz);
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return Math.round((asUtc - Math.floor(date.getTime() / 1000) * 1000) / 60000);
+}
+
+/** Wall-clock time in the gym's zone → the real instant. */
+export function gymDateTimeToUtc(
+  dateStr: string,
+  timeStr = '00:00',
+  tz: string = DEFAULT_GYM_TIMEZONE,
+): Date {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  const [hh, mm, ss] = timeStr.split(':').map(Number);
+  const guess = Date.UTC(y, m - 1, d, hh || 0, mm || 0, ss || 0);
+  const first = guess - offsetMinutes(new Date(guess), tz) * 60000;
+  const second = guess - offsetMinutes(new Date(first), tz) * 60000;
+  return new Date(second);
+}
+
+/** Today (or `date`) as YYYY-MM-DD in the gym's zone. */
+export const getGymDate = (date: Date = new Date(), tz: string = DEFAULT_GYM_TIMEZONE): string => {
+  const p = zonedParts(date, tz);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+};
+
+export const getGymDateFromIso = (iso: string, tz: string = DEFAULT_GYM_TIMEZONE): string =>
+  getGymDate(new Date(iso), tz);
+
+/** UTC range covering a whole gym-local day. */
+export const getGymDayRange = (dateStr: string, tz: string = DEFAULT_GYM_TIMEZONE) => {
+  const start = gymDateTimeToUtc(dateStr, '00:00:00', tz);
+  const nextDay = gymDateTimeToUtc(addDaysToDateStr(dateStr, 1), '00:00:00', tz);
+  return {
+    startUtc: start.toISOString(),
+    endUtc: new Date(nextDay.getTime() - 1000).toISOString(),
+  };
+};
+
+/** Pure calendar arithmetic on YYYY-MM-DD strings (no timezone involved). */
+export function addDaysToDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+/** 0 = Sunday … 6 = Saturday for a calendar day string. */
+export function weekdayIndex(dateStr: string): number {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/** Mon–Sun week containing anchorDate. */
+export const getGymWeekRange = (anchorDate: string, tz: string = DEFAULT_GYM_TIMEZONE) => {
+  const weekday = weekdayIndex(anchorDate);
   const daysFromMonday = weekday === 0 ? 6 : weekday - 1;
   const monday = addDaysToDateStr(anchorDate, -daysFromMonday);
   const sunday = addDaysToDateStr(monday, 6);
-  const { startUtc } = getCaracasDayRange(monday);
-  const { endUtc } = getCaracasDayRange(sunday);
+  const { startUtc } = getGymDayRange(monday, tz);
+  const { endUtc } = getGymDayRange(sunday, tz);
   return { startUtc, endUtc, startDate: monday, endDate: sunday };
 };
 
-/** Day strings (YYYY-MM-DD) Mon–Sun for the week containing anchorDate. */
-export const getCaracasWeekDays = (anchorDate: string): string[] => {
-  const { startDate } = getCaracasWeekRange(anchorDate);
-  return Array.from({ length: 7 }, (_, i) => addDaysToDateStr(startDate, i));
+export const getGymWeekDays = (anchorDate: string): string[] => {
+  const weekday = weekdayIndex(anchorDate);
+  const monday = addDaysToDateStr(anchorDate, -(weekday === 0 ? 6 : weekday - 1));
+  return Array.from({ length: 7 }, (_, i) => addDaysToDateStr(monday, i));
 };
 
-/**
- * Returns UTC range for a full month in Caracas.
- * @param yearMonth Format: YYYY-MM
- */
-export const getCaracasMonthRange = (yearMonth: string) => {
-  const [yearStr, monthStr] = yearMonth.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr);
+/** @param yearMonth YYYY-MM */
+export const getGymMonthRange = (yearMonth: string, tz: string = DEFAULT_GYM_TIMEZONE) => {
+  const [year, month] = yearMonth.split('-').map(Number);
   const startDate = `${yearMonth}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
-  const { startUtc } = getCaracasDayRange(startDate);
-  const { endUtc } = getCaracasDayRange(endDate);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const endDate = `${yearMonth}-${pad(lastDay)}`;
+  const { startUtc } = getGymDayRange(startDate, tz);
+  const { endUtc } = getGymDayRange(endDate, tz);
   return { startUtc, endUtc, startDate, endDate };
 };
 
-export const getCaracasCustomRange = (start: string, end: string) => {
-  if (start > end) {
-    throw new Error('Invalid date range');
-  }
-  const { startUtc } = getCaracasDayRange(start);
-  const { endUtc } = getCaracasDayRange(end);
+export const getGymCustomRange = (start: string, end: string, tz: string = DEFAULT_GYM_TIMEZONE) => {
+  if (start > end) throw new Error('Invalid date range');
+  const { startUtc } = getGymDayRange(start, tz);
+  const { endUtc } = getGymDayRange(end, tz);
   return { startUtc, endUtc, startDate: start, endDate: end };
 };
 
-/** Calendar day strings from start to end inclusive (Caracas dates). */
-export const getCaracasDateSpan = (start: string, end: string): string[] => {
+/** Calendar day strings from start to end inclusive. */
+export const getGymDateSpan = (start: string, end: string): string[] => {
   const days: string[] = [];
   let current = start;
   while (current <= end) {
@@ -114,27 +130,58 @@ export const getCaracasDateSpan = (start: string, end: string): string[] => {
   return days;
 };
 
-export const getCaracasDateFromIso = (iso: string): string => {
-  return getCaracasDate(new Date(iso));
+/** "HH:mm" (24h) in the gym's zone — also the value format for <input type="time">. */
+export const getGymTimeLabel = (iso: string, tz: string = DEFAULT_GYM_TIMEZONE): string => {
+  const p = zonedParts(new Date(iso), tz);
+  return `${pad(p.hour)}:${pad(p.minute)}`;
 };
 
-export const getCaracasTimeLabel = (iso: string): string => {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    timeZone: 'America/Caracas',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+export const getGymHourMinute = (iso: string, tz: string = DEFAULT_GYM_TIMEZONE) => {
+  const p = zonedParts(new Date(iso), tz);
+  return { hour: p.hour, minute: p.minute };
 };
 
-export const getCaracasMinutesSince = (iso: string, hourStart: number): number => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+export const getGymMinutesSince = (
+  iso: string,
+  hourStart: number,
+  tz: string = DEFAULT_GYM_TIMEZONE,
+): number => {
+  const { hour, minute } = getGymHourMinute(iso, tz);
   return hour * 60 + minute - hourStart * 60;
 };
+
+/** Format a gym-local calendar day (noon anchor avoids edge shifts). */
+export const formatGymDay = (
+  dateStr: string,
+  options: Intl.DateTimeFormatOptions,
+  locale = 'en-US',
+  tz: string = DEFAULT_GYM_TIMEZONE,
+): string =>
+  gymDateTimeToUtc(dateStr, '12:00', tz).toLocaleDateString(locale, { ...options, timeZone: tz });
+
+/* ------------------------------------------------------------------------------------------ */
+/* Caracas-named aliases: kept for server code (push, AI snapshot, payroll email, HQ) that    */
+/* does not know the gym's timezone yet. New code should call the getGym* versions.          */
+/* ------------------------------------------------------------------------------------------ */
+
+/** @deprecated use getGymDate(date, tz) */
+export const getCaracasDate = (date: Date = new Date()) => getGymDate(date);
+/** @deprecated use getGymDayRange(dateStr, tz) */
+export const getCaracasDayRange = (dateStr: string) => getGymDayRange(dateStr);
+/** @deprecated use getGymWeekRange(anchorDate, tz) */
+export const getCaracasWeekRange = (anchorDate: string) => getGymWeekRange(anchorDate);
+/** @deprecated use getGymWeekDays(anchorDate) */
+export const getCaracasWeekDays = (anchorDate: string) => getGymWeekDays(anchorDate);
+/** @deprecated use getGymMonthRange(yearMonth, tz) */
+export const getCaracasMonthRange = (yearMonth: string) => getGymMonthRange(yearMonth);
+/** @deprecated use getGymCustomRange(start, end, tz) */
+export const getCaracasCustomRange = (start: string, end: string) => getGymCustomRange(start, end);
+/** @deprecated use getGymDateSpan(start, end) */
+export const getCaracasDateSpan = (start: string, end: string) => getGymDateSpan(start, end);
+/** @deprecated use getGymDateFromIso(iso, tz) */
+export const getCaracasDateFromIso = (iso: string) => getGymDateFromIso(iso);
+/** @deprecated use getGymTimeLabel(iso, tz) */
+export const getCaracasTimeLabel = (iso: string) => getGymTimeLabel(iso);
+/** @deprecated use getGymMinutesSince(iso, hourStart, tz) */
+export const getCaracasMinutesSince = (iso: string, hourStart: number) =>
+  getGymMinutesSince(iso, hourStart);

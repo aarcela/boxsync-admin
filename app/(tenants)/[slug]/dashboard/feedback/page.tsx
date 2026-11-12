@@ -228,9 +228,9 @@ export default function FeedbackPage() {
       {/* COMPACT STRATEGIC HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-pits-surface-elevated p-4 rounded-xl border border-pits-edge shadow-sm gap-4 shrink-0">
         <div>
-          <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-none mb-1">
+          <h1 className="page-title mb-1">
             {t('Service Quality Control')}
-          </h2>
+          </h1>
           <p className="text-pits-dim font-bold text-[10px] uppercase tracking-widest opacity-60">
             {t('Strategic monitoring and coach evaluation')}
           </p>

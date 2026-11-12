@@ -12,6 +12,15 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
+/* One page-title style for every dashboard page (sentence case, no italics). */
+@utility page-title {
+  @apply text-2xl sm:text-3xl font-black tracking-tight leading-tight text-pits-text;
+}
+
+@utility page-subtitle {
+  @apply text-sm font-medium text-pits-dim mt-1;
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

@@ -14,11 +14,13 @@ import Tooltip from '@/components/Tooltip';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
+import { getGymDate, getGymTimeLabel } from '@/lib/utils/date';
 
 type ViewTab = 'list' | 'calendar';
 
 export default function SchedulePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const locale = lang === 'es' ? 'es' : 'en-US';
   const {
     classes,
     loading,
@@ -36,7 +38,7 @@ export default function SchedulePage() {
   } = useSchedule();
 
   const { toast } = useToast();
-  const { tenantId } = useTenant();
+  const { tenantId, timezone: tz } = useTenant();
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -131,9 +133,9 @@ export default function SchedulePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
+            <h1 className="page-title">
               {t('Class Schedule')}
-            </h2>
+            </h1>
             <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
               <Info size={16} className="text-pits-dim cursor-help" />
             </Tooltip>
@@ -231,13 +233,11 @@ export default function SchedulePage() {
             {classes.map((session) => {
               const startDate = new Date(session.start_time);
               
-              const startDateStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(startDate);
-              const todayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-              const isToday = startDateStr === todayStr;
+              const isToday = getGymDate(startDate, tz) === getGymDate(new Date(), tz);
 
-              const dayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', weekday: 'short' }).format(startDate);
-              const dateNumStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', day: 'numeric' }).format(startDate);
-              const timeStr = startDate.toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
+              const dayStr = new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: 'short' }).format(startDate);
+              const dateNumStr = new Intl.DateTimeFormat(locale, { timeZone: tz, day: 'numeric' }).format(startDate);
+              const timeStr = getGymTimeLabel(session.start_time, tz);
 
               const bookingCount = session.bookings[0]?.count || 0;
               const waitlistCount = session.waitlist?.[0]?.count || 0;
@@ -421,7 +421,7 @@ export default function SchedulePage() {
                       <div>
                         <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Class Time')}</p>
                         <p className="font-bold text-pits-text text-sm italic">
-                          {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
+                          {getGymTimeLabel(cls.start_time, tz)}
                         </p>
                       </div>
                       <div>

@@ -352,7 +352,7 @@ export default function FinancialInsightsPage() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+            <h1 className="page-title">
               {t('Revenue Rescue')}
             </h1>
             <StatusBadge tone="info">{t('Retention')}</StatusBadge>

@@ -385,8 +385,8 @@ export default function AthletesPage() {
     <div className="space-y-5 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-black text-pits-text tracking-tight">
-            {t('Roster')}
+          <h1 className="page-title">
+            {t('Users')}
           </h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-pits-dim">
             <span>

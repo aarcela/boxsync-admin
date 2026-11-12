@@ -91,7 +91,7 @@ export default function CommunityPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-pits-text uppercase tracking-tight">
+          <h1 className="page-title">
             {t('Community Control')}
           </h1>
           <p className="text-sm text-pits-dim font-medium">

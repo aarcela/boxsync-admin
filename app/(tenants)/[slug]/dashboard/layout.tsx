@@ -93,8 +93,10 @@ type NavSection = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Always start closed so SSR + first client paint match (avoid hydration mismatch).
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Desktop rail starts expanded and mobile drawer starts closed, so SSR and first paint
+  // match without a width animation on every page load.
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
@@ -107,13 +109,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [emailConfirmed, setEmailConfirmed] = useState(true);
   const [trialBannerTracked, setTrialBannerTracked] = useState(false);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const sync = () => setIsSidebarOpen(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
 
   const loadDueCount = useCallback(async () => {
     try {
@@ -306,14 +301,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [t, userRole, features, emailConfirmed, signupSource]);
 
   const toggleMenu = (menuName: string) => {
-    setOpenMenus((prev) => (prev.includes(menuName) ? [] : [menuName]));
+    // Collapsed rail has no room for sub-items: expand and open in one click.
+    if (collapsed) {
+      setCollapsed(false);
+      setOpenMenus((prev) => (prev.includes(menuName) ? prev : [...prev, menuName]));
+      return;
+    }
+    setOpenMenus((prev) =>
+      prev.includes(menuName) ? prev.filter((m) => m !== menuName) : [...prev, menuName],
+    );
   };
 
-  const closeSidebarOnMobile = () => {
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
+  const closeSidebarOnMobile = () => setMobileOpen(false);
+
+  const toggleSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) setCollapsed((c) => !c);
+    else setMobileOpen((o) => !o);
   };
+
+  /** Hidden only on desktop while the rail is collapsed; the mobile drawer is always full width. */
+  const whenExpanded = collapsed ? 'lg:hidden' : '';
 
   useEffect(() => {
     if (pathname.includes('/dashboard/wods') && !features.wod) {
@@ -361,57 +368,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-pits-surface overflow-hidden">
       
       {/* MOBILE BACKDROP */}
-      {isSidebarOpen && (
-        <div 
+      {mobileOpen && (
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() => setMobileOpen(false)}
         />
       )}
-      
+
       {/* SIDEBAR */}
-      <aside 
-        className={`bg-pits-shell text-pits-shell-ink transition-all duration-300 ease-in-out flex flex-col overflow-x-hidden
-          fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
-          ${isSidebarOpen 
-            ? 'w-64 translate-x-0' 
-            : '-translate-x-full lg:translate-x-0 lg:w-20'}
+      <aside
+        className={`bg-pits-shell text-pits-shell-ink transition-[width,transform] duration-200 ease-out flex flex-col overflow-x-hidden
+          fixed inset-y-0 left-0 z-50 w-64 lg:relative lg:translate-x-0
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${collapsed ? 'lg:w-20' : 'lg:w-64'}
         `}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center justify-between px-4">
-          <div className={`flex-1 flex items-center py-4 ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
-            {isSidebarOpen ? (
-               <>
-              <Image src="/assets/logo.png" alt="Logo" className="w-10 h-10" width={40} height={40} />
-              <span className="font-black text-2xl text-pits-white ml-2">WODUS</span>
-               </>
-            ) : (
-              <span className="font-black text-2xl text-pits-shell-accent">W</span>
-            )}
+        <div className="h-16 flex items-center justify-between px-4 shrink-0">
+          <div className={`flex-1 flex items-center py-4 pl-2 ${collapsed ? 'lg:justify-center lg:pl-0' : ''}`}>
+            <Image src="/assets/logo.png" alt="Logo" className={`w-10 h-10 ${collapsed ? 'lg:hidden' : ''}`} width={40} height={40} />
+            <span className={`font-black text-2xl text-pits-white ml-2 whitespace-nowrap ${whenExpanded}`}>WODUS</span>
+            <span className={`font-black text-2xl text-pits-shell-accent hidden ${collapsed ? 'lg:inline' : ''}`}>W</span>
           </div>
-          
+
           {/* Close button for mobile */}
-          {isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
-            >
-              <X size={20} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label={t('Close')}
+            className="lg:hidden p-2 text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
         <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navSections.map((section) => (
             <div key={section.id} className="space-y-1">
-              {isSidebarOpen && section.label && (
-                <p className="px-3 pt-1 pb-1 text-[9px] font-black uppercase tracking-widest text-pits-shell-ink-muted/70">
+              {section.label && (
+                <p className={`px-3 pt-1 pb-1 text-[10px] font-black uppercase tracking-widest text-pits-shell-ink-muted whitespace-nowrap ${whenExpanded}`}>
                   {section.label}
                 </p>
               )}
-              {!isSidebarOpen && section.id !== 'today' && (
-                <div className="mx-2 my-2 border-t border-pits-shell-edge" />
+              {collapsed && section.id !== 'today' && (
+                <div className="hidden lg:block mx-2 my-2 border-t border-pits-shell-edge" />
               )}
               {section.items.map((item) => {
                 const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
@@ -422,6 +423,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   'href' in item
                     ? pathname === item.href
                     : 'subItems' in item && item.subItems?.some((sub) => pathname === sub.href);
+                const rowClass = `w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent ${
+                  collapsed ? 'lg:justify-center' : ''
+                } ${
+                  isActive
+                    ? 'border-pits-shell-accent text-pits-shell-ink'
+                    : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'
+                }`;
+                const iconClass = `shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`;
 
                 return (
                   <div key={`${section.id}-${item.name}`} className="space-y-1">
@@ -430,24 +439,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <button
                           type="button"
                           onClick={() => toggleMenu(item.name)}
-                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                            ${isActive
-                              ? 'border-pits-shell-accent text-pits-shell-ink'
-                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                          `}
+                          aria-expanded={isMenuOpen && !collapsed}
+                          aria-label={item.name}
+                          className={rowClass}
                         >
-                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                          {isSidebarOpen && (
-                            <>
-                              <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left min-w-0 break-words leading-tight">
-                                {item.name}
-                              </span>
-                              <ChevronDown
-                                size={16}
-                                className={`shrink-0 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
-                              />
-                            </>
-                          )}
+                          <item.icon size={20} className={iconClass} />
+                          <span className={`ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left min-w-0 truncate ${whenExpanded}`}>
+                            {item.name}
+                          </span>
+                          <ChevronDown
+                            size={16}
+                            className={`shrink-0 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''} ${whenExpanded}`}
+                          />
                         </button>
                       </Tooltip>
                     ) : 'href' in item ? (
@@ -455,24 +458,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <Link
                           href={item.href}
                           onClick={closeSidebarOnMobile}
-                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                            ${isActive
-                              ? 'border-pits-shell-accent text-pits-shell-ink'
-                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                          `}
+                          aria-label={item.name}
+                          className={rowClass}
                         >
-                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                          {isSidebarOpen && (
-                            <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
-                              {item.name}
-                            </span>
-                          )}
+                          <item.icon size={20} className={iconClass} />
+                          <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
+                            {item.name}
+                          </span>
                         </Link>
                       </Tooltip>
                     ) : null}
 
-                    {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
-                      <div className="ml-2 min-w-0 space-y-1 border-l border-pits-shell-edge pl-2">
+                    {hasSubItems && isMenuOpen && 'subItems' in item && (
+                      <div className={`ml-2 min-w-0 space-y-1 border-l border-pits-shell-edge pl-2 ${whenExpanded}`}>
                         {item.subItems.map((sub) => {
                           const isSubActive = pathname === sub.href;
                           return (
@@ -487,7 +485,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 `}
                               >
                                 <sub.icon size={16} className={`shrink-0 ${isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide min-w-0 break-words leading-tight">
+                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide min-w-0 truncate">
                                   {sub.name}
                                 </span>
                               </Link>
@@ -504,17 +502,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Footer / Logout */}
-        <div className="p-4">
+        <div className="p-4 shrink-0">
           <button
+            type="button"
             onClick={handleLogout}
-            className="flex items-center w-full min-w-0 p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors"
+            aria-label={t('Log Out')}
+            className={`flex items-center w-full min-w-0 p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors ${collapsed ? 'lg:justify-center' : ''}`}
           >
             <LogOut size={20} className="shrink-0" />
-            {isSidebarOpen && (
-              <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
-                {t('Log Out')}
-              </span>
-            )}
+            <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
+              {t('Log Out')}
+            </span>
           </button>
         </div>
       </aside>
@@ -524,11 +522,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Top Header */}
         <header className="h-16 bg-pits-shell shadow-lg flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={t('Menu')}
               className="p-2 rounded-md hover:bg-pits-shell-edge text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
             >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+              <Menu size={20} />
             </button>
             
             {/* Language Toggle */}
@@ -594,7 +594,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 disabled={runningExpiry}
                 className={`relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 ${
                   dueCount > 0
-                    ? 'bg-pits-red/15 hover:bg-pits-red/25 text-pits-red border-pits-red/40'
+                    ? 'bg-pits-warning-soft hover:bg-pits-warning-edge text-pits-warning border-pits-warning-edge'
                     : 'bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent border-pits-shell-edge'
                 }`}
               >
@@ -603,7 +603,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {t('Update expired memberships')}
                 </span>
                 {dueCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-red text-white text-[9px] font-black leading-none flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-danger text-white text-[10px] font-black leading-none flex items-center justify-center">
                     {dueCount > 99 ? '99+' : dueCount}
                   </span>
                 )}

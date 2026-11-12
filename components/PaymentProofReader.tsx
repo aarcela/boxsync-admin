@@ -31,8 +31,16 @@ export type PaymentProofReadResult = {
   proofUrl: string;
 };
 
+type ReaderErrorCode =
+  | 'no_proof'
+  | 'image_unavailable'
+  | 'ai_disabled'
+  | 'quota'
+  | 'reader_unavailable';
+
 type ApiResponse = Partial<PaymentProofReadResult> & {
   error?: string;
+  code?: ReaderErrorCode;
   unavailable?: boolean;
   proofUrl?: string;
   comparison?: Comparison;
@@ -75,9 +83,11 @@ function Field({
 export default function PaymentProofReader({
   paymentId,
   proofHref,
+  showProofLink = true,
 }: {
   paymentId: string;
   proofHref?: string | null;
+  showProofLink?: boolean;
 }) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -109,7 +119,7 @@ export default function PaymentProofReader({
         if (!cancelled) setResult(data);
       } catch {
         const fallback: ApiResponse = {
-          error: 'Proof reader is unavailable.',
+          code: 'reader_unavailable',
           unavailable: true,
         };
         sessionCache.set(paymentId, fallback);
@@ -144,7 +154,7 @@ export default function PaymentProofReader({
           <Sparkles size={12} className="text-pits-primary" />
           {t('Proof reader')}
         </div>
-        {proofUrl ? (
+        {proofUrl && showProofLink ? (
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
@@ -162,9 +172,15 @@ export default function PaymentProofReader({
         </div>
       ) : result?.unavailable || !extraction ? (
         <p className="text-xs text-pits-dim font-medium leading-relaxed">
-          {typeof result?.error === 'string' && result.error
-            ? result.error
-            : t('Proof reader unavailable. Review the image manually.')}
+          {result?.code === 'no_proof'
+            ? t('No proof attached to this payment.')
+            : result?.code === 'image_unavailable'
+              ? t('The proof image could not be loaded.')
+              : result?.code === 'ai_disabled'
+                ? t('Proof reader is turned off for this gym. Review the image manually.')
+                : result?.code === 'quota'
+                  ? t('Monthly AI limit reached. Review the image manually.')
+                  : t('Proof reader unavailable. Review the image manually.')}
         </p>
       ) : (
         <div className="space-y-2.5">

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { TenantCurrencyConfig } from '@/lib/currency';
+import { parseGymTimezone } from '@/lib/gym-timezone';
 import { DEFAULT_TENANT_CURRENCIES } from '@/lib/currency';
 import {
   DEFAULT_PLATFORM_PLAN,
@@ -32,6 +33,8 @@ export type TenantContextValue = {
   setFeatures: (next: TenantFeatures) => void;
   settings: unknown;
   setSettings: (next: unknown) => void;
+  /** Gym-local IANA timezone (settings.timezone, default Caracas). */
+  timezone: string;
 };
 
 const TenantContext = createContext<TenantContextValue | null>(null);
@@ -47,6 +50,7 @@ export function TenantProvider({
     | 'setFeatures'
     | 'setSettings'
     | 'staffReadOnly'
+    | 'timezone'
   > & {
     currencies?: TenantCurrencyConfig;
     features?: TenantFeatures;
@@ -101,6 +105,7 @@ export function TenantProvider({
         setFeatures,
         settings,
         setSettings,
+        timezone: parseGymTimezone(settings),
       }}
     >
       {children}

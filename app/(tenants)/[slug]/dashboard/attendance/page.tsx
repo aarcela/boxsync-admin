@@ -12,7 +12,7 @@ import AddGuestModal from '@/components/AddGuestModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
-import { getCaracasDate } from '@/lib/utils/date';
+import { getGymDate, getGymTimeLabel } from '@/lib/utils/date';
 import { TranslationKey } from '@/lib/translations';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { Booking, BookingStatus, ClassTypeRow, MemberPaymentStatus } from '@/lib/types/gym';
@@ -21,16 +21,10 @@ import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeSty
 const bookingStatusKey = (status: BookingStatus): TranslationKey =>
   status as TranslationKey;
 
-const classTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString('en-US', {
-    timeZone: 'America/Caracas',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
 export default function AttendancePage() {
   const { t } = useLanguage();
-  const { tenantId } = useTenant();
+  const { tenantId, timezone } = useTenant();
+  const classTime = (iso: string) => getGymTimeLabel(iso, timezone);
   const {
     date,
     setDate,
@@ -81,7 +75,7 @@ export default function AttendancePage() {
   const isClassFull = selectedClass ? bookingCount >= selectedClass.max_capacity : false;
   const rosterUserIds = roster.map(b => b.profiles.id);
   const rosterGuestIds = guestRoster.map(g => g.guest_athlete_id);
-  const isToday = date === getCaracasDate();
+  const isToday = date === getGymDate(new Date(), timezone);
   const presentCount = roster.filter(b => b.status === 'attended').length
     + guestRoster.filter(g => g.status === 'attended').length;
   const missedCount = roster.filter(b => b.status === 'no_show').length
@@ -194,9 +188,9 @@ export default function AttendancePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-pits-surface-elevated p-4 rounded-xl border   shadow-sm gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl md:text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-tight">
+            <h1 className="page-title">
               {t('Daily Attendance')}
-            </h2>
+            </h1>
             <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
               <Info size={16} className="text-pits-dim cursor-help" />
             </Tooltip>
@@ -237,7 +231,7 @@ export default function AttendancePage() {
 
             {!isToday && (
               <button
-                onClick={() => setDate(getCaracasDate())}
+                onClick={() => setDate(getGymDate(new Date(), timezone))}
                 className="px-3 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all"
               >
                 {t('Today')}

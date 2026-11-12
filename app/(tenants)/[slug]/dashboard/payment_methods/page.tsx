@@ -349,7 +349,7 @@ export default function PaymentMethodsPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
+            <h1 className="page-title">
               {t('Payment Methods')}
             </h1>
             <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">

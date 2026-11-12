@@ -7,7 +7,7 @@ import {
 } from '../services/dashboardService';
 
 export function useDashboardData() {
-  const { tenantId } = useTenant();
+  const { tenantId, timezone } = useTenant();
   const [stats, setStats] = useState<DashboardStats>({
     pendingPayments: [],
     inactiveAthletes: [],
@@ -19,21 +19,24 @@ export function useDashboardData() {
     todayAttendance: EMPTY_TODAY_ATTENDANCE,
   });
   const [loading, setLoading] = useState(true);
+  /** True once real data has arrived; until then the UI must not imply "all clear". */
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await dashboardService.getAllDashboardData(tenantId);
+      const data = await dashboardService.getAllDashboardData(tenantId, timezone);
       setStats(data);
+      setLoaded(true);
     } catch (err) {
       setError(err as Error);
       console.error('Error in useDashboardData:', err);
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, timezone]);
 
   useEffect(() => {
     fetchStats();
@@ -52,6 +55,7 @@ export function useDashboardData() {
   return {
     stats,
     loading,
+    loaded,
     error,
     refresh: fetchStats,
     removePaymentLocally

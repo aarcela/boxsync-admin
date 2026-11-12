@@ -441,9 +441,9 @@ export default function WodEditorPage() {
             <Dumbbell className="text-pits-dark-text" size={24} />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-pits-text-main uppercase italic tracking-tighter">
+            <h1 className="page-title">
               {t('Programming Center')}
-            </h2>
+            </h1>
             <p className="text-pits-dim font-medium text-xs flex items-center">
               <Calendar size={12} className="mr-1" />
               {t('Assigning workout for {{date}}', { date: selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) })}

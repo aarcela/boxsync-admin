@@ -295,7 +295,7 @@ export default function PerformancePage() {
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-black text-pits-text uppercase tracking-tighter leading-none mb-2">
+          <h1 className="page-title mb-2">
             {t('Box Intelligence')}
           </h1>
           <p className="text-pits-dim font-bold text-xs uppercase tracking-widest opacity-60">

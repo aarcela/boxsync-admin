@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Loader2, Save, Repeat } from 'lucide-react';
-import { addDays, format } from 'date-fns';
 import { useToast } from './Toast';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { classService } from '@/lib/services/classService';
 import { ClassTypeRow } from '@/lib/types/gym';
 import { classTypeDurationMap } from '@/lib/utils/classTypeStyles';
-import { getCaracasDateFromIso } from '@/lib/utils/date';
+import { addDaysToDateStr, getGymDate, getGymDateFromIso, getGymTimeLabel, gymDateTimeToUtc, weekdayIndex } from '@/lib/utils/date';
+import { useTenant } from '@/components/TenantContext';
+import { DEFAULT_GYM_TIMEZONE } from '@/lib/gym-timezone';
 
 export type ClassModalMode = 'create' | 'edit' | 'duplicate';
 
@@ -52,34 +53,16 @@ function defaultDurationMinutes(classType: string, durationByName: Record<string
   return durationByName[classType] ?? (classType === 'Open Box' ? 120 : 60);
 }
 
-function toCaracasTimeInput(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  let hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-  if (hour === 24) hour = 0;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function parseCaracasDateTime(dateStr: string, timeStr: string): Date {
-  return new Date(`${dateStr}T${timeStr}:00-04:00`);
-}
-
+/** Start + duration → end date/time strings, all in the gym's timezone. */
 function computeEndFromStart(
   startDate: string,
   startTime: string,
-  durationMin: number
+  durationMin: number,
+  tz: string = DEFAULT_GYM_TIMEZONE
 ): { endDate: string; endTime: string } {
-  const start = parseCaracasDateTime(startDate, startTime);
-  const end = new Date(start.getTime() + durationMin * 60000);
-  return {
-    endDate: getCaracasDateFromIso(end.toISOString()),
-    endTime: toCaracasTimeInput(end.toISOString()),
-  };
+  const start = gymDateTimeToUtc(startDate, startTime, tz);
+  const end = new Date(start.getTime() + durationMin * 60000).toISOString();
+  return { endDate: getGymDateFromIso(end, tz), endTime: getGymTimeLabel(end, tz) };
 }
 
 export default function CreateClassModal({
@@ -92,17 +75,19 @@ export default function CreateClassModal({
   prefill = null,
 }: CreateClassModalProps) {
   const { toast } = useToast();
+  const { timezone: tz } = useTenant();
+  const gymToday = () => getGymDate(new Date(), tz);
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   
   // Basic Form State
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(() => getGymDate(new Date(), tz));
   const [time, setTime] = useState('07:00');
   const [endDate, setEndDate] = useState(() =>
-    computeEndFromStart(format(new Date(), 'yyyy-MM-dd'), '07:00', 60).endDate
+    computeEndFromStart(getGymDate(new Date(), tz), '07:00', 60, tz).endDate
   );
   const [endTime, setEndTime] = useState(() =>
-    computeEndFromStart(format(new Date(), 'yyyy-MM-dd'), '07:00', 60).endTime
+    computeEndFromStart(getGymDate(new Date(), tz), '07:00', 60, tz).endTime
   );
   const [coachId, setCoachId] = useState('');
   const [type, setType] = useState('CrossFit');
@@ -113,7 +98,7 @@ export default function CreateClassModal({
   // Recurring State
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  const [untilDate, setUntilDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
+  const [untilDate, setUntilDate] = useState(() => addDaysToDateStr(getGymDate(new Date(), tz), 7));
 
   const isEdit = mode === 'edit';
   const durationByName = classTypeDurationMap(classTypes);
@@ -122,7 +107,8 @@ export default function CreateClassModal({
     const next = computeEndFromStart(
       startDate,
       startTime,
-      defaultDurationMinutes(classType, durationByName)
+      defaultDurationMinutes(classType, durationByName),
+      tz
     );
     setEndDate(next.endDate);
     setEndTime(next.endTime);
@@ -134,14 +120,14 @@ export default function CreateClassModal({
     nextDate: string,
     nextTime: string
   ) => {
-    const prevStart = parseCaracasDateTime(prevDate, prevTime);
-    const prevEnd = parseCaracasDateTime(endDate, endTime);
+    const prevStart = gymDateTimeToUtc(prevDate, prevTime, tz);
+    const prevEnd = gymDateTimeToUtc(endDate, endTime, tz);
     const durationMs = Math.max(prevEnd.getTime() - prevStart.getTime(), 30 * 60000);
-    const nextStart = parseCaracasDateTime(nextDate, nextTime);
+    const nextStart = gymDateTimeToUtc(nextDate, nextTime, tz);
     if (Number.isNaN(nextStart.getTime())) return;
     const nextEnd = new Date(nextStart.getTime() + durationMs);
-    setEndDate(getCaracasDateFromIso(nextEnd.toISOString()));
-    setEndTime(toCaracasTimeInput(nextEnd.toISOString()));
+    setEndDate(getGymDateFromIso(nextEnd.toISOString(), tz));
+    setEndTime(getGymTimeLabel(nextEnd.toISOString(), tz));
   };
 
   useEffect(() => {
@@ -149,22 +135,22 @@ export default function CreateClassModal({
 
     setIsRecurring(false);
     setSelectedDays([]);
-    setUntilDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
+    setUntilDate(addDaysToDateStr(gymToday(), 7));
 
     if (prefill) {
-      const nextDate = getCaracasDateFromIso(prefill.start_time);
-      const nextTime = toCaracasTimeInput(prefill.start_time);
+      const nextDate = getGymDateFromIso(prefill.start_time, tz);
+      const nextTime = getGymTimeLabel(prefill.start_time, tz);
       setDate(nextDate);
       setTime(nextTime);
-      setEndDate(getCaracasDateFromIso(prefill.end_time));
-      setEndTime(toCaracasTimeInput(prefill.end_time));
+      setEndDate(getGymDateFromIso(prefill.end_time, tz));
+      setEndTime(getGymTimeLabel(prefill.end_time, tz));
       setType(prefill.class_type || 'CrossFit');
       setCapacity(String(prefill.max_capacity || 12));
       setCoachId(prefill.coach_id || '');
       return;
     }
 
-    const nextDate = initialDate || format(new Date(), 'yyyy-MM-dd');
+    const nextDate = initialDate || gymToday();
     const nextTime = initialTime || '07:00';
     const nextType = 'CrossFit';
     setDate(nextDate);
@@ -173,7 +159,7 @@ export default function CreateClassModal({
     setCapacity('12');
     setCoachId('');
     syncEndFromStart(nextDate, nextTime, nextType);
-  }, [isOpen, initialDate, initialTime, prefill, mode]);
+  }, [isOpen, initialDate, initialTime, prefill, mode, tz]);
 
   useEffect(() => {
     const fetchCoaches = async () => {
@@ -226,8 +212,8 @@ export default function CreateClassModal({
         throw new Error('Missing tenant context. Sign out and sign in again.');
       }
 
-      const start = parseCaracasDateTime(date, time);
-      const end = parseCaracasDateTime(endDate, endTime);
+      const start = gymDateTimeToUtc(date, time, tz);
+      const end = gymDateTimeToUtc(endDate, endTime, tz);
       if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
         throw new Error('Invalid start or end date/time.');
       }
@@ -270,21 +256,18 @@ export default function CreateClassModal({
       } else {
         if (selectedDays.length === 0) throw new Error('Select at least one day for recurrence.');
         
-        let currentIterDate = parseCaracasDateTime(date, time);
-        const endLimit = new Date(`${untilDate}T23:59:59-04:00`);
-
-        while (currentIterDate <= endLimit) {
-          if (selectedDays.includes(currentIterDate.getDay())) {
-            classesToInsert.push({
-              tenant_id: tenantId,
-              start_time: currentIterDate.toISOString(),
-              end_time: new Date(currentIterDate.getTime() + durationMs).toISOString(),
-              coach_id: coachId || null,
-              class_type: type,
-              max_capacity: maxCapacity,
-            });
-          }
-          currentIterDate = addDays(currentIterDate, 1);
+        // Walk gym-local calendar days so weekday and wall-clock time stay right across DST.
+        for (let day = date; day <= untilDate; day = addDaysToDateStr(day, 1)) {
+          if (!selectedDays.includes(weekdayIndex(day))) continue;
+          const occurrence = gymDateTimeToUtc(day, time, tz);
+          classesToInsert.push({
+            tenant_id: tenantId,
+            start_time: occurrence.toISOString(),
+            end_time: new Date(occurrence.getTime() + durationMs).toISOString(),
+            coach_id: coachId || null,
+            class_type: type,
+            max_capacity: maxCapacity,
+          });
         }
       }
 

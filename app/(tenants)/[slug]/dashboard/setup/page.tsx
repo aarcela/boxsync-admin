@@ -167,7 +167,7 @@ export default function GymSetupPage() {
         <p className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">
           {t('Setup assistant')}
         </p>
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-pits-ink">
+        <h1 className="page-title">
           {t('Configure your gym')}
         </h1>
         <p className="text-sm text-pits-ink-muted mt-1">

@@ -113,9 +113,9 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
+        <h1 className="page-title">
           {t('Push notifications')}
-        </h2>
+        </h1>
         <p className="text-pits-dim font-medium text-sm">
           {t('Send a custom alert to members who have the app installed.')}
         </p>

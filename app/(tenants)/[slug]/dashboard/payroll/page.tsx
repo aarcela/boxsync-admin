@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import { supabase } from '@/lib/supabase';
 import { payrollService } from '@/lib/services/payrollService';
 import { coachSalaryService } from '@/lib/services/coachSalaryService';
@@ -26,16 +27,19 @@ import {
 } from '@/lib/payroll/payrollReport';
 import { downloadPdf, generateFullPayrollPdf, generateCoachPayrollPdf } from '@/lib/payroll/generatePayrollPdf';
 import {
-  getCaracasDate,
-  getCaracasDayRange,
-  getCaracasWeekRange,
-  getCaracasWeekDays,
-  getCaracasMonthRange,
-  getCaracasCustomRange,
-  getCaracasDateSpan,
-  getCaracasDateFromIso,
-  getCaracasTimeLabel,
-  getCaracasMinutesSince,
+  addDaysToDateStr,
+  formatGymDay,
+  getGymDate,
+  getGymDayRange,
+  getGymWeekRange,
+  getGymWeekDays,
+  getGymMonthRange,
+  getGymCustomRange,
+  getGymDateSpan,
+  getGymDateFromIso,
+  getGymTimeLabel,
+  getGymMinutesSince,
+  weekdayIndex,
 } from '@/lib/utils/date';
 
 const START_HOUR = 5;
@@ -74,17 +78,9 @@ function DateField({
   );
 }
 
-function formatCaracasDay(dateStr: string, opts: Intl.DateTimeFormatOptions) {
-  return new Date(`${dateStr}T12:00:00-04:00`).toLocaleDateString('en-US', {
-    timeZone: 'America/Caracas',
-    ...opts,
-  });
-}
-
+/** 0 = Monday … 6 = Sunday. */
 function mondayIndex(dateStr: string): number {
-  const wd = formatCaracasDay(dateStr, { weekday: 'short' });
-  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-  return map[wd] ?? 0;
+  return (weekdayIndex(dateStr) + 6) % 7;
 }
 
 function classDurationMinutes(startIso: string, endIso: string): number {
@@ -119,7 +115,13 @@ function blockStyles(status: PayrollClassStatus) {
 
 export default function PayrollPage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { timezone: tz } = useTenant();
+  const locale = lang === 'es' ? 'es' : 'en-US';
+  const formatDay = useCallback(
+    (dateStr: string, opts: Intl.DateTimeFormatOptions) => formatGymDay(dateStr, opts, locale, tz),
+    [locale, tz],
+  );
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -129,10 +131,10 @@ export default function PayrollPage() {
   const [callerRole, setCallerRole] = useState<string | null>(null);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('week');
-  const [anchorDate, setAnchorDate] = useState(getCaracasDate());
-  const [monthValue, setMonthValue] = useState(getCaracasDate().slice(0, 7));
-  const [customStart, setCustomStart] = useState(getCaracasDate());
-  const [customEnd, setCustomEnd] = useState(getCaracasDate());
+  const [anchorDate, setAnchorDate] = useState(getGymDate(new Date(), tz));
+  const [monthValue, setMonthValue] = useState(getGymDate(new Date(), tz).slice(0, 7));
+  const [customStart, setCustomStart] = useState(getGymDate(new Date(), tz));
+  const [customEnd, setCustomEnd] = useState(getGymDate(new Date(), tz));
   const [coachFilter, setCoachFilter] = useState<string>('all');
   const [viewTab, setViewTab] = useState<ViewTab>('calendar');
   const [selectedClass, setSelectedClass] = useState<PayrollClass | null>(null);
@@ -147,33 +149,33 @@ export default function PayrollPage() {
     try {
       switch (filterMode) {
         case 'day':
-          return getCaracasDayRange(anchorDate);
+          return getGymDayRange(anchorDate, tz);
         case 'week':
-          return getCaracasWeekRange(anchorDate);
+          return getGymWeekRange(anchorDate, tz);
         case 'month':
-          return getCaracasMonthRange(monthValue);
+          return getGymMonthRange(monthValue, tz);
         case 'custom': {
           const start = customStart <= customEnd ? customStart : customEnd;
           const end = customStart <= customEnd ? customEnd : customStart;
-          return getCaracasCustomRange(start, end);
+          return getGymCustomRange(start, end, tz);
         }
       }
     } catch {
-      return getCaracasWeekRange(anchorDate);
+      return getGymWeekRange(anchorDate, tz);
     }
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, tz]);
 
   const calendarDays = useMemo(() => {
     if (filterMode === 'day') return [anchorDate];
-    if (filterMode === 'week') return getCaracasWeekDays(anchorDate);
+    if (filterMode === 'week') return getGymWeekDays(anchorDate);
     if (filterMode === 'month') {
-      const { startDate, endDate } = getCaracasMonthRange(monthValue);
-      return getCaracasDateSpan(startDate, endDate);
+      const { startDate, endDate } = getGymMonthRange(monthValue, tz);
+      return getGymDateSpan(startDate, endDate);
     }
     const start = customStart <= customEnd ? customStart : customEnd;
     const end = customStart <= customEnd ? customEnd : customStart;
-    return getCaracasDateSpan(start, end);
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
+    return getGymDateSpan(start, end);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, tz]);
 
   useEffect(() => {
     const loadContext = async () => {
@@ -291,9 +293,7 @@ export default function PayrollPage() {
   };
 
   const shiftAnchor = (days: number) => {
-    const d = new Date(`${anchorDate}T12:00:00-04:00`);
-    d.setDate(d.getDate() + days);
-    setAnchorDate(getCaracasDate(d));
+    setAnchorDate(addDaysToDateStr(anchorDate, days));
   };
 
   const shiftWeek = (weeks: number) => shiftAnchor(weeks * 7);
@@ -311,40 +311,40 @@ export default function PayrollPage() {
   }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
 
   const displayPeriodLabel = useMemo(() => {
-    const fmt = (d: string) => formatCaracasDay(d, { month: 'short', day: 'numeric' });
+    const fmt = (d: string) => formatDay(d, { month: 'short', day: 'numeric' });
     switch (filterMode) {
       case 'day':
-        return formatCaracasDay(anchorDate, { weekday: 'short', month: 'short', day: 'numeric' });
+        return formatDay(anchorDate, { weekday: 'short', month: 'short', day: 'numeric' });
       case 'week': {
-        const { startDate, endDate } = getCaracasWeekRange(anchorDate);
+        const { startDate, endDate } = getGymWeekRange(anchorDate, tz);
         return `${t('Week of')} ${fmt(startDate)} – ${fmt(endDate)}`;
       }
       case 'month':
-        return formatCaracasDay(`${monthValue}-01`, { month: 'long', year: 'numeric' });
+        return formatDay(`${monthValue}-01`, { month: 'long', year: 'numeric' });
       case 'custom': {
         const start = customStart <= customEnd ? customStart : customEnd;
         const end = customStart <= customEnd ? customEnd : customStart;
         return `${fmt(start)} – ${fmt(end)}`;
       }
     }
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd, t]);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, t, formatDay, tz]);
 
   const classesByDay = useMemo(() => {
     const map = new Map<string, PayrollClass[]>();
     for (const day of calendarDays) map.set(day, []);
     for (const cls of classes) {
-      const day = getCaracasDateFromIso(cls.start_time);
+      const day = getGymDateFromIso(cls.start_time, tz);
       map.get(day)?.push(cls);
     }
     return map;
-  }, [classes, calendarDays]);
+  }, [classes, calendarDays, tz]);
 
   const weekdayHeaders = useMemo(
     () =>
-      getCaracasWeekDays(calendarDays[0] ?? anchorDate).map((day) =>
-        formatCaracasDay(day, { weekday: 'short' })
+      getGymWeekDays(calendarDays[0] ?? anchorDate).map((day) =>
+        formatDay(day, { weekday: 'short' })
       ),
-    [calendarDays, anchorDate]
+    [calendarDays, anchorDate, formatDay]
   );
 
   const monthCells = useMemo(() => {
@@ -356,7 +356,7 @@ export default function PayrollPage() {
   }, [calendarDays]);
 
   const showHourCalendar = calendarDays.length <= 7;
-  const today = getCaracasDate();
+  const today = getGymDate(new Date(), tz);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const coachReports = useMemo(
@@ -493,7 +493,7 @@ export default function PayrollPage() {
           {cls.class_type}
         </p>
         <p className={`${compact ? 'text-[9px] mt-0.5' : 'text-[10px] mt-1'} font-bold truncate`}>
-          {getCaracasTimeLabel(cls.start_time)}
+          {getGymTimeLabel(cls.start_time, tz)}
           {cls.coach?.full_name ? ` · ${cls.coach.full_name}` : ''}
         </p>
       </button>
@@ -518,7 +518,7 @@ export default function PayrollPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
+            <h1 className="page-title">
               {t('Payroll')}
             </h1>
             <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
@@ -776,10 +776,10 @@ export default function PayrollPage() {
                           }`}
                         >
                           <p className="text-[10px] font-black text-pits-dim uppercase">
-                            {formatCaracasDay(day, { weekday: 'short' })}
+                            {formatDay(day, { weekday: 'short' })}
                           </p>
                           <p className="text-sm font-black text-pits-text">
-                            {formatCaracasDay(day, { day: 'numeric' })}
+                            {formatDay(day, { day: 'numeric' })}
                           </p>
                         </div>
                       ))}
@@ -825,7 +825,7 @@ export default function PayrollPage() {
                             ))}
 
                             {dayClasses.map((cls) => {
-                              const minutes = getCaracasMinutesSince(cls.start_time, START_HOUR);
+                              const minutes = getGymMinutesSince(cls.start_time, START_HOUR, tz);
                               const durationMin = classDurationMinutes(cls.start_time, cls.end_time);
                               if (minutes >= (END_HOUR - START_HOUR + 1) * 60) return null;
                               if (minutes + durationMin <= 0) return null;
@@ -879,7 +879,7 @@ export default function PayrollPage() {
                             }`}
                           >
                             <p className="text-[10px] font-black text-pits-dim uppercase mb-2">
-                              {formatCaracasDay(day, { day: 'numeric' })}
+                              {formatDay(day, { day: 'numeric' })}
                             </p>
                             <div className="space-y-1.5">
                               {dayClasses.map((cls) => (
@@ -974,10 +974,10 @@ export default function PayrollPage() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-[10px] font-bold text-pits-ink">
-                                {getCaracasDateFromIso(cls.start_time)}
+                                {getGymDateFromIso(cls.start_time, tz)}
                               </div>
                               <div className="text-[9px] text-pits-dim">
-                                {getCaracasTimeLabel(cls.start_time)}
+                                {getGymTimeLabel(cls.start_time, tz)}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-xs font-bold uppercase">
@@ -1131,8 +1131,8 @@ export default function PayrollPage() {
                       {selectedClass.class_type}
                     </h2>
                     <p className="text-[10px] font-bold text-pits-dim uppercase mt-1">
-                      {getCaracasDateFromIso(selectedClass.start_time)} •{' '}
-                      {getCaracasTimeLabel(selectedClass.start_time)}
+                      {getGymDateFromIso(selectedClass.start_time, tz)} •{' '}
+                      {getGymTimeLabel(selectedClass.start_time, tz)}
                     </p>
                   </div>
                   <div className="p-2 bg-pits-primary-soft rounded-xl">

@@ -411,7 +411,7 @@ export default function ProfilePage() {
     <>
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-pits-ink uppercase tracking-tight">
+        <h1 className="page-title">
           {t('My Profile')}
         </h1>
         <p className="text-sm text-pits-ink-muted mt-1">

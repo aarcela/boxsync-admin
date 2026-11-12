@@ -60,6 +60,24 @@ export const financialService = {
     }))) as Promise<PaymentRecord[]>;
   },
 
+  /** Every pending payment, regardless of date, so nothing waiting for review is hidden by a period filter. */
+  async getPendingPayments(tenantId?: string | null): Promise<PaymentRecord[]> {
+    let query = supabase
+      .from('payments')
+      .select('*, profiles ( full_name )')
+      .eq('status', 'pending');
+    if (tenantId) query = query.eq('tenant_id', tenantId);
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return Promise.all((data || []).map(async payment => ({
+      ...payment,
+      proof_image_url: payment.proof_image_url
+        ? await signPaymentProofUrl(payment.proof_image_url)
+        : '',
+    }))) as Promise<PaymentRecord[]>;
+  },
+
   async getMemberStats(): Promise<{ active: number; inactive: number; projectedREF: number; overdueREF: number }> {
     const { data: profiles, error } = await supabase
       .from('profiles')

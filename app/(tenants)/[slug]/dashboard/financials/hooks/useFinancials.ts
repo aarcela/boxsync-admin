@@ -92,8 +92,9 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
       const incomeStart = startDate.slice(0, 10);
       const incomeEnd = endDate.slice(0, 10);
 
-      const [paymentsData, incomesData, methodsData, memberStats, rate] = await Promise.all([
+      const [periodPayments, pendingPayments, incomesData, methodsData, memberStats, rate] = await Promise.all([
         financialService.getPayments(startDate, endDate),
+        financialService.getPendingPayments(tenantId),
         incomeService.getIncomes(incomeStart, incomeEnd),
         financialService.getPaymentMethods(),
         financialService.getMemberStats(),
@@ -101,6 +102,12 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
           ? financialService.getEffectiveExchangeRate(tenantId, currencies.reference)
           : financialService.getReferenceExchangeRate(currencies.reference),
       ]);
+
+      const periodIds = new Set(periodPayments.map((p) => p.id));
+      const paymentsData = [
+        ...pendingPayments.filter((p) => !periodIds.has(p.id)),
+        ...periodPayments,
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
       setPayments(paymentsData);
       setIncomes(incomesData);
@@ -158,11 +165,11 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
 
     } catch (error) {
       console.error('Error fetching financials:', error);
-      toast('Sync failed across matrix sector lines.', 'error');
+      toast(t("Couldn't load money data."), 'error');
     } finally {
       setLoading(false);
     }
-  }, [period, customRange, toast, currencies, tenantId]);
+  }, [period, customRange, toast, t, currencies, tenantId]);
 
   useEffect(() => {
     fetchFinancials();
@@ -206,9 +213,11 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
         ),
         'success',
       );
-      await fetchFinancials();
+      void fetchFinancials();
+      return true;
     } catch {
       toast(t('Error approving payment. Please try again.'), 'error');
+      return false;
     }
   };
 
@@ -216,9 +225,11 @@ export function useFinancials(period: string, customRange?: { start: Date; end: 
     try {
       await financialService.rejectPayment(paymentId, userId, reason);
       toast(t('Payment rejected'), 'warning');
-      await fetchFinancials();
+      void fetchFinancials();
+      return true;
     } catch {
       toast(t('Error rejecting payment. Please try again.'), 'error');
+      return false;
     }
   };
 

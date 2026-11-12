@@ -31,7 +31,8 @@ import {
 } from '@/lib/overdue-settings';
 import { tenantBookingService } from '@/lib/services/tenantBookingService';
 import { tenantOverdueService } from '@/lib/services/tenantOverdueService';
-import { saveBookingSettingsAction, saveOverdueSettingsAction } from './actions';
+import { saveBookingSettingsAction, saveGymTimezoneAction, saveOverdueSettingsAction } from './actions';
+import GymTimezoneCard from '@/components/GymTimezoneCard';
 
 const CUSTOM_SENTINEL = -1;
 const MAX_CUSTOM_MINUTES = 7 * 24 * 60;
@@ -473,12 +474,14 @@ export default function BookingSettingsPage() {
           <CalendarClock size={20} className="text-pits-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-pits-ink">{t('Booking')}</h1>
+          <h1 className="page-title">{t('Booking')}</h1>
           <p className="mt-1 text-sm font-bold text-pits-ink-muted">
             {t('Booking settings help')}
           </p>
         </div>
       </div>
+
+      <GymTimezoneCard onSave={saveGymTimezoneAction} />
 
       {loading ? (
         <div className="rounded-2xl bg-pits-card border border-pits-edge p-10 flex justify-center">

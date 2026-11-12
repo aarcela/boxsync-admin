@@ -73,9 +73,9 @@ export default function NewsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
+          <h1 className="page-title">
             {t('News & Alerts')}
-          </h2>
+          </h1>
           <p className="text-pits-dim font-medium text-sm">
             {t('Broadcast updates to the athlete mobile app.')}
           </p>

@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCaracasDate } from '@/lib/utils/date';
+import { getGymDate } from '@/lib/utils/date';
 import { classService } from '@/lib/services/classService';
 import { guestService, GuestBooking } from '@/lib/services/guestService';
 import { Booking, ClassSession, BookingStatus } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 
 export function useAttendance() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { timezone } = useTenant();
   
   // State
   const [date, setDate] = useState('');
@@ -22,8 +24,8 @@ export function useAttendance() {
 
   // Initial date setup
   useEffect(() => {
-    setDate(getCaracasDate());
-  }, []);
+    setDate(getGymDate(new Date(), timezone));
+  }, [timezone]);
 
   // 1. Fetch Classes for selected Date
   const fetchClasses = useCallback(async (selectedDate: string) => {
@@ -35,13 +37,13 @@ export function useAttendance() {
     setGuestRoster([]);
     
     try {
-      const data = await classService.getClassesByDate(selectedDate);
+      const data = await classService.getClassesByDate(selectedDate, timezone);
       setClasses(data);
 
       if (data.length === 0) return;
 
       // Today: closest class to now. Other days: first class, so roster is ready.
-      const todayStr = getCaracasDate();
+      const todayStr = getGymDate(new Date(), timezone);
       if (selectedDate === todayStr) {
         const now = new Date();
         let closestId = data[0].id;
@@ -64,7 +66,7 @@ export function useAttendance() {
     } finally {
       setLoadingClasses(false);
     }
-  }, [toast, t]);
+  }, [toast, t, timezone]);
 
   useEffect(() => {
     fetchClasses(date);
