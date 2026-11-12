@@ -69,3 +69,6 @@ export function formatRelative(value: DateInput, lang: Language, now: Date = new
   if (abs < 86400 * 365) return rtf.format(Math.round(seconds / (86400 * 30)), 'month');
   return rtf.format(Math.round(seconds / (86400 * 365)), 'year');
 }
+
+/** "noviembre de 2026" → "Noviembre de 2026" (CSS `capitalize` would also turn "de" into "De"). */
+export const capitalizeFirst = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);

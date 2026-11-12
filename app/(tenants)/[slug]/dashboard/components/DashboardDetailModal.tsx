@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { X, User, Clock, CheckCircle, MessageCircle, Send, Bell } from 'lucide-react';
+import { X, User, Clock, CheckCircle, Bell } from 'lucide-react';
 import { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
 import { useLanguage } from '@/components/LanguageContext';
-import { useToast } from '@/components/Toast';
-import Tooltip from '@/components/Tooltip';
+import MemberContactActions, { contactActionBtn } from '@/components/MemberContactActions';
 import { formatDate, formatTime } from '@/lib/utils/format-date';
 
 type DashboardModalItem = DashboardProfile | DashboardClass | DashboardPayment;
@@ -28,13 +27,6 @@ export default function DashboardDetailModal(props: DashboardDetailModalProps) {
   return <DetailBody {...props} />;
 }
 
-const actionBtn =
-  'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors disabled:opacity-50';
-
-function whatsAppHref(phone?: string | null): string | null {
-  const digits = phone?.replace(/\D/g, '') ?? '';
-  return digits ? `https://wa.me/${digits}` : null;
-}
 
 function DetailBody({
   onClose,
@@ -46,10 +38,7 @@ function DetailBody({
   onReviewPayment,
 }: DashboardDetailModalProps) {
   const { t, lang } = useLanguage();
-  const { toast } = useToast();
   const [reservedOnly, setReservedOnly] = useState(false);
-  const [sending, setSending] = useState<string | null>(null);
-  const [sent, setSent] = useState<Set<string>>(new Set());
 
   const athletes = data as DashboardProfile[];
   const rows = useMemo(() => {
@@ -71,24 +60,6 @@ function DetailBody({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  const sendReminder = async (athlete: DashboardProfile) => {
-    setSending(athlete.id);
-    try {
-      const response = await fetch(`/api/admin/users/${athlete.id}/send-expiry-reminder`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang }),
-      });
-      if (!response.ok) throw new Error('reminder failed');
-      setSent((prev) => new Set(prev).add(athlete.id));
-      toast(t('Reminder sent to {{name}}', { name: athlete.full_name }), 'success');
-    } catch {
-      toast(t("Couldn't send the reminder. Try again."), 'error');
-    } finally {
-      setSending(null);
-    }
-  };
 
   return (
     <div
@@ -151,8 +122,6 @@ function DetailBody({
             <div className="space-y-2">
               {type === 'athletes' &&
                 rows.map((athlete) => {
-                  const wa = whatsAppHref(athlete.phone);
-                  const wasSent = sent.has(athlete.id);
                   return (
                     <div
                       key={athlete.id}
@@ -201,41 +170,10 @@ function DetailBody({
                         </div>
                       </Link>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {variant === 'overdue' && !athlete.has_pending_proof ? (
-                          athlete.phone ? (
-                            <button
-                              type="button"
-                              disabled={sending === athlete.id || wasSent}
-                              onClick={() => void sendReminder(athlete)}
-                              className={`${actionBtn} ${
-                                wasSent
-                                  ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
-                                  : 'bg-pits-surface-elevated text-pits-text border-pits-edge hover:bg-pits-surface-muted'
-                              }`}
-                            >
-                              {wasSent ? <CheckCircle size={14} /> : <Send size={14} />}
-                              {wasSent ? t('Reminder sent') : t('Send reminder')}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-pits-dim">{t('No phone on file')}</span>
-                          )
-                        ) : null}
-                        {wa ? (
-                          <Tooltip content={t('Open WhatsApp chat')}>
-                            <a
-                              href={wa}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={t('Open WhatsApp chat')}
-                              className={`${actionBtn} bg-pits-surface-elevated text-pits-text border-pits-edge hover:bg-pits-surface-muted`}
-                            >
-                              <MessageCircle size={14} />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </a>
-                          </Tooltip>
-                        ) : null}
-                      </div>
+                      <MemberContactActions
+                        member={athlete}
+                        showReminder={variant === 'overdue' && !athlete.has_pending_proof}
+                      />
                     </div>
                   );
                 })}
@@ -259,7 +197,7 @@ function DetailBody({
                         </div>
                         <Link
                           href="/dashboard/notifications"
-                          className={`${actionBtn} bg-pits-surface-elevated text-pits-text border-pits-edge hover:bg-pits-surface-muted shrink-0`}
+                          className={`${contactActionBtn} bg-pits-surface-elevated text-pits-text border-pits-edge hover:bg-pits-surface-muted shrink-0`}
                         >
                           <Bell size={14} />
                           {t('Notify members')}
@@ -297,7 +235,7 @@ function DetailBody({
                       <button
                         type="button"
                         onClick={() => onReviewPayment(payment.id)}
-                        className={`${actionBtn} bg-pits-primary text-pits-dark-text border-pits-primary hover:bg-pits-primary-dark`}
+                        className={`${contactActionBtn} bg-pits-primary text-pits-dark-text border-pits-primary hover:bg-pits-primary-dark`}
                       >
                         {t('Review')}
                       </button>

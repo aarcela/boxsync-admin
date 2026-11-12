@@ -12,6 +12,7 @@ import {
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PaymentReviewPanel from '@/components/PaymentReviewPanel';
+import OverdueMembersCard from '@/components/OverdueMembersCard';
 import { useFinancials } from './hooks/useFinancials';
 import { currencySymbol } from '@/lib/currency';
 import { TranslationKey } from '@/lib/translations';
@@ -133,7 +134,7 @@ export default function FinancialsPage() {
   const [expiryConfirmOpen, setExpiryConfirmOpen] = useState(false);
   const [cashOpen, setCashOpen] = useState(false);
   const [reviewId, setReviewId] = useState<string | null>(null);
-  const pendingQueue = filteredPayments.filter((p) => p.status === 'pending');
+  const pendingQueue = payments.filter((p) => p.status === 'pending');
   const closeReview = useCallback(() => setReviewId(null), []);
 
   // Paged state (local to UI)
@@ -143,9 +144,6 @@ export default function FinancialsPage() {
   // Business calculations
   const refSymbol = currencySymbol(currencies.reference);
   const localSymbol = currencySymbol(currencies.local);
-  const combinedTotalRef =
-    stats.reference.totalRevenue +
-    (exchangeRate > 0 ? stats.local.totalRevenue / exchangeRate : 0);
 
   const paymentSymbol = (p: { currency?: string | null; currency_type?: string | null }) =>
     currencySymbol(p.currency || p.currency_type || currencies.reference);
@@ -181,11 +179,11 @@ export default function FinancialsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="page-title">
-              {t('Money overview')}
+              {t('Payments tab')}
             </h1>
           </div>
           <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Payments, income and cash for the selected period.')}
+            {t('Review proofs, follow up on who owes and see recent payments.')}
           </p>
         </div>
 
@@ -219,6 +217,21 @@ export default function FinancialsPage() {
           </div>
         </div>
       </div>
+
+      {pendingQueue.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-pits-warning-edge bg-pits-warning-soft px-4 py-3">
+          <p className="text-sm font-semibold text-pits-warning">
+            {t('{{count}} payments to review', { count: pendingQueue.length })}
+          </p>
+          <button
+            type="button"
+            onClick={() => setReviewId(pendingQueue[0].id)}
+            className="h-9 px-4 rounded-lg bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark"
+          >
+            {t('Review now')}
+          </button>
+        </div>
+      ) : null}
 
       {/* DATE RANGE FILTER */}
       <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-pits-edge shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
@@ -289,7 +302,7 @@ export default function FinancialsPage() {
       </div>
 
       {/* 2. VITALS BAR (KPIs) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label={t('Collected')}
           value={activeCurrency === currencies.local ? stats.local.totalRevenue : stats.reference.totalRevenue}
@@ -297,7 +310,6 @@ export default function FinancialsPage() {
           trend="positive"
           color="success"
         />
-        <StatCard label={t('Consolidated')} value={combinedTotalRef} symbol={refSymbol} trend="neutral" color="muted" info={t('Consolidated REF base')} />
         <StatCard label={t('Pending')} value={stats.reference.pendingAmount + (exchangeRate > 0 ? stats.local.pendingAmount / exchangeRate : 0)} symbol={refSymbol} trend="warning" color="warning" />
         <StatCard label={t('Overdue')} value={stats.overdueAmountREF} symbol={refSymbol} trend="danger" color="danger" />
         <StatCard label={t('Active Athletes')} value={stats.activeMembers} symbol="" trend="neutral" color="primary" />
@@ -308,6 +320,8 @@ export default function FinancialsPage() {
         {/* MAIN SECTION (LEFT 8 COLS) */}
         <div className="lg:col-span-12 space-y-6 min-w-0">
           
+          <OverdueMembersCard />
+
           {/* TABLE FILTERS */}
           <div className="bg-pits-surface-elevated p-3 rounded-2xl border border-pits-edge shadow-sm flex flex-col md:flex-row gap-3 items-center">
              <div className="relative flex-1 w-full">

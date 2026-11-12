@@ -20,7 +20,6 @@ import {
   BarChart3,
   MessageSquare,
   TrendingUp,
-  Wallet,
   Scale,
   MessagesSquare,
   Trophy,
@@ -40,6 +39,7 @@ import {
   ListChecks,
   MessageCircle,
   Search,
+  ArrowLeftRight,
   ChevronDown,
   User,
   Languages,
@@ -202,10 +202,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         icon: DollarSign,
         tip: t('Nav tip Money'),
         tabs: [
-          tab('Money overview', '/dashboard/financials', DollarSign, 'Nav tip Money overview'),
-          tab('Month result', '/dashboard/accountability', Scale, 'Nav tip Month result'),
-          tab('Income', '/dashboard/income', TrendingUp, 'Nav tip Income'),
-          tab('Expenses', '/dashboard/expenses', Wallet, 'Nav tip Expenses'),
+          tab('Payments tab', '/dashboard/financials', DollarSign, 'Nav tip Payments tab'),
+          tab('This month', '/dashboard/accountability', Scale, 'Nav tip Month result'),
+          tab('Movements', '/dashboard/movements', ArrowLeftRight, 'Nav tip Movements'),
           ...(userRole === 'admin'
             ? [
                 tab('Salary', '/dashboard/salary', Banknote, 'Nav tip Salary'),
