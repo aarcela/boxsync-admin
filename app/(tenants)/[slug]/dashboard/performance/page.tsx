@@ -338,9 +338,6 @@ export default function PerformancePage() {
               </div>
               <h2 className="font-black text-xl text-pits-text uppercase tracking-tighter">{t('Athlete Health')}</h2>
             </div>
-            <div className="flex items-center gap-1">
-               <span className="text-[11px] font-black text-pits-success bg-pits-success/10 px-2 py-1 rounded-md uppercase">Live Score</span>
-            </div>
           </div>
           
           <div className="p-6 flex-1 flex flex-col gap-6">
@@ -447,9 +444,6 @@ export default function PerformancePage() {
               </div>
               <h2 className="font-black text-xl text-pits-text uppercase tracking-tighter">{t('Class Performance')}</h2>
             </div>
-             <div className="px-3 py-1 bg-pits-primary text-pits-dark-text rounded-full text-[11px] font-black uppercase tracking-widest">
-                Optimization
-             </div>
           </div>
           
           <div className="p-6 flex-1 flex flex-col gap-6">
@@ -470,7 +464,7 @@ export default function PerformancePage() {
                             <span className="text-sm font-black text-pits-text uppercase group-hover:text-pits-red transition-colors">{t('Occupancy Rate')}</span>
                             <span className="text-[11px] font-bold text-pits-error bg-pits-primary-soft px-2 py-0.5 rounded-full">{s.occupancy}% {t('Occupancy Rate')}</span>
                           </div>
-                          <span className="text-[11px] font-bold text-pits-dim uppercase tracking-tighter">Action: {t('Adjust schedule')}</span>
+                          <span className="text-[11px] font-bold text-pits-dim uppercase tracking-tighter">{t('Adjust schedule')}</span>
                        </div>
                     </div>
                     <button 
@@ -494,9 +488,6 @@ export default function PerformancePage() {
               </div>
               <h2 className="font-black text-xl text-pits-text uppercase tracking-tighter">{t('Revenue Efficiency')}</h2>
             </div>
-             <div className="text-[11px] font-black text-pits-primary bg-pits-primary-soft px-3 py-1 rounded-lg uppercase border border-pits-edge">
-                LTV Driven
-             </div>
           </div>
           
           <div className="p-6 flex-1 flex flex-col justify-between gap-6">
@@ -511,7 +502,7 @@ export default function PerformancePage() {
                   <span className="text-3xl font-black text-pits-text">{revenueSummary.activeAthletes}</span>
                   <div className="mt-3 flex items-center gap-1 text-pits-dim">
                      <Users size={12} />
-                     <span className="text-[11px] font-black">{revenueSummary.rosterRate}% of roster</span>
+                     <span className="text-[11px] font-black">{t('{{percent}}% of members', { percent: revenueSummary.rosterRate })}</span>
                   </div>
                </div>
             </div>
@@ -549,68 +540,28 @@ export default function PerformancePage() {
 
       </div>
 
-      {/* 5. METHODOLOGY & FORMULA REFERENCE */}
-      <section className="bg-pits-surface-elevated border border-pits-edge rounded-[2.5rem] p-8 md:p-12 text-pits-text relative overflow-hidden mt-12 shadow-sm">
-        <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12">
-          <Zap size={200} />
-        </div>
-        
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-10 border-b border-pits-edge pb-6">
-            <div className="p-3 bg-pits-red rounded-2xl shadow-lg shadow-pits-red/20">
-              <Target size={24} className="text-pits-red" />
+      {/* How the numbers are calculated */}
+      <details className="group rounded-2xl border border-pits-edge bg-pits-surface-elevated">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-semibold text-pits-text">
+          {t('How these numbers are calculated')}
+          <span className="text-pits-dim transition-transform group-open:rotate-180" aria-hidden>⌄</span>
+        </summary>
+        <dl className="grid gap-4 border-t border-pits-edge px-5 py-4 text-sm sm:grid-cols-2">
+          {([
+            ['Active Athlete', 'Formula active athlete'],
+            ['At Risk Status', 'Formula at risk'],
+            ['Rev per Employee (RPAA)', 'Formula revenue per athlete'],
+            ['Revenue per Class', 'Formula revenue per class'],
+            ['Coach Trend Logic', 'Formula coach trend'],
+            ['Occupancy Rate', 'Formula occupancy'],
+          ] as const).map(([term, detail]) => (
+            <div key={term}>
+              <dt className="font-semibold text-pits-text">{t(term)}</dt>
+              <dd className="mt-0.5 text-xs text-pits-dim">{t(detail)}</dd>
             </div>
-            <div>
-              <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">{t('Intelligence Methodology')}</h2>
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-pits-dim mt-1">{t('Proprietary operational formulas')}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
-            <div className="space-y-6">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-red border-l-2 border-pits-red pl-4">{t('Athlete Segmentation')}</h3>
-              <div className="space-y-4">
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('Active Athlete')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">Attendance ≥ 1 session in last 7 days + Solvent membership status.</p>
-                </div>
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('At Risk Status')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">Zero attendance for 7–13 days OR 50% drop in weekly frequency.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-red border-l-2 border-pits-red pl-4">{t('Financial Efficiency')}</h3>
-              <div className="space-y-4">
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('Rev per Employee (RPAA)')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">Total Revenue / Active Athlete Count. Measures real engagement value.</p>
-                </div>
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('Revenue per Class')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">Total Monthly Revenue / Total Classes Held. Measures schedule ROI.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-red border-l-2 border-pits-red pl-4">{t('Performance Quality')}</h3>
-              <div className="space-y-4">
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('Coach Trend Logic')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">(Current Week Avg - Previous Week Avg) / Previous Week Avg. Requires min. 5 reviews.</p>
-                </div>
-                <div>
-                  <span className="block text-xs font-black uppercase text-pits-text mb-1">{t('Occupancy Rate')}</span>
-                  <p className="text-[11px] leading-relaxed opacity-50 font-bold uppercase tracking-tight">Booked capacity vs available slots. Verified by check-in data.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+          ))}
+        </dl>
+      </details>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }

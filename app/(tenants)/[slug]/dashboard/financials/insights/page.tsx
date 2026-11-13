@@ -16,6 +16,7 @@ import {
 import { formatDate, formatDateTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 import { useToast } from '@/components/Toast';
 import type { TranslationKey } from '@/lib/translations';
 import {
@@ -78,7 +79,8 @@ const OUTCOME_LABELS: Record<string, TranslationKey> = {
 
 function interventionCopy(
   item: RescueIntervention,
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string,
+  symbol: string,
 ) {
   const evidence = item.evidence || {};
   switch (item.signal_key) {
@@ -87,7 +89,7 @@ function interventionCopy(
         title: t('Membership revenue at risk'),
         explanation: t(
           'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.',
-          { amount: Number(evidence.planValue ?? item.monthly_value).toFixed(0) }
+          { amount: `${symbol}${Number(evidence.planValue ?? item.monthly_value).toFixed(0)}` }
         ),
         suggestedAction: t('Offer payment help or a temporary plan alternative.'),
       };
@@ -95,7 +97,7 @@ function interventionCopy(
       return {
         title: t('Registration fee pending'),
         explanation: t('${{amount}} registration fee remains unpaid.', {
-          amount: Number(evidence.registrationFee ?? item.monthly_value).toFixed(0),
+          amount: `${symbol}${Number(evidence.registrationFee ?? item.monthly_value).toFixed(0)}`,
         }),
         suggestedAction: t(
           'Confirm the payment method and agree on a payment date.'
@@ -179,7 +181,8 @@ const PRIORITY_TONE: Record<RescuePriority, BadgeTone> = {
 };
 
 export default function FinancialInsightsPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, currencies } = useTenant();
+  const symbol = currencySymbol(currencies.reference);
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [interventions, setInterventions] = useState<RescueIntervention[]>([]);
@@ -376,14 +379,14 @@ export default function FinancialInsightsPage() {
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
           label={t('Monthly revenue at risk')}
-          value={`$${summary.openRevenueAtRisk.toLocaleString()}`}
+          value={`${symbol}${summary.openRevenueAtRisk.toLocaleString()}`}
           detail={t('{{count}} open actions', { count: summary.openCount })}
           icon={AlertCircle}
           tone="danger"
         />
         <MetricCard
           label={t('Revenue recovered')}
-          value={`$${summary.recoveredRevenue.toLocaleString()}`}
+          value={`${symbol}${summary.recoveredRevenue.toLocaleString()}`}
           detail={t('{{count}} returned to class', { count: summary.returnedCount })}
           icon={DollarSign}
           tone="success"
@@ -459,7 +462,7 @@ export default function FinancialInsightsPage() {
       ) : (
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {visible.map((item) => {
-            const copy = interventionCopy(item, t);
+            const copy = interventionCopy(item, t, symbol);
             const outcomeKey = item.outcome_type || '';
             const outcomeLabel = OUTCOME_LABELS[outcomeKey]
               ? t(OUTCOME_LABELS[outcomeKey])
@@ -487,7 +490,7 @@ export default function FinancialInsightsPage() {
                 </div>
                 <div className="shrink-0 sm:text-right">
                   <p className="text-xl sm:text-2xl font-black italic text-pits-text break-all leading-none">
-                    ${Number(item.monthly_value).toLocaleString()}
+                    {symbol}{Number(item.monthly_value).toLocaleString()}
                   </p>
                   <p className="mt-1 text-[11px] font-black uppercase tracking-widest text-pits-dim">
                     {t('MRR at risk')}

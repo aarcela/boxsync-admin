@@ -982,7 +982,7 @@ export const translations = {
     Escalated: 'Escalated',
     Urgent: 'Urgent',
     Member: 'Member',
-    'MRR at risk': 'MRR at risk',
+    'MRR at risk': 'per month at risk',
     WhatsApp: 'WhatsApp',
     History: 'History',
     'View history': 'View history',
@@ -999,19 +999,19 @@ export const translations = {
     'Membership renewed': 'Membership renewed',
     'Membership revenue at risk': 'Membership revenue at risk',
     'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.':
-      'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.',
+      'Access is inactive and approximately {{amount}} in monthly revenue is at risk.',
     'Offer payment help or a temporary plan alternative.':
       'Offer payment help or a temporary plan alternative.',
     'Registration fee pending': 'Registration fee pending',
     '${{amount}} registration fee remains unpaid.':
-      '${{amount}} registration fee remains unpaid.',
+      '{{amount}} registration fee remains unpaid.',
     'Confirm the payment method and agree on a payment date.':
       'Confirm the payment method and agree on a payment date.',
     'First 90 days need attention': 'First 90 days need attention',
     'Day {{days}} member is averaging {{visits}} visits/week.':
       'Day {{days}} member is averaging {{visits}} visits/week.',
     'Assign a coach check-in and book the next suitable class.':
-      'Assign a {{coach}} check-in and book the next suitable {session}.',
+      'Assign a {coach} check-in and book the next suitable {session}.',
     'Attendance momentum dropped': 'Attendance momentum dropped',
     '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.':
       '{{days}} days since the last attended {session}; weekly frequency is down {{percent}}%.',
@@ -1894,6 +1894,14 @@ export const translations = {
     'Try again': 'Try again',
     Menu: 'Menu',
     Tomorrow: 'Tomorrow',
+    '{{percent}}% of members': '{{percent}}% of {members}',
+    'How these numbers are calculated': 'How these numbers are calculated',
+    'Formula active athlete': 'Came to at least 1 class in the last 7 days and is up to date with payment.',
+    'Formula at risk': 'No visits for 7–13 days, or weekly visits dropped by half.',
+    'Formula revenue per athlete': 'Revenue for the period divided by active members.',
+    'Formula revenue per class': 'Monthly revenue divided by classes held.',
+    'Formula coach trend': 'This week\'s average rating vs last week\'s. Needs at least 5 ratings.',
+    'Formula occupancy': 'Booked spots out of available spots, confirmed with check-ins.',
     'ID: {{id}} (set automatically, cannot change later)': 'ID: {{id}} (set automatically, cannot change later)',
     'Price ({{currency}})': 'Price ({{currency}})',
     'Prices are in {{currency}}. Local payment methods convert them with your exchange rate.': 'Prices are in {{currency}}. Local payment methods convert them with your exchange rate.',
@@ -3099,7 +3107,7 @@ export const translations = {
     Escalated: 'Escalado',
     Urgent: 'Urgente',
     Member: 'Miembro',
-    'MRR at risk': 'MRR en riesgo',
+    'MRR at risk': 'al mes en riesgo',
     WhatsApp: 'WhatsApp',
     History: 'Historial',
     'View history': 'Ver historial',
@@ -3116,19 +3124,19 @@ export const translations = {
     'Membership renewed': 'Membresía renovada',
     'Membership revenue at risk': 'Ingreso de membresía en riesgo',
     'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.':
-      'El acceso está inactivo y aproximadamente ${{amount}} de ingreso mensual está en riesgo.',
+      'El acceso está inactivo y aproximadamente {{amount}} de ingreso mensual está en riesgo.',
     'Offer payment help or a temporary plan alternative.':
       'Ofrece ayuda de pago o una alternativa temporal de plan.',
     'Registration fee pending': 'Cuota de inscripción pendiente',
     '${{amount}} registration fee remains unpaid.':
-      'Queda pendiente ${{amount}} de la cuota de inscripción.',
+      'Queda pendiente {{amount}} de la cuota de inscripción.',
     'Confirm the payment method and agree on a payment date.':
       'Confirma el método de pago y acuerda una fecha de pago.',
     'First 90 days need attention': 'Los primeros 90 días necesitan atención',
     'Day {{days}} member is averaging {{visits}} visits/week.':
       'El miembro en el día {{days}} promedia {{visits}} visitas/semana.',
     'Assign a coach check-in and book the next suitable class.':
-      'Asigna un check-in de {{coach}} y reserva la próxima {session} adecuada.',
+      'Asigna un check-in de {coach} y reserva la próxima {session} adecuada.',
     'Attendance momentum dropped': 'Cayó el ritmo de asistencia',
     '{{days}} days since the last attended class; weekly frequency is down {{percent}}%.':
       '{{days}} días desde la última {session} asistida; la frecuencia semanal bajó {{percent}}%.',
@@ -4016,6 +4024,14 @@ export const translations = {
     'Try again': 'Reintentar',
     Menu: 'Menú',
     Tomorrow: 'Mañana',
+    '{{percent}}% of members': '{{percent}}% de los miembros',
+    'How these numbers are calculated': 'Cómo se calculan estos números',
+    'Formula active athlete': 'Vino al menos a 1 clase en los últimos 7 días y está al día con el pago.',
+    'Formula at risk': 'Sin venir de 7 a 13 días, o bajó a la mitad sus visitas semanales.',
+    'Formula revenue per athlete': 'Ingresos del período divididos entre los miembros activos.',
+    'Formula revenue per class': 'Ingresos del mes divididos entre las clases dictadas.',
+    'Formula coach trend': 'Calificación promedio de esta semana vs la anterior. Necesita al menos 5 calificaciones.',
+    'Formula occupancy': 'Cupos reservados sobre cupos disponibles, confirmado con el check-in.',
     'ID: {{id}} (set automatically, cannot change later)': 'ID: {{id}} (automático, no se puede cambiar después)',
     'Price ({{currency}})': 'Precio ({{currency}})',
     'Prices are in {{currency}}. Local payment methods convert them with your exchange rate.': 'Los precios están en {{currency}}. Los métodos de pago locales los convierten con tu tasa.',
