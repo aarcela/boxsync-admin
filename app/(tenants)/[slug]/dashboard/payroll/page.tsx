@@ -16,6 +16,7 @@ import {
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
 import { payrollService } from '@/lib/services/payrollService';
 import { coachSalaryService } from '@/lib/services/coachSalaryService';
@@ -42,10 +43,10 @@ import {
   weekdayIndex,
 } from '@/lib/utils/date';
 
-const START_HOUR = 5;
-const END_HOUR = 21;
+/** Default visible range; it stretches so early or late classes are never hidden. */
+const DEFAULT_START_HOUR = 5;
+const DEFAULT_END_HOUR = 21;
 const SLOT_HEIGHT = 56;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
 const dateFieldClass =
   'relative min-w-0 w-full h-full bg-transparent border-none text-xs font-black uppercase text-pits-text outline-none cursor-pointer appearance-none [color-scheme:light] [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0 [&::-webkit-datetime-edit-text]:p-0 [&::-webkit-date-and-time-value]:min-h-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
@@ -116,7 +117,8 @@ function blockStyles(status: PayrollClassStatus) {
 export default function PayrollPage() {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
-  const { timezone: tz } = useTenant();
+  const { timezone: tz, currencies } = useTenant();
+  const symbol = currencySymbol(currencies.reference);
   const locale = lang === 'es' ? 'es' : 'en-US';
   const formatDay = useCallback(
     (dateStr: string, opts: Intl.DateTimeFormatOptions) => formatGymDay(dateStr, opts, locale, tz),
@@ -357,11 +359,26 @@ export default function PayrollPage() {
 
   const showHourCalendar = calendarDays.length <= 7;
   const today = getGymDate(new Date(), tz);
+  const { START_HOUR, END_HOUR, HOURS } = useMemo(() => {
+    let start = DEFAULT_START_HOUR;
+    let end = DEFAULT_END_HOUR;
+    for (const cls of classes) {
+      const startMin = getGymMinutesSince(cls.start_time, 0, tz);
+      const endMin = startMin + classDurationMinutes(cls.start_time, cls.end_time);
+      start = Math.min(start, Math.floor(startMin / 60));
+      end = Math.max(end, Math.min(23, Math.ceil(endMin / 60) - 1));
+    }
+    return {
+      START_HOUR: start,
+      END_HOUR: end,
+      HOURS: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+    };
+  }, [classes, tz]);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const coachReports = useMemo(
-    () => buildCoachPayrollReports(classes, periodLabel),
-    [classes, periodLabel]
+    () => buildCoachPayrollReports(classes, periodLabel, currencies.reference, tz),
+    [classes, periodLabel, currencies.reference, tz]
   );
 
   const handleExportPdf = async () => {
@@ -937,7 +954,7 @@ export default function PayrollPage() {
                           {t('Status')}
                         </th>
                         <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
-                          {t('Pay (USD)')}
+                          {t('Pay ({{currency}})', { currency: currencies.reference })}
                         </th>
                         <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Actions')}
@@ -999,7 +1016,7 @@ export default function PayrollPage() {
                             <td className="px-4 py-3 text-xs font-black">
                               {cls.payrollStatus === 'confirmed' ? (
                                 cls.payRateUsd != null ? (
-                                  `$${cls.payRateUsd.toFixed(2)}`
+                                  `${symbol}${cls.payRateUsd.toFixed(2)}`
                                 ) : (
                                   <span className="text-[11px] text-pits-dim uppercase">
                                     {t('No rate')}
@@ -1043,10 +1060,10 @@ export default function PayrollPage() {
                     </div>
                     <div className="flex justify-between items-center p-3 bg-pits-primary-soft rounded-2xl border border-pits-success/30">
                       <span className="text-[11px] font-bold text-pits-success uppercase">
-                        {t('Total Payroll (USD)')}
+                        {t('Total Payroll ({{currency}})', { currency: currencies.reference })}
                       </span>
                       <span className="text-lg font-black text-pits-success">
-                        ${summary.totalPayroll.toFixed(2)}
+                        {symbol}{summary.totalPayroll.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -1072,7 +1089,7 @@ export default function PayrollPage() {
                           {report.coachName}
                         </span>
                         <span className="text-xs font-black text-pits-success shrink-0">
-                          ${report.totalUsd.toFixed(2)}
+                          {symbol}{report.totalUsd.toFixed(2)}
                         </span>
                         <button
                           type="button"
@@ -1156,7 +1173,7 @@ export default function PayrollPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-[11px] font-bold uppercase">
-                    <span className="text-pits-dim">{t('Pay (USD)')}</span>
+                    <span className="text-pits-dim">{t('Pay ({{currency}})', { currency: currencies.reference })}</span>
                     <span className="text-pits-success font-black">
                       {selectedClass.payrollStatus === 'confirmed'
                         ? selectedClass.payRateUsd != null

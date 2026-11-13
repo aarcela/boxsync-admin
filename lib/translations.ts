@@ -1320,7 +1320,7 @@ export const translations = {
     'Coach Salaries': '{Coach} Salaries',
     'Admin Only': 'Admin Only',
     'Manage pay tiers and coach salary assignments':
-      'Manage pay tiers and {{coach}} salary assignments',
+      'Manage pay tiers and {coach} salary assignments',
     'Only admins can manage coach salaries.': 'Only admins can manage {coach} salaries.',
     'Failed to load salary configuration': 'Failed to load salary configuration',
     'Add Pay Tier': 'Add Pay Tier',
@@ -1350,16 +1350,16 @@ export const translations = {
     'Rate per Class (USD)': 'Rate per {Session} (USD)',
     'Confirm Tier': 'Confirm Tier',
     'Define per-class pay rates by tier and assign each coach to a tier.':
-      'Define per-{session} pay rates by tier and assign each {{coach}} to a tier.',
+      'Define per-{session} pay rates by tier and assign each {coach} to a tier.',
     'Total Tiers': 'Total Tiers',
     'Assigned Coaches': 'Assigned Coaches',
     'Set a USD rate for each class type within every pay tier.':
       'Set a USD rate for each {session} type within every pay tier.',
     'Unassign a coach by selecting Unassigned in the tier dropdown.':
-      'Unassign a {{coach}} by selecting Unassigned in the tier dropdown.',
+      'Unassign a {coach} by selecting Unassigned in the tier dropdown.',
     Payroll: 'Payroll',
     'Review class payroll and coach compensation':
-      'Review {session} payroll and {{coach}} compensation',
+      'Review {session} payroll and {coach} compensation',
     'Only admins can manage payroll.': 'Only admins can manage payroll.',
     'Failed to load payroll data': 'Failed to load payroll data',
     'Payroll status updated': 'Payroll status updated',
@@ -1400,7 +1400,7 @@ export const translations = {
     'Payroll emails sent': 'Payroll emails sent',
     'Failed to send payroll emails': 'Failed to send payroll emails',
     'No emails sent. Check coach email addresses.':
-      'No emails sent. Check {{coach}} email addresses.',
+      'No emails sent. Check {coach} email addresses.',
     skipped: 'skipped',
     failed: 'failed',
     'Delete failed': 'Delete failed',
@@ -1894,6 +1894,10 @@ export const translations = {
     'Try again': 'Try again',
     Menu: 'Menu',
     Tomorrow: 'Tomorrow',
+    'Total Payroll ({{currency}})': 'Total payroll ({{currency}})',
+    'Pay ({{currency}})': 'Pay ({{currency}})',
+    'Set a rate in {{currency}} for each class type within every pay tier.': 'Set a rate in {{currency}} for each {session} type within every pay tier.',
+    'Rate per class ({{currency}})': 'Rate per {session} ({{currency}})',
     '{{percent}}% of members': '{{percent}}% of {members}',
     'How these numbers are calculated': 'How these numbers are calculated',
     'Formula active athlete': 'Came to at least 1 class in the last 7 days and is up to date with payment.',
@@ -3478,13 +3482,13 @@ export const translations = {
     'Rate per Class (USD)': 'Tarifa por {Session} (USD)',
     'Confirm Tier': 'Confirmar Nivel',
     'Define per-class pay rates by tier and assign each coach to a tier.':
-      'Define tarifas por {session} según el nivel y asigna cada {{coach}} a un nivel.',
+      'Define tarifas por {session} según el nivel y asigna cada {coach} a un nivel.',
     'Total Tiers': 'Niveles Totales',
     'Assigned Coaches': 'Coaches Asignados',
     'Set a USD rate for each class type within every pay tier.':
       'Establece una tarifa en USD para cada tipo de {session} en cada nivel de pago.',
     'Unassign a coach by selecting Unassigned in the tier dropdown.':
-      'Desasigna un {{coach}} seleccionando Sin asignar en el menú de nivel.',
+      'Desasigna un {coach} seleccionando Sin asignar en el menú de nivel.',
     Payroll: 'Nómina',
     'Review class payroll and coach compensation':
       'Revisa la nómina de clases y compensación de coaches',
@@ -4024,6 +4028,10 @@ export const translations = {
     'Try again': 'Reintentar',
     Menu: 'Menú',
     Tomorrow: 'Mañana',
+    'Total Payroll ({{currency}})': 'Nómina total ({{currency}})',
+    'Pay ({{currency}})': 'Pago ({{currency}})',
+    'Set a rate in {{currency}} for each class type within every pay tier.': 'Establece una tarifa en {{currency}} para cada tipo de {session} en cada nivel de pago.',
+    'Rate per class ({{currency}})': 'Tarifa por {session} ({{currency}})',
     '{{percent}}% of members': '{{percent}}% de los miembros',
     'How these numbers are calculated': 'Cómo se calculan estos números',
     'Formula active athlete': 'Vino al menos a 1 clase en los últimos 7 días y está al día con el pago.',

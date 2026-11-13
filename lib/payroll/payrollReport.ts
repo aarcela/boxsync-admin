@@ -1,9 +1,10 @@
 import type { PayrollClass } from '@/lib/types/gym';
 import {
-  getCaracasDateFromIso,
-  getCaracasTimeLabel,
   getCaracasWeekRange,
+  getGymDateFromIso,
+  getGymTimeLabel,
 } from '@/lib/utils/date';
+import { DEFAULT_GYM_TIMEZONE } from '@/lib/gym-timezone';
 
 export interface PayrollClassLine {
   date: string;
@@ -19,11 +20,15 @@ export interface CoachPayrollReport {
   periodLabel: string;
   lines: PayrollClassLine[];
   totalUsd: number;
+  /** Currency code the rates are set in (the gym's reference currency). */
+  currency: string;
 }
 
 export function buildCoachPayrollReports(
   classes: PayrollClass[],
-  periodLabel: string
+  periodLabel: string,
+  currency = 'USD',
+  tz: string = DEFAULT_GYM_TIMEZONE,
 ): CoachPayrollReport[] {
   const byCoach: Record<string, CoachPayrollReport> = {};
 
@@ -39,13 +44,14 @@ export function buildCoachPayrollReports(
           periodLabel,
           lines: [],
           totalUsd: 0,
+          currency,
         };
       }
 
       const rate = c.payRateUsd ?? 0;
       byCoach[coachId].lines.push({
-        date: getCaracasDateFromIso(c.start_time),
-        time: getCaracasTimeLabel(c.start_time),
+        date: getGymDateFromIso(c.start_time, tz),
+        time: getGymTimeLabel(c.start_time, tz),
         classType: c.class_type,
         rateUsd: rate,
       });

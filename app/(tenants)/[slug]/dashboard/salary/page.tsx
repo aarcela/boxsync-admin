@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
 import { classTypeService } from '@/lib/services/classTypeService';
@@ -41,6 +42,7 @@ function emptyRates(typeNames: string[]): Record<string, string> {
 export default function SalaryPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { currencies } = useTenant();
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -523,7 +525,7 @@ export default function SalaryPage() {
                 <li className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
                   <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
-                    {t('Set a USD rate for each class type within every pay tier.')}
+                    {t('Set a rate in {{currency}} for each class type within every pay tier.', { currency: currencies.reference })}
                   </p>
                 </li>
                 <li className="flex gap-3">
@@ -592,7 +594,7 @@ export default function SalaryPage() {
 
                 <div className="space-y-3">
                   <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
-                    {t('Rate per Class (USD)')}
+                    {t('Rate per class ({{currency}})', { currency: currencies.reference })}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {classTypeNames.map((classType) => (
