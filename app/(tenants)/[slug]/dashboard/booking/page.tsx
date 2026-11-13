@@ -147,7 +147,7 @@ function CloseWindowEditor({
                 onCustomActiveChange(false);
                 onChange(m);
               }}
-              className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+              className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
                 active
                   ? 'bg-pits-primary text-pits-dark-text'
                   : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -161,7 +161,7 @@ function CloseWindowEditor({
           type="button"
           disabled={disabled}
           onClick={() => onCustomActiveChange(true)}
-          className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+          className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
             customActive
               ? 'bg-pits-primary text-pits-dark-text'
               : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -276,7 +276,7 @@ function ReminderEditor({
                 onCustomActiveChange(false);
                 onChange(m);
               }}
-              className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+              className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
                 active
                   ? 'bg-pits-primary text-pits-dark-text'
                   : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -290,7 +290,7 @@ function ReminderEditor({
           type="button"
           disabled={disabled}
           onClick={() => onCustomActiveChange(true)}
-          className={`rounded-full px-3 py-1.5 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+          className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
             customActive
               ? 'bg-pits-primary text-pits-dark-text'
               : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'

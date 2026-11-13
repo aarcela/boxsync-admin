@@ -340,7 +340,7 @@ export default function FeedbackPage() {
              <div className="flex items-center gap-1 bg-pits-ink/5 border border-pits-edge rounded-lg p-1">
                 <button
                   onClick={() => { setFilterRating(null); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-md text-[11px] font-black uppercase transition-all ${
+                  className={`px-3 min-h-9 rounded-md text-[11px] font-black uppercase transition-all ${
                     filterRating === null ? 'bg-pits-surface-elevated text-pits-text' : 'text-pits-dim hover:text-pits-text'
                   }`}
                 >
@@ -350,7 +350,7 @@ export default function FeedbackPage() {
                   <button
                     key={r}
                     onClick={() => { setFilterRating(r); setCurrentPage(1); }}
-                    className={`px-2 py-1 rounded-md text-[11px] font-black flex items-center gap-1 transition-all ${
+                    className={`px-2.5 min-h-9 rounded-md text-[11px] font-black flex items-center gap-1 transition-all ${
                       filterRating === r ? 'bg-pits-surface-elevated text-pits-text font-black' : 'text-pits-dim hover:text-pits-text font-bold'
                     }`}
                   >

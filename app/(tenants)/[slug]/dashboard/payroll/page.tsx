@@ -538,11 +538,8 @@ export default function PayrollPage() {
             <h1 className="page-title">
               {t('Payroll')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[11px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
-              {t('Admin Only')}
-            </div>
           </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
+          <p className="page-subtitle">
             {t('Review class payroll and coach compensation')}
           </p>
           {!isAdmin && callerRole && (

@@ -369,7 +369,7 @@ export default function FinancialInsightsPage() {
           type="button"
           disabled={loading}
           onClick={() => void loadData()}
-          className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[11px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
+          className="inline-flex h-9 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[11px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           {t('Refresh signals')}

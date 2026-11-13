@@ -371,7 +371,7 @@ export default function PerformancePage() {
                            if (a.phone) window.open(`https://wa.me/${a.phone.replace(/\D/g, '')}`, '_blank');
                            else toast(t('No phone on file'), 'warning');
                          }}
-                         className="px-3 py-1.5 bg-pits-panel text-pits-text text-[11px] font-black uppercase rounded-lg hover:bg-pits-primary hover:text-pits-dark-text transition-all"
+                         className="px-3 min-h-9 bg-pits-panel text-pits-text text-[11px] font-black uppercase rounded-lg hover:bg-pits-primary hover:text-pits-dark-text transition-all"
                        >
                          {t('Contact')}
                        </button>

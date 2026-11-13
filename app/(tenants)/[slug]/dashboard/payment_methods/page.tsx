@@ -8,11 +8,9 @@ import {
   Wallet, 
   CheckCircle2, 
   XCircle,
-  MoreVertical,
   Search,
   Zap,
   Info,
-  CreditCard
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
@@ -498,77 +496,64 @@ export default function PaymentMethodsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-pits-surface-elevated">
-                  <tr>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Currency')}</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Status')}</th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-pits-edge">
-                  {loading ? (
-                    <tr><td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">{t('Initializing Data Stream...')}</td></tr>
-                  ) : filteredMethods.map(method => (
-                    <tr key={method.id} className="hover:bg-pits-surface-elevated transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl ${method.is_active ? 'bg-pits-surface-muted text-pits-text' : 'bg-pits-surface-muted text-pits-dim'}`}>
-                            <CreditCard size={16} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-pits-text uppercase tracking-tight">{method.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[11px] font-black uppercase bg-pits-surface-muted text-pits-dim border border-pits-edge">
-                                {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-pits-dim font-medium truncate max-w-[200px]">{methodSummary(method)}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[11px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
-                          {method.currency === currencies.reference
-                            ? `${t('Reference')} · ${method.currency}`
-                            : `${t('Local')} · ${method.currency}`}
+            {loading ? (
+              <div className="divide-y divide-pits-edge" aria-busy="true">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
+                    <div className="h-3 w-40 rounded bg-pits-surface-muted" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredMethods.length === 0 ? (
+              <p className="px-4 py-12 text-center text-sm text-pits-dim">{t('No records found.')}</p>
+            ) : (
+              <ul className="divide-y divide-pits-edge">
+                {filteredMethods.map((method) => (
+                  <li key={method.id} className={`flex items-center gap-3 pl-4 pr-2 py-3 ${method.is_active ? '' : 'opacity-60'}`}>
+                    <button type="button" onClick={() => handleOpenForm(method)} className="min-w-0 flex-1 text-left">
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="truncate text-sm font-semibold text-pits-text">{method.label}</span>
+                        <span className="text-xs text-pits-dim">
+                          {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])} ·{' '}
+                          {method.currency === currencies.reference ? t('Reference') : t('Local')} {method.currency}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => handleToggleStatus(method)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${method.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                        >
-                          {method.is_active ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
-                          {method.is_active ? t('Active') : t('Inactive')}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button 
-                            onClick={() => handleOpenForm(method)}
-                            className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-all"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => setMethodToDelete(method.id)}
-                            className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-primary-soft rounded-lg transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!loading && filteredMethods.length === 0 && (
-                    <tr><td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase">{t('No records found.')}</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      </span>
+                      <span className="block truncate text-xs text-pits-dim">{methodSummary(method)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={method.is_active}
+                      onClick={() => handleToggleStatus(method)}
+                      className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                        method.is_active
+                          ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                          : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                      }`}
+                    >
+                      {method.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                      {method.is_active ? t('Active') : t('Inactive')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenForm(method)}
+                      aria-label={t('Edit')}
+                      className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMethodToDelete(method.id)}
+                      aria-label={t('Delete')}
+                      className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

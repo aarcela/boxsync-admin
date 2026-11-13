@@ -8,12 +8,10 @@ import {
   Trash2, 
   MessageSquare, 
   Heart, 
-  Calendar, 
   User as UserIcon,
   Filter,
   RefreshCw,
   Eye,
-  Image as ImageIcon,
   Trophy,
   Dumbbell,
   Megaphone,
@@ -163,136 +161,86 @@ export default function CommunityPage() {
 
       {/* Posts Table */}
       <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-pits-surface-elevated border-b border-pits-edge">
-              <tr>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('User')}</th>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Content')}</th>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Type')}</th>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Stats')}</th>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">{t('Date')}</th>
-                <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-pits-edge">
-              {filteredPosts.map((post) => (
-                <tr key={post.id} className="group hover:bg-pits-surface-elevated transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-pits-surface-muted border-2 border-white shadow-sm">
-                        {post.profiles?.avatar_url ? (
-                          <Image 
-                            src={post.profiles.avatar_url} 
-                            alt={post.profiles.full_name || ''} 
-                            fill 
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-pits-dim">
-                            <UserIcon size={20} />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-pits-text">
-                          {post.profiles?.full_name || t('Unknown Athlete')}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="max-w-xs md:max-w-md">
-                      <p className="text-sm text-pits-text line-clamp-2 leading-relaxed">
-                        {post.content}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {post.type === 'wod_share' && post.metadata?.score && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-red/10 text-pits-red rounded-md font-black text-[11px] uppercase tracking-wider">
-                            <TrendingUp size={10} />
-                            {t('Score')}: {post.metadata.score}
-                          </div>
-                        )}
-                        {post.media_url && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-pits-surface-muted text-pits-dim rounded-md font-bold text-[11px] uppercase tracking-wider">
-                            <ImageIcon size={10} />
-                            {t('Attached Media')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-pits-surface-muted rounded-full w-fit">
-                      {getPostIcon(post.type)}
-                      <span className="text-[11px] font-black text-pits-text uppercase tracking-tight">
-                        {t(post.type)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-4 text-pits-dim">
-                      <div className="flex items-center gap-1">
-                        <Heart size={14} className={post.likes_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
-                        <span className="text-xs font-bold">{post.likes_count || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare size={14} className={post.comments_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
-                        <span className="text-xs font-bold">{post.comments_count || 0}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-pits-dim">
-                      <Calendar size={14} />
-                      <span className="text-xs font-medium">
-                        {formatDate(post.created_at, lang)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {post.media_url && (
-                        <a 
-                          href={post.media_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
-                          title={t('View Media')}
-                        >
-                          <Eye size={18} />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => setIsDeleting(post.id)}
-                        className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-red/5 rounded-lg transition-all"
-                        title={t('Delete Post')}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+        {/* One card per post: reads like the feed and works at any width. */}
+        <ul className="divide-y divide-pits-edge">
+          {filteredPosts.map((post) => (
+            <li key={post.id} className="flex gap-3 px-4 py-4 sm:px-5">
+              <div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden bg-pits-surface-muted border border-pits-edge">
+                {post.profiles?.avatar_url ? (
+                  <Image src={post.profiles.avatar_url} alt="" fill className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-pits-dim">
+                    <UserIcon size={18} />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold text-pits-text">
+                    {post.profiles?.full_name || t('Unknown Athlete')}
+                  </p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-pits-surface-muted px-2 py-0.5 text-[11px] font-semibold text-pits-dim">
+                    {getPostIcon(post.type)}
+                    {t(post.type)}
+                  </span>
+                  <span className="text-xs text-pits-dim">{formatDate(post.created_at, lang)}</span>
+                </div>
+                <p className="mt-1 text-sm text-pits-text line-clamp-3 leading-relaxed">{post.content}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-pits-dim">
+                  <span className="inline-flex items-center gap-1">
+                    <Heart size={14} className={post.likes_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
+                    {post.likes_count || 0}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageSquare size={14} className={post.comments_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
+                    {post.comments_count || 0}
+                  </span>
+                  {post.type === 'wod_share' && post.metadata?.score ? (
+                    <span className="inline-flex items-center gap-1 font-semibold text-pits-text">
+                      <TrendingUp size={12} />
+                      {t('Score')}: {post.metadata.score}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col items-center gap-1">
+                {post.media_url && (
+                  <a
+                    href={post.media_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-10 h-10 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                    aria-label={t('View Media')}
+                    title={t('View Media')}
+                  >
+                    <Eye size={18} />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsDeleting(post.id)}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                  aria-label={t('Delete Post')}
+                  title={t('Delete Post')}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
 
-              {filteredPosts.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 bg-pits-surface-muted rounded-full flex items-center justify-center text-pits-dim">
-                        <MessageSquare size={32} />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-base font-black text-pits-text uppercase tracking-tight">{t('No posts found')}</p>
-                        <p className="text-sm text-pits-dim font-medium">{t('Try changing your filter or check back later')}</p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {filteredPosts.length === 0 && !loading && (
+          <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+            <div className="w-14 h-14 bg-pits-surface-muted rounded-full flex items-center justify-center text-pits-dim">
+              <MessageSquare size={28} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-pits-text">{t('No posts found')}</p>
+              <p className="text-sm text-pits-dim">{t('Try changing your filter or check back later')}</p>
+            </div>
+          </div>
+        )}
 
         {hasMore && (
           <div className="p-6 border-t border-pits-edge flex justify-center">
