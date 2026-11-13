@@ -236,7 +236,7 @@ export default function PilotPage() {
         <button
           type="button"
           onClick={() => void copyCaseStudy()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[11px] font-black uppercase tracking-widest text-white hover:bg-pits-primary hover:text-pits-dark-text"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-pits-edge bg-pits-surface-elevated px-4 text-sm font-semibold text-pits-text shadow-sm hover:bg-pits-surface-muted"
         >
           <Clipboard size={15} />
           {lang === 'es' ? 'Copiar reporte' : 'Copy case-study report'}

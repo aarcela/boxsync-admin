@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Calendar, ChevronLeft, ChevronRight, Clock, Loader2, Trash2, User, Users } from 'lucide-react';
+import { capitalizeFirst, formatDateLong } from '@/lib/utils/format-date';
 import { classService } from '@/lib/services/classService';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
@@ -99,6 +101,14 @@ export default function ScheduleWeekCalendar({
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /** Class under the pointer and where its block is, for the details card. */
+  const [hovered, setHovered] = useState<{ cls: ClassSession; rect: DOMRect } | null>(null);
+  useEffect(() => {
+    if (!hovered) return;
+    const hide = () => setHovered(null);
+    window.addEventListener('scroll', hide, true);
+    return () => window.removeEventListener('scroll', hide, true);
+  }, [hovered]);
   const [bulkCoach, setBulkCoach] = useState('');
   const [bulkType, setBulkType] = useState('');
   const [bulkCapacity, setBulkCapacity] = useState('');
@@ -569,7 +579,9 @@ export default function ScheduleWeekCalendar({
                             left: `calc(${(lane / laneCount) * 100}% + 2px)`,
                             width: `calc(${100 / laneCount}% - 4px)`,
                           }}
-                          title={`${cls.class_type} · ${getGymTimeLabel(cls.start_time, tz)}`}
+                          aria-label={`${cls.class_type} · ${getGymTimeLabel(cls.start_time, tz)}`}
+                          onMouseEnter={(e) => setHovered({ cls, rect: e.currentTarget.getBoundingClientRect() })}
+                          onMouseLeave={() => setHovered((h) => (h?.cls.id === cls.id ? null : h))}
                         >
                           <input
                             type="checkbox"
@@ -609,6 +621,10 @@ export default function ScheduleWeekCalendar({
         {t('Click a slot to schedule · Use checkboxes to multi-select')}
       </p>
 
+      {hovered && typeof document !== 'undefined'
+        ? createPortal(<ClassHoverCard hovered={hovered} tz={tz} lang={lang} t={t} color={colorByName[hovered.cls.class_type]} />, document.body)
+        : null}
+
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         title={t('Cancel Class')}
@@ -630,6 +646,76 @@ export default function ScheduleWeekCalendar({
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
+    </div>
+  );
+}
+
+
+const CARD_WIDTH = 240;
+
+/** Everything about a class at a glance, shown next to its block on hover. */
+function ClassHoverCard({
+  hovered,
+  tz,
+  lang,
+  t,
+  color,
+}: {
+  hovered: { cls: ClassSession; rect: DOMRect };
+  tz: string;
+  lang: 'en' | 'es';
+  t: ReturnType<typeof useLanguage>['t'];
+  color?: string;
+}) {
+  const { cls, rect } = hovered;
+  const booked = cls.bookings[0]?.count ?? 0;
+  const waiting = cls.waitlist?.[0]?.count ?? 0;
+  const full = booked >= cls.max_capacity;
+  const pct = Math.min(100, (booked / Math.max(1, cls.max_capacity)) * 100);
+  const minutes = getDurationMinutes(cls.start_time, cls.end_time);
+  // Right of the block when there is room, otherwise left; keep inside the viewport vertically.
+  const left = rect.right + 8 + CARD_WIDTH < window.innerWidth ? rect.right + 8 : Math.max(8, rect.left - CARD_WIDTH - 8);
+  const top = Math.min(Math.max(8, rect.top), window.innerHeight - 220);
+
+  return (
+    <div
+      role="tooltip"
+      className="fixed z-[200] pointer-events-none rounded-xl border border-pits-edge bg-pits-surface-elevated p-3 shadow-xl text-pits-text"
+      style={{ left, top, width: CARD_WIDTH }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color || 'var(--color-pits-edge)' }} aria-hidden />
+        <p className="truncate text-sm font-bold">{cls.class_type}</p>
+      </div>
+      <p className="mt-0.5 text-xs text-pits-dim">{capitalizeFirst(formatDateLong(getGymDateFromIso(cls.start_time, tz), lang))}</p>
+      <dl className="mt-2 space-y-1.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Clock size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span>
+            {getGymTimeLabel(cls.start_time, tz)}–{getGymTimeLabel(cls.end_time, tz)}
+            <span className="text-pits-dim"> · {minutes} min</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <User size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span className={cls.coach?.full_name ? '' : 'font-semibold text-pits-warning'}>
+            {cls.coach?.full_name || t('No coach assigned')}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Users size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span className={full ? 'font-semibold text-pits-danger' : ''}>
+            {t('{{booked}} of {{capacity}} booked', { booked, capacity: cls.max_capacity })}
+            {full ? ` · ${t('Full')}` : ''}
+          </span>
+        </div>
+      </dl>
+      <div className="mt-2 h-1.5 rounded-full bg-pits-surface-muted overflow-hidden">
+        <div className={`h-full rounded-full ${full ? 'bg-pits-danger' : pct > 80 ? 'bg-pits-warning' : 'bg-pits-positive'}`} style={{ width: `${pct}%` }} />
+      </div>
+      {waiting > 0 ? (
+        <p className="mt-1.5 text-xs text-pits-dim">{t('{{count}} waiting', { count: waiting })}</p>
+      ) : null}
     </div>
   );
 }
