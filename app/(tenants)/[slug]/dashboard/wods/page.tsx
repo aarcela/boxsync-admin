@@ -10,24 +10,33 @@ import {
   addWeeks,
   format,
   isSameDay,
-  isToday,
   parseISO,
   startOfWeek,
   subWeeks,
 } from 'date-fns';
 import { 
-  Calendar, Save, Loader2, Dumbbell, Search, 
-  Eye, Zap, Scale, Sparkles, MoveRight, Lock, Pencil, Trash2,
+  Save, Loader2, Dumbbell, Search,
+  Eye, Zap, Scale, Sparkles, MoveRight, Trash2, Copy, CheckCircle2,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatDate, formatDateLong, formatDateShort, formatWeekdayShort } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
+import { getGymDate } from '@/lib/utils/date';
 
-function localDateKey(value = new Date()) {
-  return format(value, 'yyyy-MM-dd');
-}
+type WodFields = {
+  title: string;
+  warmUp: string;
+  technique: string;
+  strength: string;
+  metcon: string;
+  scaling: string;
+  stimulus: string;
+  scoreType: string;
+};
+
+const snapshotOf = (f: WodFields) => JSON.stringify(f);
 
 function errorText(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
@@ -75,13 +84,16 @@ function readWodContent(raw: string | null) {
 export default function WodEditorPage() {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
-  const { tenantId } = useTenant();
-  const [date, setDate] = useState(() => localDateKey());
+  const { tenantId, timezone } = useTenant();
+  // "Today" is the gym's calendar day, not the browser's.
+  const gymToday = getGymDate(new Date(), timezone);
+  const [date, setDate] = useState(() => getGymDate(new Date(), timezone));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<'edit' | 'preview'>('edit');
-  const [isLocked, setIsLocked] = useState(false);
-  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState('');
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
@@ -179,38 +191,26 @@ export default function WodEditorPage() {
         if (error) throw error;
 
         const content = readWodContent(data?.content ?? null);
-        if (!data) {
-          setWodId(null);
-          setTitle('');
-          setScoreType('none');
-          setIsLocked(false);
-          setView('edit');
-        } else {
-          setWodId(data.id);
-          setTitle(data.title || '');
-          setScoreType(data.score_type || 'none');
-          setIsLocked(true);
-          setView('preview');
-        }
-        setWarmUp(content.warm_up);
-        setTechnique(content.technique);
-        setStrength(content.strength);
-        setMetcon(content.metcon);
-        setScaling(content.scaling);
-        setStimulus(content.stimulus);
+        const loaded: WodFields = {
+          title: data?.title || '',
+          warmUp: content.warm_up,
+          technique: content.technique,
+          strength: content.strength,
+          metcon: content.metcon,
+          scaling: content.scaling,
+          stimulus: content.stimulus,
+          scoreType: data?.score_type || 'none',
+        };
+        setWodId(data?.id ?? null);
+        applyFields(loaded);
+        setSavedSnapshot(snapshotOf(loaded));
+        setView('edit');
       } catch (error) {
         if (cancelled) return;
         console.error('Error loading WOD:', error);
         setWodId(null);
-        setTitle('');
-        setWarmUp('');
-        setTechnique('');
-        setStrength('');
-        setMetcon('');
-        setScaling('');
-        setStimulus('');
-        setScoreType('none');
-        setIsLocked(false);
+        applyFields(EMPTY_FIELDS);
+        setSavedSnapshot(snapshotOf(EMPTY_FIELDS));
         setView('edit');
         toast(t('Failed to load workout'), 'error');
       } finally {
@@ -222,7 +222,70 @@ export default function WodEditorPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, tenantId]);
+
+  const currentFields: WodFields = { title, warmUp, technique, strength, metcon, scaling, stimulus, scoreType };
+  const dirty = !loading && snapshotOf(currentFields) !== savedSnapshot;
+
+  function applyFields(f: WodFields) {
+    setTitle(f.title);
+    setWarmUp(f.warmUp);
+    setTechnique(f.technique);
+    setStrength(f.strength);
+    setMetcon(f.metcon);
+    setScaling(f.scaling);
+    setStimulus(f.stimulus);
+    setScoreType(f.scoreType);
+  }
+
+  /** Switching day with unsaved edits asks first instead of silently dropping them. */
+  const goToDate = (next: string) => {
+    if (next === date) return;
+    if (dirty) {
+      setPendingDate(next);
+      return;
+    }
+    setDate(next);
+  };
+
+  /** Fill the form with the most recent workout before this day (not saved until Publish). */
+  const copyLastWorkout = async () => {
+    if (!tenantId) return;
+    setCopying(true);
+    try {
+      const { data, error } = await supabase
+        .from('wods')
+        .select('date, title, score_type, content')
+        .eq('tenant_id', tenantId)
+        .lt('date', date)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        toast(t('No earlier workout to copy.'), 'warning');
+        return;
+      }
+      const content = readWodContent(data.content);
+      applyFields({
+        title: data.title || '',
+        warmUp: content.warm_up,
+        technique: content.technique,
+        strength: content.strength,
+        metcon: content.metcon,
+        scaling: content.scaling,
+        stimulus: content.stimulus,
+        scoreType: data.score_type || 'none',
+      });
+      setView('edit');
+      toast(t('Copied from {{date}}. Review and publish.', { date: formatDateLong(parseISO(data.date), lang) }), 'success');
+    } catch (error) {
+      toast(`${t('Failed to load workout')}: ${errorText(error)}`, 'error');
+    } finally {
+      setCopying(false);
+    }
+  };
 
   const handleSave = async () => {
     if (saveLock.current) return;
@@ -246,16 +309,17 @@ export default function WodEditorPage() {
 
       const fields = {
         date: savedDate,
-        title: title.trim() || 'Daily WOD',
+        title: title.trim() || t('Daily WOD'),
         content: contentJson,
         score_type: scoreType,
       };
 
+      const savedFields = snapshotOf({ ...currentFields, title: fields.title });
       const applySaved = (id: string) => {
         if (dateRef.current !== savedDate) return;
         setWodId(id);
-        setView('preview');
-        setIsLocked(true);
+        setTitle(fields.title);
+        setSavedSnapshot(savedFields);
       };
 
       if (wodId) {
@@ -296,7 +360,7 @@ export default function WodEditorPage() {
       }
 
       setWeekVersion((version) => version + 1);
-      toast(t('Workout Published Successfully'), 'success');
+      toast(wodId ? t('Changes saved') : t('Workout Published Successfully'), 'success');
     } catch (error: unknown) {
       toast(`${t('Error saving WOD')}: ${errorText(error)}`, 'error');
     } finally {
@@ -305,25 +369,10 @@ export default function WodEditorPage() {
     }
   };
 
-  const requestUnlock = () => setEditConfirmOpen(true);
-
-  const handleConfirmEdit = () => {
-    setEditConfirmOpen(false);
-    setIsLocked(false);
-    setView('edit');
-  };
-
   const resetForm = () => {
     setWodId(null);
-    setTitle('');
-    setWarmUp('');
-    setTechnique('');
-    setStrength('');
-    setMetcon('');
-    setScaling('');
-    setStimulus('');
-    setScoreType('none');
-    setIsLocked(false);
+    applyFields(EMPTY_FIELDS);
+    setSavedSnapshot(snapshotOf(EMPTY_FIELDS));
     setView('edit');
   };
 
@@ -348,13 +397,51 @@ export default function WodEditorPage() {
     }
   };
 
-  const selectDay = (day: Date) => setDate(format(day, 'yyyy-MM-dd'));
-  const goToPrevWeek = () => setDate(format(subWeeks(selectedDate, 1), 'yyyy-MM-dd'));
-  const goToNextWeek = () => setDate(format(addWeeks(selectedDate, 1), 'yyyy-MM-dd'));
-  const goToToday = () => setDate(format(new Date(), 'yyyy-MM-dd'));
+  const selectDay = (day: Date) => goToDate(format(day, 'yyyy-MM-dd'));
+  const goToPrevWeek = () => goToDate(format(subWeeks(selectedDate, 1), 'yyyy-MM-dd'));
+  const goToNextWeek = () => goToDate(format(addWeeks(selectedDate, 1), 'yyyy-MM-dd'));
+  const goToToday = () => goToDate(gymToday);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-5 max-w-5xl mx-auto pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="page-title">{t('Daily workouts')}</h1>
+          <p className="page-subtitle flex flex-wrap items-center gap-x-2">
+            <span>{capitalize(formatDateLong(selectedDate, lang))}</span>
+            {wodId ? (
+              <span className="inline-flex items-center gap-1 text-pits-positive font-semibold">
+                <CheckCircle2 size={14} aria-hidden />
+                {t('Published in the app')}
+              </span>
+            ) : (
+              <span className="text-pits-dim">· {t('Not published yet')}</span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void copyLastWorkout()}
+            disabled={copying || loading}
+            className="inline-flex items-center gap-2 min-h-10 px-3 rounded-xl border border-pits-edge bg-pits-surface-elevated text-sm font-semibold text-pits-text hover:bg-pits-surface-muted disabled:opacity-50"
+          >
+            {copying ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+            {t('Copy last workout')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setView(view === 'edit' ? 'preview' : 'edit')}
+            aria-pressed={view === 'preview'}
+            className={`lg:hidden inline-flex items-center gap-2 min-h-10 px-3 rounded-xl border text-sm font-semibold ${
+              view === 'preview' ? 'bg-pits-text text-white border-pits-text' : 'bg-pits-surface-elevated border-pits-edge text-pits-text'
+            }`}
+          >
+            <Eye size={16} />
+            {t('Preview')}
+          </button>
+        </div>
+      </div>
 
       {/* WEEK CALENDAR */}
       <div className="bg-pits-surface-elevated p-4 sm:p-5 rounded-2xl border border-pits-edge shadow-sm">
@@ -387,7 +474,7 @@ export default function WodEditorPage() {
           {weekDays.map((day) => {
             const dayKey = format(day, 'yyyy-MM-dd');
             const selected = isSameDay(day, selectedDate);
-            const today = isToday(day);
+            const today = dayKey === gymToday;
             const hasWod = scheduledDates.has(dayKey);
 
             return (
@@ -418,7 +505,7 @@ export default function WodEditorPage() {
           })}
         </div>
 
-        {!isToday(selectedDate) && (
+        {date !== gymToday && (
           <div className="mt-3 flex justify-center">
             <button
               type="button"
@@ -431,44 +518,6 @@ export default function WodEditorPage() {
         )}
       </div>
       
-      {/* HEADER & DATE PICKER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-pits-red rounded-xl flex items-center justify-center text-pits-dark-text">
-            <Dumbbell className="text-pits-dark-text" size={24} />
-          </div>
-          <div>
-            <h1 className="page-title">
-              {t('Programming Center')}
-            </h1>
-            <p className="text-pits-dim font-medium text-xs flex items-center">
-              <Calendar size={12} className="mr-1" />
-              {t('Assigning workout for {{date}}', { date: formatDateLong(selectedDate, lang) })}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <div className="relative">
-            <input 
-              type="date" 
-              value={date}
-              onChange={(e) => {
-                if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) setDate(e.target.value);
-              }}
-              className="pl-4 pr-10 py-3 bg-pits-surface-muted border border-pits-edge rounded-xl font-bold text-pits-text focus:ring-2 focus:ring-pits-red/20 focus:border-pits-red outline-none shadow-sm transition-all"
-            />
-          </div>
-          <button 
-            onClick={() => setView(view === 'edit' ? 'preview' : 'edit')}
-            className={`p-3 rounded-xl border transition-all ${view === 'preview' ? 'bg-pits-panel text-pits-text' : 'bg-pits-surface-elevated text-pits-dim hover:bg-pits-surface-muted'}`}
-            title={t('Toggle Preview')}
-          >
-            <Eye size={20} />
-          </button>
-        </div>
-      </div>
-
       {loading ? (
         <div className="p-24 flex flex-col items-center justify-center text-pits-dim gap-4">
           <Loader2 size={40} className="animate-spin text-pits-red" />
@@ -479,37 +528,8 @@ export default function WodEditorPage() {
           
           {/* MAIN FORM: INPUTS */}
           <div className={`lg:col-span-7 space-y-6 relative ${view === 'preview' ? 'hidden lg:block' : 'block'}`}>
-            {isLocked && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-pits-primary-soft border border-pits-edge rounded-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-pits-primary-soft text-pits-primary rounded-xl flex items-center justify-center">
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-pits-text uppercase tracking-wide">{t('Workout published')}</p>
-                    <p className="text-xs text-pits-success font-medium">{t('Workout published lock message')}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={requestUnlock}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pits-surface-elevated border border-pits-edge text-pits-success rounded-xl font-black text-xs uppercase tracking-widest hover:bg-pits-primary-soft transition-all shrink-0"
-                >
-                  <Pencil size={14} />
-                  {t('Edit workout')}
-                </button>
-              </div>
-            )}
+            <div className="space-y-6">
 
-            <div
-              className={`space-y-6 ${isLocked ? 'pointer-events-none opacity-60 select-none' : ''}`}
-              onClick={isLocked ? requestUnlock : undefined}
-              role={isLocked ? 'button' : undefined}
-              tabIndex={isLocked ? 0 : undefined}
-              onKeyDown={isLocked ? (e) => { if (e.key === 'Enter' || e.key === ' ') requestUnlock(); } : undefined}
-              aria-label={isLocked ? t('Published workout click to edit') : undefined}
-            >
-            
             {/* Title & Score Type Block */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm overflow-hidden relative">
@@ -521,7 +541,7 @@ export default function WodEditorPage() {
                   type="text" 
                   value={title}
                   maxLength={200}
-                  disabled={isLocked}
+                  
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('WOD title placeholder')}
                   className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all placeholder:font-normal disabled:cursor-not-allowed"
@@ -539,7 +559,7 @@ export default function WodEditorPage() {
                 </label>
                 <select 
                   value={scoreType}
-                  disabled={isLocked}
+                  
                   onChange={(e) => setScoreType(e.target.value)}
                   className="w-full p-4 bg-pits-surface-muted border border-pits-edge rounded-xl font-black text-xl text-pits-text focus:bg-pits-surface-elevated focus:border-pits-red outline-none transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
@@ -558,7 +578,7 @@ export default function WodEditorPage() {
               icon={<Sparkles size={16} />}
               value={warmUp} 
               onChange={setWarmUp}
-              disabled={isLocked}
+              
               placeholder={t('Warm up placeholder')}
             />
 
@@ -585,14 +605,13 @@ export default function WodEditorPage() {
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-pits-dim" size={18} />
                 <input 
                   type="text"
-                  disabled={isLocked}
+                  
                   value={techniqueDropdownOpen ? techniqueSearch : technique}
                   onChange={(e) => {
                     setTechniqueSearch(e.target.value);
                     setTechniqueDropdownOpen(true);
                   }}
                   onFocus={() => {
-                    if (isLocked) return;
                     setTechniqueSearch('');
                     setTechniqueDropdownOpen(true);
                     void loadMovements();
@@ -641,7 +660,7 @@ export default function WodEditorPage() {
               icon={<Dumbbell size={16} />}
               value={strength} 
               onChange={setStrength}
-              disabled={isLocked}
+              
               placeholder={t('Strength placeholder')}
             />
 
@@ -652,7 +671,7 @@ export default function WodEditorPage() {
               icon={<Zap size={16} />}
               value={metcon} 
               onChange={setMetcon}
-              disabled={isLocked}
+              
               rows={8}
               placeholder={t('Metcon placeholder')}
             />
@@ -668,7 +687,7 @@ export default function WodEditorPage() {
                 </div>
                 <textarea 
                   value={stimulus}
-                  disabled={isLocked}
+                  
                   onChange={(e) => setStimulus(e.target.value)}
                   rows={3}
                   placeholder={t('Stimulus placeholder')}
@@ -687,7 +706,7 @@ export default function WodEditorPage() {
                 </p>
                 <textarea 
                   value={scaling}
-                  disabled={isLocked}
+                  
                   onChange={(e) => setScaling(e.target.value)}
                   rows={3}
                   placeholder={t('Scaling placeholder')}
@@ -715,7 +734,7 @@ export default function WodEditorPage() {
                     {title || t("TODAY'S WORKOUT")}
                   </div>
                   <div className="text-[11px] font-bold text-pits-dim tracking-widest uppercase">
-                    {selectedDate.toDateString()}
+                    {capitalize(formatDateLong(selectedDate, lang))}
                   </div>
 
                   {/* Reactive Blocks */}
@@ -746,23 +765,18 @@ export default function WodEditorPage() {
             </div>
             
             {/* Save Action */}
-            <div className="bg-pits-surface-elevated p-6 rounded-2xl border border-pits-edge shadow-sm">
+            <div className="bg-pits-surface-elevated p-4 sm:p-5 rounded-2xl border border-pits-edge shadow-sm max-lg:sticky max-lg:bottom-3 max-lg:z-20">
+              {dirty ? (
+                <p className="mb-2 text-xs font-semibold text-pits-warning text-center">{t('Unsaved changes')}</p>
+              ) : null}
               <button
                 type="button"
-                onClick={isLocked ? requestUnlock : handleSave}
-                disabled={saving || loading || deleting}
-                className={`w-full py-4 rounded-xl flex items-center justify-center font-black uppercase tracking-widest text-sm shadow-xl transition-all
-                  ${saving ? 'bg-pits-dim text-pits-dark-text cursor-not-allowed' : isLocked ? 'bg-pits-success hover:opacity-90 text-pits-dark-text shadow-pits-primary/20' : 'bg-pits-primary text-pits-dark-text hover:bg-pits-primary-dark hover:scale-[1.02] active:scale-[0.98] shadow-pits-primary/20'}
-                `}
+                onClick={handleSave}
+                disabled={saving || loading || deleting || (!!wodId && !dirty)}
+                className="w-full min-h-12 rounded-xl flex items-center justify-center gap-2 bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark disabled:opacity-50"
               >
-                {saving ? (
-                  <Loader2 size={18} className="animate-spin mr-2" />
-                ) : isLocked ? (
-                  <Pencil size={18} className="mr-2" />
-                ) : (
-                  <Save size={18} className="mr-2" />
-                )}
-                {saving ? t('Publishing...') : isLocked ? t('Edit published workout btn') : t('Publish to App')}
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {saving ? t('Publishing...') : wodId ? (dirty ? t('Save Changes') : t('Saved')) : t('Publish to App')}
               </button>
 
               {wodId && (
@@ -770,7 +784,7 @@ export default function WodEditorPage() {
                   type="button"
                   onClick={() => setDeleteConfirmOpen(true)}
                   disabled={deleting || saving}
-                  className="w-full mt-3 py-3 rounded-xl flex items-center justify-center gap-2 border border-pits-edge text-pits-error font-black uppercase tracking-widest text-xs hover:bg-pits-primary-soft transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-2 min-h-10 rounded-xl flex items-center justify-center gap-2 text-pits-danger text-sm font-semibold hover:bg-pits-danger-soft disabled:opacity-50"
                 >
                   {deleting ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -781,15 +795,6 @@ export default function WodEditorPage() {
                 </button>
               )}
 
-              <div className="mt-4 flex items-center justify-between px-2">
-                 <div className="flex items-center gap-1.5 opacity-40">
-                   <div className="w-2 h-2 bg-pits-success rounded-full animate-pulse"></div>
-                   <span className="text-[11px] font-bold uppercase tracking-wider text-pits-text">{t('Connected')}</span>
-                 </div>
-                 <p className="text-[11px] text-pits-dim font-bold uppercase text-right">
-                   {t('Auto-scales for iOS/Android')}
-                 </p>
-              </div>
             </div>
 
           </div>
@@ -797,14 +802,17 @@ export default function WodEditorPage() {
       )}
 
       <ConfirmDialog
-        isOpen={editConfirmOpen}
-        title={t('Edit published workout title')}
-        message={t('Edit published workout message')}
-        confirmLabel={t('Yes, edit')}
-        cancelLabel={t('Keep locked')}
+        isOpen={!!pendingDate}
+        title={t('Unsaved changes')}
+        message={t('Leave this day without saving? Your changes will be lost.')}
+        confirmLabel={t('Discard changes')}
+        cancelLabel={t('Keep editing')}
         variant="warning"
-        onConfirm={handleConfirmEdit}
-        onCancel={() => setEditConfirmOpen(false)}
+        onConfirm={() => {
+          if (pendingDate) setDate(pendingDate);
+          setPendingDate(null);
+        }}
+        onCancel={() => setPendingDate(null)}
       />
 
       <ConfirmDialog
@@ -819,6 +827,21 @@ export default function WodEditorPage() {
       />
     </div>
   );
+}
+
+const EMPTY_FIELDS: WodFields = {
+  title: '',
+  warmUp: '',
+  technique: '',
+  strength: '',
+  metcon: '',
+  scaling: '',
+  stimulus: '',
+  scoreType: 'none',
+};
+
+function capitalize(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
 // UI HELPER COMPONENTS
