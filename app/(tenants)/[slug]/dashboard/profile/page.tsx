@@ -38,6 +38,7 @@ import { checkinCodeService } from '@/lib/services/checkinCodeService';
 import { tenantSupportService } from '@/lib/services/tenantSupportService';
 import { normalizeWhatsAppRecipient } from '@/lib/whatsapp';
 import type { TranslationKey } from '@/lib/translations';
+import { PageLoader } from '@/components/LoadingStates';
 
 type StaffProfile = {
   full_name: string | null;
@@ -426,9 +427,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 className="animate-spin text-pits-primary" size={32} />
-      </div>
+      <PageLoader />
     );
   }
 

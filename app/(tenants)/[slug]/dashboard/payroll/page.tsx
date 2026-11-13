@@ -42,6 +42,7 @@ import {
   getGymMinutesSince,
   weekdayIndex,
 } from '@/lib/utils/date';
+import { ListSkeleton, TableSkeleton } from '@/components/LoadingStates';
 
 /** Default visible range; it stretches so early or late classes are never hidden. */
 const DEFAULT_START_HOUR = 5;
@@ -769,9 +770,7 @@ export default function PayrollPage() {
               </div>
 
               {loading ? (
-                <div className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">
-                  {t('Initializing Data Stream...')}
-                </div>
+                <ListSkeleton rows={4} />
               ) : showHourCalendar ? (
                 <div className="overflow-x-auto">
                   <div className={calendarDays.length >= 5 ? 'min-w-[720px]' : 'min-w-0'}>
@@ -960,11 +959,7 @@ export default function PayrollPage() {
                     </thead>
                     <tbody className="divide-y divide-pits-edge">
                       {loading ? (
-                        <tr>
-                          <td colSpan={8} className="py-12 text-center text-pits-dim uppercase animate-pulse">
-                            {t('Loading...')}
-                          </td>
-                        </tr>
+                        <TableSkeleton columns={8} />
                       ) : classes.length === 0 ? (
                         <tr>
                           <td colSpan={8} className="py-12 text-center text-pits-dim uppercase">

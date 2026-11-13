@@ -27,6 +27,7 @@ import {
   RescueSignalType,
   revenueRescueService,
 } from '@/lib/services/revenueRescueService';
+import { PageLoader } from '@/components/LoadingStates';
 
 type StaffMember = {
   id: string;
@@ -446,11 +447,8 @@ export default function FinancialInsightsPage() {
       </section>
 
       {loading ? (
-        <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-pits-edge bg-pits-surface-elevated">
-          <RefreshCw size={30} className="mb-4 animate-spin text-pits-primary" />
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-dim">
-            {t('Calculating revenue at risk...')}
-          </p>
+        <div className="rounded-3xl border border-pits-edge bg-pits-surface-elevated">
+          <PageLoader label={t('Calculating revenue at risk...')} className="min-h-72" />
         </div>
       ) : visible.length === 0 ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-pits-edge bg-pits-surface-elevated">

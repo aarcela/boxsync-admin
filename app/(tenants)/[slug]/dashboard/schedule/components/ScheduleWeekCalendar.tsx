@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { PageLoader } from '@/components/LoadingStates';
 
 /** Default visible range; it stretches when a class in the week falls outside it. */
 const DEFAULT_START_HOUR = 5;
@@ -498,9 +499,7 @@ export default function ScheduleWeekCalendar({
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse text-xs tracking-widest">
-          {t('Loading schedule...')}
-        </div>
+        <PageLoader label={t('Loading schedule...')} className="min-h-[20rem]" />
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[720px]">

@@ -17,6 +17,7 @@ import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabase } from '@/lib/supabase';
 import { getRenewDateInputValue } from '@/lib/renew-date';
 import ProfileAvatar from '@/components/ProfileAvatar';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -592,12 +593,7 @@ export default function AthletesPage() {
 
       <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-pits-dim">
-            <Loader2 size={28} className="animate-spin text-pits-red" aria-hidden />
-            <p className="text-xs font-bold uppercase tracking-widest">
-              {t('Loading roster page...')}
-            </p>
-          </div>
+          <ListSkeleton rows={6} />
         ) : (
           <>
           <ul className="sm:hidden divide-y divide-pits-edge">

@@ -24,6 +24,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatDate, formatDateLong, formatDateShort, formatWeekdayShort } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { getGymDate } from '@/lib/utils/date';
+import { PageLoader } from '@/components/LoadingStates';
 
 type WodFields = {
   title: string;
@@ -519,10 +520,7 @@ export default function WodEditorPage() {
       </div>
       
       {loading ? (
-        <div className="p-24 flex flex-col items-center justify-center text-pits-dim gap-4">
-          <Loader2 size={40} className="animate-spin text-pits-red" />
-          <p className="font-bold text-sm uppercase tracking-widest">{t('Loading Whiteboard...')}</p>
-        </div>
+        <PageLoader label={t('Loading workouts...')} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           

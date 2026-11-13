@@ -10,6 +10,7 @@ import {
 import { formatDateShort, formatTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
+import { ListSkeleton, EmptyState } from '@/components/LoadingStates';
 
 interface Feedback {
   id: string;
@@ -372,21 +373,16 @@ export default function FeedbackPage() {
           </div>
           <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-wider text-pits-dim">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-error" /> {t('Critical')}</span>
-              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-primary-soft0" /> {t('Neutral')}</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-warning" /> {t('Neutral')}</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-success" /> {t('Excellent')}</span>
           </div>
         </div>
 
         <div className="overflow-y-auto flex-1 custom-scrollbar">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-pits-dim">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pits-red"></div>
-            </div>
+            <ListSkeleton rows={4} />
           ) : feedback.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-pits-dim p-12">
-              <MessageSquare size={48} className="mb-4 opacity-20" />
-              <p className="font-bold text-sm uppercase italic tracking-widest">{t('No feedback found.')}</p>
-            </div>
+            <EmptyState icon={MessageSquare} title={t('No feedback found.')} hint={t('Ratings from {members} after class will show up here.')} />
           ) : (
             <div className="divide-y divide-pits-edge">
               {feedback.map((item) => (

@@ -43,6 +43,7 @@ import {
   deletePaymentMethodAction,
   togglePaymentMethodStatusAction 
 } from './actions';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 function currencySelectValue(code: string, options: string[]) {
   return options.includes(code) ? code : CUSTOM_CURRENCY_VALUE;
@@ -497,13 +498,7 @@ export default function PaymentMethodsPage() {
             </div>
 
             {loading ? (
-              <div className="divide-y divide-pits-edge" aria-busy="true">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
-                    <div className="h-3 w-40 rounded bg-pits-surface-muted" />
-                  </div>
-                ))}
-              </div>
+              <ListSkeleton rows={3} />
             ) : filteredMethods.length === 0 ? (
               <p className="px-4 py-12 text-center text-sm text-pits-dim">{t('No records found.')}</p>
             ) : (

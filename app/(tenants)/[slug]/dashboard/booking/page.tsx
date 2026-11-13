@@ -35,6 +35,7 @@ import { tenantBookingService } from '@/lib/services/tenantBookingService';
 import { tenantOverdueService } from '@/lib/services/tenantOverdueService';
 import { saveBookingSettingsAction, saveGymTimezoneAction, saveOverdueSettingsAction } from './actions';
 import GymTimezoneCard from '@/components/GymTimezoneCard';
+import { PageLoader } from '@/components/LoadingStates';
 
 const CUSTOM_SENTINEL = -1;
 const MAX_CUSTOM_MINUTES = 7 * 24 * 60;
@@ -535,8 +536,8 @@ export default function BookingSettingsPage() {
       <GymTimezoneCard onSave={saveGymTimezoneAction} />
 
       {loading ? (
-        <div className="rounded-2xl bg-pits-card border border-pits-edge p-10 flex justify-center">
-          <Loader2 size={20} className="animate-spin text-pits-primary" />
+        <div className="rounded-2xl bg-pits-card border border-pits-edge">
+          <PageLoader className="min-h-48" />
         </div>
       ) : (
         <>

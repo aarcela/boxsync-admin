@@ -43,6 +43,7 @@ import { supabase } from '@/lib/supabase';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ProfileAvatar from '@/components/ProfileAvatar';
+import { PageLoader } from '@/components/LoadingStates';
 
 type MemberPayStatus = {
   status: 'ok' | 'in_grace' | 'overdue' | 'pending_review' | 'no_plan';
@@ -489,14 +490,7 @@ export default function AthleteDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 size={36} className="animate-spin text-pits-red" />
-          <p className="text-pits-dim font-bold uppercase tracking-widest text-xs">
-            {t('Loading athlete details...')}
-          </p>
-        </div>
-      </div>
+      <PageLoader label={t('Loading athlete details...')} />
     );
   }
 

@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { formatDate } from '@/lib/utils/format-date';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/components/LanguageContext';
+import { ListSkeleton, EmptyState } from '@/components/LoadingStates';
 
 interface NewsItem {
   id: string;
@@ -92,19 +93,13 @@ export default function NewsPage() {
       {/* List */}
       <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-pits-dim">{t('Loading feed...')}</div>
+          <ListSkeleton rows={3} />
         ) : news.length === 0 ? (
-          <div className="p-12 text-center text-pits-dim flex flex-col items-center">
-            <Bell size={32} className="mb-3 text-pits-dim" />
-            <p className="text-sm">{t('No active announcements.')}</p>
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="mt-3 text-sm font-semibold text-pits-info hover:underline"
-            >
-              {t('Post Update')}
-            </button>
-          </div>
+          <EmptyState
+            icon={Bell}
+            title={t('No active announcements.')}
+            action={{ label: t('Post Update'), onClick: () => setIsModalOpen(true) }}
+          />
         ) : (
           <div className="divide-y divide-pits-edge">
             {news.map((item) => (

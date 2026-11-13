@@ -10,6 +10,7 @@ import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
 import type { TranslationKey } from '@/lib/translations';
+import { PageLoader } from '@/components/LoadingStates';
 
 // --- DATA TYPES ---
 
@@ -281,12 +282,7 @@ export default function PerformancePage() {
 
   if (loading) {
      return (
-       <div className="h-full flex items-center justify-center p-12">
-          <div className="flex flex-col items-center gap-4">
-             <div className="w-12 h-12 border-4 border-pits-red border-t-transparent rounded-full animate-spin"></div>
-             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-text/40">{t('Running Intelligence Layer...')}</p>
-          </div>
-       </div>
+       <PageLoader />
      );
   }
 

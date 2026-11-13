@@ -20,6 +20,7 @@ import {
   PilotMetrics,
   pilotProgramService,
 } from '@/lib/services/pilotProgramService';
+import { PageLoader } from '@/components/LoadingStates';
 
 const EMPTY_METRICS: PilotMetrics = {
   activeMembers: 0,
@@ -144,9 +145,7 @@ export default function PilotPage() {
 
   if (loading) {
     return (
-      <div className="flex h-80 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-pits-primary border-t-transparent" />
-      </div>
+      <PageLoader />
     );
   }
 

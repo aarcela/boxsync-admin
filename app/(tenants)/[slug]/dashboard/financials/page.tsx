@@ -18,6 +18,7 @@ import { currencySymbol } from '@/lib/currency';
 import { TranslationKey } from '@/lib/translations';
 import { formatDate, formatTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
+import { TableSkeleton } from '@/components/LoadingStates';
 
 type TranslateFn = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
@@ -375,7 +376,7 @@ export default function FinancialsPage() {
                 </thead>
                 <tbody className="divide-y divide-pits-edge">
                   {loading ? (
-                    <tr><td colSpan={5} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">{t('Loading...')}</td></tr>
+                    <TableSkeleton columns={5} rows={5} />
                   ) : paginatedPayments.map(p => (
                     <tr key={p.id} className="hover:bg-pits-surface-muted/40 transition-colors group">
                       <td className="px-6 py-4">

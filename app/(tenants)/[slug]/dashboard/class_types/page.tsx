@@ -23,6 +23,7 @@ import {
   deleteClassTypeAction,
   toggleClassTypeStatusAction,
 } from './actions';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 export default function ClassTypesPage() {
   const { toast } = useToast();
@@ -192,14 +193,7 @@ export default function ClassTypesPage() {
 
       <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated overflow-hidden">
         {loading ? (
-          <div className="divide-y divide-pits-edge" aria-busy="true">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
-                <div className="h-4 w-4 rounded-full bg-pits-surface-muted" />
-                <div className="h-3 w-40 rounded bg-pits-surface-muted" />
-              </div>
-            ))}
-          </div>
+          <ListSkeleton rows={3} />
         ) : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <p className="text-sm text-pits-dim">{t('No class types found')}</p>
