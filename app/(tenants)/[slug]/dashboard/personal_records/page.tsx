@@ -9,8 +9,6 @@ import {
   Trophy,
   CheckCircle2,
   XCircle,
-  Zap,
-  Info,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
@@ -133,12 +131,13 @@ export default function PersonalRecordsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.category || !formData.record_type) return;
-    if (!editingMovement && !formData.slug) return;
+    // Names with no latin letters slugify to ''; give them a stable ID instead of blocking save.
+    const slug = formData.slug || `movement_${Date.now().toString(36)}`;
 
     startTransition(async () => {
       try {
         const form = new FormData();
-        form.append('slug', formData.slug);
+        form.append('slug', slug);
         form.append('name', formData.name);
         form.append('category', formData.category);
         form.append('record_type', formData.record_type);
@@ -207,228 +206,111 @@ export default function PersonalRecordsPage() {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="page-title">
-              {t('Personal Records')}
-            </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
-              {t('PR Catalog')}
-            </div>
-          </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Manage movements athletes can track as personal records')}
-          </p>
+          <h1 className="page-title">{t('Personal Records')}</h1>
+          <p className="page-subtitle">{t('Manage movements athletes can track as personal records')}</p>
         </div>
-
         <button
+          type="button"
           onClick={() => handleOpenForm()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           {t('Add Movement')}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px]">
-            <div className="px-6 py-4 border-b border-pits-edge">
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim"
-                  size={16}
-                />
-                <input
-                  type="text"
-                  placeholder={t('Search movements...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-pits-surface-elevated">
-                  <tr>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Movement')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Category')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Record Type')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Order')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Status')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
-                      {t('Actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-pits-edge">
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse"
-                      >
-                        {t('Initializing Data Stream...')}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredMovements.map((movement) => (
-                      <tr
-                        key={movement.slug}
-                        className="hover:bg-pits-surface-elevated transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-xl ${movement.is_active ? 'bg-pits-surface-muted text-pits-text' : 'bg-pits-surface-muted text-pits-dim'}`}
-                            >
-                              <Trophy size={16} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-pits-text uppercase tracking-tight">
-                                {movement.name}
-                              </div>
-                              <div className="text-[11px] text-pits-dim font-mono">
-                                {movement.slug}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge">
-                            {t(categoryLabel(movement.category))}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-primary border-pits-edge">
-                            {t(recordTypeLabel(movement.record_type))}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-xs font-bold text-pits-dim">
-                          {movement.sort_order}
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggleStatus(movement)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${movement.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                          >
-                            {movement.is_active ? (
-                              <CheckCircle2 size={10} />
-                            ) : (
-                              <XCircle size={10} />
-                            )}
-                            {movement.is_active ? t('Active') : t('Inactive')}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleOpenForm(movement)}
-                              className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-all"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => setSlugToDelete(movement.slug)}
-                              className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-primary-soft rounded-lg transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {!loading && filteredMovements.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="py-20 text-center text-pits-dim font-bold uppercase"
-                      >
-                        {t('No records found.')}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      {movements.length > 6 ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} aria-hidden />
+          <input
+            type="search"
+            placeholder={t('Search movements...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full min-h-10 pl-9 pr-3 bg-pits-surface-elevated border border-pits-edge rounded-xl text-sm text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+          />
         </div>
+      ) : null}
 
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-pits-surface-elevated rounded-3xl p-6 shadow-xl border border-pits-edge relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Trophy size={80} className="text-pits-text" />
-            </div>
-            <div className="relative z-10">
-              <h3 className="text-sm font-black text-pits-text uppercase tracking-tighter mb-4 flex items-center gap-2">
-                <Zap size={18} className="text-pits-red" /> {t('Catalog Overview')}
-              </h3>
-              <p className="text-pits-dim text-[11px] font-medium leading-relaxed mb-6">
-                {t(
-                  'Define which lifts, skills, and benchmarks appear in the athlete PR tracker. Inactive movements stay hidden from new entries.'
-                )}
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[11px] font-bold text-pits-dim uppercase">
-                    {t('Total Movements')}
-                  </span>
-                  <span className="text-sm font-black text-pits-text">
-                    {movements.length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[11px] font-bold text-pits-dim uppercase">
-                    {t('Active')}
-                  </span>
-                  <span className="text-sm font-black text-pits-success">
-                    {movements.filter((m) => m.is_active).length}
-                  </span>
-                </div>
+      <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated overflow-hidden">
+        {loading ? (
+          <div className="divide-y divide-pits-edge" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
+                <div className="h-3 w-40 rounded bg-pits-surface-muted" />
               </div>
-            </div>
+            ))}
           </div>
-
-          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-pits-edge shadow-sm space-y-4">
-            <h3 className="text-xs font-black text-pits-text uppercase flex items-center gap-2">
-              <Info size={14} className="text-pits-red" /> {t('System Tips')}
-            </h3>
-            <ul className="space-y-3">
-              <li className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
-                  {t(
-                    'Slug is permanent once created — it links athlete PR data to this movement.'
-                  )}
-                </p>
-              </li>
-              <li className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
-                  {t(
-                    'Record type controls how values are stored: weight (kg/lb), reps, or time (seconds).'
-                  )}
-                </p>
-              </li>
-            </ul>
+        ) : filteredMovements.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <p className="text-sm text-pits-dim">{t('No records found.')}</p>
+            <button
+              type="button"
+              onClick={() => handleOpenForm()}
+              className="mt-3 text-sm font-semibold text-pits-info hover:underline"
+            >
+              {t('Add Movement')}
+            </button>
           </div>
-        </div>
+        ) : (
+          <ul className="divide-y divide-pits-edge">
+            {filteredMovements.map((movement) => (
+              <li key={movement.slug} className={`flex items-center gap-3 pl-4 pr-2 py-2.5 ${movement.is_active ? '' : 'opacity-60'}`}>
+                <Trophy size={16} className="shrink-0 text-pits-dim" aria-hidden />
+                <button type="button" onClick={() => handleOpenForm(movement)} className="min-w-0 flex-1 text-left py-1">
+                  <span className="block truncate text-sm font-semibold text-pits-text">{movement.name}</span>
+                  <span className="block text-xs text-pits-dim">
+                    {t(categoryLabel(movement.category))} · {t(recordTypeLabel(movement.record_type))}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={movement.is_active}
+                  onClick={() => handleToggleStatus(movement)}
+                  disabled={isPending}
+                  className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                    movement.is_active
+                      ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                      : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                  }`}
+                >
+                  {movement.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                  {movement.is_active ? t('Active') : t('Inactive')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenForm(movement)}
+                  aria-label={t('Edit')}
+                  className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSlugToDelete(movement.slug)}
+                  aria-label={t('Delete')}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      <ul className="space-y-1 text-xs text-pits-dim">
+        <li>
+          {t(
+            'Define which lifts, skills, and benchmarks appear in the athlete PR tracker. Inactive movements stay hidden from new entries.'
+          )}
+        </li>
+        <li>{t('Record type controls how values are stored: weight (kg/lb), reps, or time (seconds).')}</li>
+      </ul>
 
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -453,28 +335,6 @@ export default function PersonalRecordsPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                {!editingMovement && (
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
-                      {t('Slug')}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={t('e.g. back_squat')}
-                      required
-                      value={formData.slug}
-                      onChange={(e) => {
-                        setSlugManuallyEdited(true);
-                        setFormData({
-                          ...formData,
-                          slug: slugify(e.target.value),
-                        });
-                      }}
-                      className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-mono text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim"
-                    />
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Name')}
@@ -487,6 +347,11 @@ export default function PersonalRecordsPage() {
                     onChange={(e) => handleNameChange(e.target.value)}
                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim"
                   />
+                  {!editingMovement && formData.slug ? (
+                    <p className="ml-1 text-[11px] text-pits-dim">
+                      {t('ID: {{id}} (set automatically, cannot change later)', { id: formData.slug })}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
