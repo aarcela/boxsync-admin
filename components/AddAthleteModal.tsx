@@ -18,7 +18,7 @@ const labelClass =
   'block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2';
 const inputClass =
   'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink placeholder:text-pits-ink-muted/60 focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-50';
-const hintClass = 'text-[10px] text-pits-ink-muted mt-1';
+const hintClass = 'text-[11px] text-pits-ink-muted mt-1';
 
 export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthleteModalProps) {
   const { toast } = useToast();

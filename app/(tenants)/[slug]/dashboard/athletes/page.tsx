@@ -1,20 +1,23 @@
 'use client';
 
+import { useTenant } from '@/components/TenantContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { usePaletteCommand } from '@/components/CommandPalette';
 import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound, MoreVertical, Clock } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { formatDate, formatRelative } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
-import { formatDistanceToNow } from 'date-fns';
 import { useAthletes, SortKey, SortDir } from './hooks/useAthletes';
 import { Profile, MembershipPlan } from '@/lib/types/gym';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabase } from '@/lib/supabase';
 import { getRenewDateInputValue } from '@/lib/renew-date';
 import ProfileAvatar from '@/components/ProfileAvatar';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== column) return <ArrowUpDown size={12} className="ml-1 opacity-30" />;
@@ -27,8 +30,9 @@ const ACTION_MENU_WIDTH = 220;
 const ACTION_MENU_ITEM_HEIGHT = 40;
 
 export default function AthletesPage() {
+  const { timezone } = useTenant();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const {
     profiles,
     loading,
@@ -106,7 +110,9 @@ export default function AthletesPage() {
     loadContext();
   }, []);
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(() => searchParams.get('new') === '1');
+  usePaletteCommand('new-athlete', () => setIsAddModalOpen(true));
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -181,11 +187,13 @@ export default function AthletesPage() {
     setMenuPosition(null);
   };
 
-  const toggleMenu = (profileId: string) => {
+  /** The row and the phone card each have a ⋯ button; anchor the menu to the one tapped. */
+  const toggleMenu = (profileId: string, button: HTMLButtonElement) => {
     if (openMenuId === profileId) {
       closeMenu();
       return;
     }
+    menuButtonRefs.current[profileId] = button;
     setOpenMenuId(profileId);
   };
 
@@ -385,8 +393,8 @@ export default function AthletesPage() {
     <div className="space-y-5 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-black text-pits-text tracking-tight">
-            {t('Roster')}
+          <h1 className="page-title">
+            {t('Users')}
           </h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-pits-dim">
             <span>
@@ -395,21 +403,6 @@ export default function AthletesPage() {
                 total: totalCount,
               })}
             </span>
-            {unpaidCount > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setSolvencyFilter((prev) => (prev === 'unpaid' ? 'all' : 'unpaid'))
-                }
-                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border transition-colors ${
-                  solvencyFilter === 'unpaid'
-                    ? 'bg-amber-100 text-amber-900 border-amber-300'
-                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                }`}
-              >
-                {t('{{count}} Unpaid', { count: unpaidCount })}
-              </button>
-            )}
           </div>
         </div>
         {emailConfirmed ? (
@@ -422,7 +415,7 @@ export default function AthletesPage() {
             {t('Add Athlete')}
           </button>
         ) : (
-          <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+          <p className="text-xs font-bold uppercase tracking-wider text-pits-warning">
             {t('Check your email to activate your account.')}
           </p>
         )}
@@ -443,39 +436,59 @@ export default function AthletesPage() {
             className="w-full min-h-10 pl-9 pr-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none"
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2 lg:items-center">
           <div className="hidden sm:flex items-center text-pits-dim shrink-0 px-1">
             <Filter size={16} aria-hidden />
           </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            aria-label={t('All Roles')}
-            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
-          >
-            <option value="all">{t('All Roles')}</option>
-            <option value="member">{t('Members')}</option>
-            <option value="coach">{t('Coaches')}</option>
-            <option value="manager">{t('Managers')}</option>
-            <option value="admin">{t('Admins')}</option>
-          </select>
-          <select
-            value={solvencyFilter}
-            onChange={(e) =>
-              setSolvencyFilter(e.target.value as 'all' | 'solvent' | 'unpaid')
-            }
-            aria-label={t('All statuses')}
-            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
-          >
-            <option value="all">{t('All statuses')}</option>
-            <option value="solvent">{t('Solvent / Paid')}</option>
-            <option value="unpaid">{t('Debt / Unpaid')}</option>
-          </select>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('All statuses')}>
+            {([
+              { value: 'all', label: t('All') },
+              { value: 'solvent', label: t('Up to date') },
+              { value: 'unpaid', label: unpaidCount > 0 ? `${t('With debt')} · ${unpaidCount}` : t('With debt') },
+            ] as const).map((chip) => (
+              <button
+                key={chip.value}
+                type="button"
+                aria-pressed={solvencyFilter === chip.value}
+                onClick={() => setSolvencyFilter(chip.value)}
+                className={`px-3 min-h-9 rounded-lg text-xs font-semibold border transition-colors ${
+                  solvencyFilter === chip.value
+                    ? 'bg-pits-text text-white border-pits-text'
+                    : 'bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-elevated'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('All Roles')}>
+            {[
+              { value: 'all', label: t('All Roles') },
+              { value: 'member', label: t('Members') },
+              { value: 'coach', label: t('Coaches') },
+              { value: 'manager', label: t('Managers') },
+              { value: 'admin', label: t('Admins') },
+            ].map((chip) => (
+              <button
+                key={chip.value}
+                type="button"
+                aria-pressed={roleFilter === chip.value}
+                onClick={() => setRoleFilter(chip.value)}
+                className={`px-3 min-h-9 rounded-lg text-xs font-semibold border transition-colors ${
+                  roleFilter === chip.value
+                    ? 'bg-pits-text text-white border-pits-text'
+                    : 'bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-elevated'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
           <select
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
             aria-label={t('All plans')}
-            className="w-full sm:flex-1 min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
+            className="w-full sm:w-auto sm:ml-auto min-h-10 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary"
           >
             <option value="all">{t('All plans')}</option>
             {membershipPlans.map((plan) => (
@@ -490,7 +503,7 @@ export default function AthletesPage() {
       {someSelected && (
         <div className="flex flex-col gap-3 bg-pits-surface-elevated p-3 sm:p-4 rounded-xl border border-pits-primary/30 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black text-pits-dim uppercase tracking-wider">
+            <span className="text-[11px] font-black text-pits-dim uppercase tracking-wider">
               {t('{{count}} selected', { count: selectedIds.size })}
               {selectedMemberCount < selectedIds.size
                 ? ` · ${t('{{count}} members', { count: selectedMemberCount })}`
@@ -500,7 +513,7 @@ export default function AthletesPage() {
               type="button"
               onClick={() => setSelectedIds(new Set())}
               disabled={bulkBusy}
-              className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted disabled:opacity-50"
             >
               {t('Clear selection')}
             </button>
@@ -525,7 +538,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || !bulkPlanId || selectedMemberCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'plan' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
               >
                 {t('Apply plan')}
               </button>
@@ -543,7 +556,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || !bulkRenewDate || selectedMemberCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'renew' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Set renew date')}
               </button>
@@ -553,7 +566,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedInviteCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'invite' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Resend invites')} ({selectedInviteCount})
               </button>
@@ -561,7 +574,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedResetCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'reset' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-text border-pits-edge hover:bg-pits-surface-muted/80 disabled:opacity-50"
               >
                 {t('Send password resets')} ({selectedResetCount})
               </button>
@@ -569,7 +582,7 @@ export default function AthletesPage() {
                 type="button"
                 disabled={bulkBusy || selectedReminderCount === 0}
                 onClick={() => setBulkConfirm({ isOpen: true, action: 'reminder' })}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-orange-100 text-orange-700 border-orange-300 hover:opacity-90 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-warning-soft text-pits-warning border-pits-warning-edge hover:opacity-90 disabled:opacity-50"
               >
                 {t('Send expiry reminders')} ({selectedReminderCount})
               </button>
@@ -580,16 +593,100 @@ export default function AthletesPage() {
 
       <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge overflow-hidden">
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-pits-dim">
-            <Loader2 size={28} className="animate-spin text-pits-red" aria-hidden />
-            <p className="text-xs font-bold uppercase tracking-widest">
-              {t('Loading roster page...')}
-            </p>
-          </div>
+          <ListSkeleton rows={6} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="sm:hidden divide-y divide-pits-edge">
+            {profiles.length === 0 ? (
+              <li className="px-4 py-14 text-center text-pits-dim">{t('No records found.')}</li>
+            ) : (
+              profiles.map((profile) => {
+                const phoneDigits = profile.phone?.replace(/[^0-9]/g, '') || '';
+                const isSelected = selectedIds.has(profile.id);
+                const renew = profile.role === 'member' ? getRenewDateInputValue(profile, timezone) : '';
+                return (
+                  <li
+                    key={profile.id}
+                    className={`flex items-start gap-2 px-2 py-3 ${
+                      isSelected ? 'ring-1 ring-inset ring-pits-primary ' : ''
+                    }${profile.is_solvent ? '' : 'bg-pits-warning-soft'}`}
+                  >
+                    <label className="flex items-center justify-center w-9 h-10 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelected(profile.id)}
+                        aria-label={t('Select athlete')}
+                        className="rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/dashboard/athletes/${profile.id}`)}
+                      className="flex flex-1 min-w-0 items-start gap-3 text-left"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-pits-surface-muted border border-pits-edge overflow-hidden shrink-0 flex items-center justify-center">
+                        <ProfileAvatar url={profile.avatar_url} name={profile.full_name} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-pits-text truncate">{profile.full_name || t('Unnamed')}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {profile.role === 'member' ? (
+                            <span
+                              className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                                profile.is_solvent
+                                  ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                                  : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
+                              }`}
+                            >
+                              {profile.is_solvent ? t('Up to date') : t('With debt')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                              {profile.role}
+                            </span>
+                          )}
+                          {profile.plan ? (
+                            <span className="text-xs text-pits-dim truncate">{planLabel(profile.plan)}</span>
+                          ) : null}
+                        </div>
+                        {renew ? (
+                          <p className="mt-0.5 text-xs text-pits-dim">
+                            {t('Renews on {{date}}', { date: formatDate(renew, lang) })}
+                          </p>
+                        ) : null}
+                      </div>
+                    </button>
+                    <div className="flex items-center shrink-0">
+                      {phoneDigits ? (
+                        <a
+                          href={`https://wa.me/${phoneDigits}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-center w-10 h-10 text-pits-positive rounded-lg hover:bg-pits-positive-soft"
+                          aria-label={t('Text on WhatsApp')}
+                        >
+                          <MessageCircle size={18} />
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => toggleMenu(profile.id, e.currentTarget)}
+                        className="flex items-center justify-center w-10 h-10 text-pits-dim rounded-lg hover:bg-pits-surface-muted"
+                        aria-label={t('More actions')}
+                        aria-expanded={openMenuId === profile.id}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-[10px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
+              <thead className="text-[11px] text-pits-dim uppercase tracking-[0.14em] font-black border-b border-pits-edge bg-pits-surface-muted/60">
                 <tr>
                   <th className="px-3 sm:px-4 py-3 w-10">
                     <input
@@ -673,7 +770,7 @@ export default function AthletesPage() {
                         }${
                           profile.is_solvent
                             ? 'hover:bg-pits-surface-muted/70'
-                            : 'bg-amber-50/40 hover:bg-amber-50/70'
+                            : 'bg-pits-warning-soft hover:bg-pits-warning-soft'
                         }`}
                       >
                         <td
@@ -706,7 +803,7 @@ export default function AthletesPage() {
                                     href={`https://wa.me/${phoneDigits}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors shrink-0"
+                                    className="p-2 -my-1 text-pits-positive hover:bg-pits-positive-soft rounded-md transition-colors shrink-0"
                                     title={t('Text on WhatsApp')}
                                     aria-label={t('Text on WhatsApp')}
                                     onClick={(e) => e.stopPropagation()}
@@ -721,14 +818,12 @@ export default function AthletesPage() {
                                 </p>
                               )}
                               <div className="flex items-center gap-1.5 mt-1">
-                                <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
+                                <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-pits-surface-muted text-pits-dim border border-pits-edge">
                                   {profile.role}
                                 </span>
                                 {profile.created_at && (
-                                  <span className="text-[10px] text-pits-dim">
-                                    {formatDistanceToNow(new Date(profile.created_at), {
-                                      addSuffix: true,
-                                    })}
+                                  <span className="text-[11px] text-pits-dim">
+                                    {formatRelative(new Date(profile.created_at), lang)}
                                   </span>
                                 )}
                               </div>
@@ -769,10 +864,10 @@ export default function AthletesPage() {
                               ))}
                             </select>
                             <span
-                              className={`inline-flex text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                              className={`inline-flex text-[11px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                                 profile.inscription_paid
                                   ? 'bg-pits-surface-muted text-pits-dim border-pits-edge'
-                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
                               }`}
                             >
                               {profile.inscription_plan || 'standard'}
@@ -782,29 +877,36 @@ export default function AthletesPage() {
 
                         <td className="px-4 sm:px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                           <div className="space-y-1.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setConfirmConfig({
-                                  isOpen: true,
-                                  profileId: profile.id,
-                                  profileName: profile.full_name || t('this athlete'),
-                                  currentSolvency: profile.is_solvent,
-                                })
-                              }
-                              className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border transition-colors ${
-                                profile.is_solvent
-                                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                              }`}
-                            >
-                              {profile.is_solvent ? t('Solvent / Paid') : t('Debt / Unpaid')}
-                            </button>
-                            <p className="text-[10px] text-pits-dim">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                                  profile.is_solvent
+                                    ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                                    : 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge'
+                                }`}
+                              >
+                                {profile.is_solvent ? t('Up to date') : t('With debt')}
+                              </span>
+                              {!profile.is_solvent && profile.role === 'member' ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setConfirmConfig({
+                                      isOpen: true,
+                                      profileId: profile.id,
+                                      profileName: profile.full_name || t('this athlete'),
+                                      currentSolvency: profile.is_solvent,
+                                    })
+                                  }
+                                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border border-pits-edge bg-pits-surface-elevated text-pits-text hover:bg-pits-surface-muted"
+                                >
+                                  {t('Mark as paid')}
+                                </button>
+                              ) : null}
+                            </div>
+                            <p className="text-[11px] text-pits-dim">
                               {profile.last_payment_date
-                                ? formatDistanceToNow(new Date(profile.last_payment_date), {
-                                    addSuffix: true,
-                                  })
+                                ? formatRelative(new Date(profile.last_payment_date), lang)
                                 : t('No payments')}
                             </p>
                           </div>
@@ -817,7 +919,7 @@ export default function AthletesPage() {
                           {profile.role === 'member' ? (
                             <input
                               type="date"
-                              value={getRenewDateInputValue(profile)}
+                              value={getRenewDateInputValue(profile, timezone)}
                               onChange={(e) => {
                                 const value = e.target.value || null;
                                 void updateRenewDate(profile.id, value);
@@ -838,13 +940,13 @@ export default function AthletesPage() {
                             <p
                               className={`inline-flex items-center gap-1 text-[11px] ${
                                 inactiveDays != null && inactiveDays > 10
-                                  ? 'text-red-600 font-bold'
+                                  ? 'text-pits-danger font-bold'
                                   : 'text-pits-dim'
                               }`}
                             >
                               <Calendar size={12} aria-hidden />
                               {lastVisitDate
-                                ? formatDistanceToNow(lastVisitDate, { addSuffix: true })
+                                ? formatRelative(lastVisitDate, lang)
                                 : t('Never')}
                             </p>
                           </div>
@@ -869,10 +971,7 @@ export default function AthletesPage() {
                             </button>
                             <button
                               type="button"
-                              ref={(element) => {
-                                menuButtonRefs.current[profile.id] = element;
-                              }}
-                              onClick={() => toggleMenu(profile.id)}
+                              onClick={(e) => toggleMenu(profile.id, e.currentTarget)}
                               className="p-2 min-h-9 min-w-9 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-colors"
                               title={t('More actions')}
                               aria-label={t('More actions')}
@@ -889,6 +988,7 @@ export default function AthletesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {!loading && totalCount > 0 && (
@@ -950,7 +1050,10 @@ export default function AthletesPage() {
 
       <AddAthleteModal 
         isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          if (searchParams.get('new')) router.replace('/dashboard/athletes');
+        }}
         onSuccess={refresh}
       />
 
@@ -1106,6 +1209,23 @@ export default function AthletesPage() {
                 <Clock size={14} className="shrink-0 text-pits-dim" />
               )}
               {t('Send expiry reminder')}
+            </button>
+          )}
+          {openMenuProfile.role === 'member' && openMenuProfile.is_solvent && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setConfirmConfig({
+                  isOpen: true,
+                  profileId: openMenuProfile.id,
+                  profileName: openMenuProfile.full_name || t('this athlete'),
+                  currentSolvency: openMenuProfile.is_solvent,
+                });
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors"
+            >
+              <Clock size={14} className="shrink-0 text-pits-dim" />
+              {t('Mark as unpaid')}
             </button>
           )}
           <button

@@ -27,9 +27,9 @@ const ICONS = {
 };
 
 const STYLES = {
-  success: 'bg-green-600 text-white',
-  error: 'bg-red-600 text-white',
-  warning: 'bg-orange-500 text-white',
+  success: 'bg-pits-positive text-white',
+  error: 'bg-pits-danger text-white',
+  warning: 'bg-pits-warning text-white',
   info: 'bg-gray-800 text-white',
 };
 

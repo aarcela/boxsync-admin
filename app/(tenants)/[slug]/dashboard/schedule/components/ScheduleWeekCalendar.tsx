@@ -1,27 +1,35 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Calendar, ChevronLeft, ChevronRight, Clock, Loader2, Trash2, User, Users } from 'lucide-react';
+import { capitalizeFirst, formatDateLong } from '@/lib/utils/format-date';
 import { classService } from '@/lib/services/classService';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
 import {
-  getCaracasDate,
-  getCaracasTimeLabel,
-  getCaracasDateFromIso,
-  getCaracasWeekDays,
-  getCaracasWeekRange,
+  addDaysToDateStr,
+  formatGymDay,
+  getGymDate,
+  getGymDateFromIso,
+  getGymHourMinute,
+  getGymTimeLabel,
+  getGymWeekDays,
+  getGymWeekRange,
+  gymDateTimeToUtc,
 } from '@/lib/utils/date';
+import { useTenant } from '@/components/TenantContext';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { PageLoader } from '@/components/LoadingStates';
 
-const START_HOUR = 5;
-const END_HOUR = 21;
+/** Default visible range; it stretches when a class in the week falls outside it. */
+const DEFAULT_START_HOUR = 5;
+const DEFAULT_END_HOUR = 21;
 const SLOT_HEIGHT = 56;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
 interface Coach {
   id: string;
@@ -34,17 +42,43 @@ interface ScheduleWeekCalendarProps {
   onClassesChanged?: () => void;
 }
 
-function getCaracasHourMinute(iso: string): { hour: number; minute: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  return {
-    hour: Number(parts.find((p) => p.type === 'hour')?.value ?? 0),
-    minute: Number(parts.find((p) => p.type === 'minute')?.value ?? 0),
+/**
+ * Side-by-side lanes for overlapping classes in one day, so none hides behind another.
+ * Returns lane index and lane count (of its overlap group) per class id.
+ */
+function layoutLanes(dayClasses: ClassSession[]): Map<string, { lane: number; lanes: number }> {
+  const sorted = [...dayClasses].sort(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+  );
+  const result = new Map<string, { lane: number; lanes: number }>();
+  let group: { id: string; lane: number }[] = [];
+  let laneEnds: number[] = [];
+  let groupEnd = -Infinity;
+  const flush = () => {
+    for (const item of group) result.set(item.id, { lane: item.lane, lanes: laneEnds.length });
+    group = [];
+    laneEnds = [];
   };
+  for (const cls of sorted) {
+    const start = new Date(cls.start_time).getTime();
+    // Short classes still take 30 min of space on the grid.
+    const end = Math.max(new Date(cls.end_time).getTime(), start + 30 * 60000);
+    if (start >= groupEnd) {
+      flush();
+      groupEnd = -Infinity;
+    }
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(end);
+    } else {
+      laneEnds[lane] = end;
+    }
+    group.push({ id: cls.id, lane });
+    groupEnd = Math.max(groupEnd, end);
+  }
+  flush();
+  return result;
 }
 
 function getDurationMinutes(startIso: string, endIso: string): number {
@@ -57,15 +91,25 @@ export default function ScheduleWeekCalendar({
   refreshKey = 0,
   onClassesChanged,
 }: ScheduleWeekCalendarProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
+  const { timezone: tz } = useTenant();
+  const locale = lang === 'es' ? 'es' : 'en-US';
 
-  const [anchorDate, setAnchorDate] = useState(getCaracasDate);
+  const [anchorDate, setAnchorDate] = useState(() => getGymDate(new Date(), tz));
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /** Class under the pointer and where its block is, for the details card. */
+  const [hovered, setHovered] = useState<{ cls: ClassSession; rect: DOMRect } | null>(null);
+  useEffect(() => {
+    if (!hovered) return;
+    const hide = () => setHovered(null);
+    window.addEventListener('scroll', hide, true);
+    return () => window.removeEventListener('scroll', hide, true);
+  }, [hovered]);
   const [bulkCoach, setBulkCoach] = useState('');
   const [bulkType, setBulkType] = useState('');
   const [bulkCapacity, setBulkCapacity] = useState('');
@@ -78,30 +122,38 @@ export default function ScheduleWeekCalendar({
 
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
 
-  const weekDays = useMemo(() => getCaracasWeekDays(anchorDate), [anchorDate]);
-  const weekRange = useMemo(() => getCaracasWeekRange(anchorDate), [anchorDate]);
+  const weekDays = useMemo(() => getGymWeekDays(anchorDate), [anchorDate]);
+  const weekRange = useMemo(() => getGymWeekRange(anchorDate, tz), [anchorDate, tz]);
+  // Stretch the grid so classes before 05:00 or after 21:00 are still shown.
+  const { START_HOUR, HOURS } = useMemo(() => {
+    let start = DEFAULT_START_HOUR;
+    let end = DEFAULT_END_HOUR;
+    for (const cls of classes) {
+      const { hour } = getGymHourMinute(cls.start_time, tz);
+      const endHour = getGymHourMinute(cls.end_time, tz).hour;
+      start = Math.min(start, hour);
+      end = Math.max(end, hour, endHour > hour ? endHour : hour);
+    }
+    end = Math.min(end, 23);
+    return { START_HOUR: start, HOURS: Array.from({ length: end - start + 1 }, (_, i) => start + i) };
+  }, [classes, tz]);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const periodLabel = useMemo(() => {
-    const fmt = (d: string) =>
-      new Date(`${d}T12:00:00-04:00`).toLocaleDateString('en-US', {
-        timeZone: 'America/Caracas',
-        month: 'short',
-        day: 'numeric',
-      });
+    const fmt = (d: string) => formatGymDay(d, { month: 'short', day: 'numeric' }, locale, tz);
     return `${t('Week of')} ${fmt(weekRange.startDate)} – ${fmt(weekRange.endDate)}`;
-  }, [weekRange.startDate, weekRange.endDate, t]);
+  }, [weekRange.startDate, weekRange.endDate, t, locale, tz]);
 
   const classesByDay = useMemo(() => {
     const map = new Map<string, ClassSession[]>();
     for (const day of weekDays) map.set(day, []);
     for (const cls of classes) {
-      const day = getCaracasDateFromIso(cls.start_time);
+      const day = getGymDateFromIso(cls.start_time, tz);
       const list = map.get(day);
       if (list) list.push(cls);
     }
     return map;
-  }, [classes, weekDays]);
+  }, [classes, weekDays, tz]);
 
   const selectedClasses = useMemo(
     () => classes.filter((c) => selectedIds.has(c.id)),
@@ -112,17 +164,17 @@ export default function ScheduleWeekCalendar({
 
   useEffect(() => {
     if (singleSelected) {
-      setBulkDate(getCaracasDateFromIso(singleSelected.start_time));
-      setBulkTime(getCaracasTimeLabel(singleSelected.start_time));
-      setBulkEndDate(getCaracasDateFromIso(singleSelected.end_time));
-      setBulkEndTime(getCaracasTimeLabel(singleSelected.end_time));
+      setBulkDate(getGymDateFromIso(singleSelected.start_time, tz));
+      setBulkTime(getGymTimeLabel(singleSelected.start_time, tz));
+      setBulkEndDate(getGymDateFromIso(singleSelected.end_time, tz));
+      setBulkEndTime(getGymTimeLabel(singleSelected.end_time, tz));
     } else {
       setBulkDate('');
       setBulkTime('');
       setBulkEndDate('');
       setBulkEndTime('');
     }
-  }, [singleSelected]);
+  }, [singleSelected, tz]);
 
   const loadWeek = useCallback(async () => {
     setLoading(true);
@@ -172,9 +224,7 @@ export default function ScheduleWeekCalendar({
   }, []);
 
   const shiftWeek = (weeks: number) => {
-    const d = new Date(`${anchorDate}T12:00:00-04:00`);
-    d.setDate(d.getDate() + weeks * 7);
-    setAnchorDate(getCaracasDate(d));
+    setAnchorDate(addDaysToDateStr(anchorDate, weeks * 7));
   };
 
   const toggleSelected = (classId: string) => {
@@ -188,6 +238,23 @@ export default function ScheduleWeekCalendar({
 
   const handleEmptySlot = (day: string, hour: number) => {
     onCreateSlot(day, `${String(hour).padStart(2, '0')}:00`);
+  };
+
+  /** Moving the start keeps the class length, so a new start never leaves a 12-hour class. */
+  const moveStart = (nextDate: string, nextTime: string) => {
+    if (bulkDate && bulkTime && bulkEndDate && bulkEndTime && nextDate && nextTime) {
+      const prevStart = gymDateTimeToUtc(bulkDate, bulkTime, tz).getTime();
+      const prevEnd = gymDateTimeToUtc(bulkEndDate, bulkEndTime, tz).getTime();
+      const nextStart = gymDateTimeToUtc(nextDate, nextTime, tz).getTime();
+      const length = prevEnd - prevStart;
+      if (Number.isFinite(nextStart) && length > 0) {
+        const nextEnd = new Date(nextStart + length).toISOString();
+        setBulkEndDate(getGymDateFromIso(nextEnd, tz));
+        setBulkEndTime(getGymTimeLabel(nextEnd, tz));
+      }
+    }
+    setBulkDate(nextDate);
+    setBulkTime(nextTime);
   };
 
   const handleApplyBulk = async () => {
@@ -212,16 +279,16 @@ export default function ScheduleWeekCalendar({
       bulkEndDate &&
       bulkEndTime
     ) {
-      const originalDate = getCaracasDateFromIso(singleSelected.start_time);
-      const originalTime = getCaracasTimeLabel(singleSelected.start_time);
-      const originalEndDate = getCaracasDateFromIso(singleSelected.end_time);
-      const originalEndTime = getCaracasTimeLabel(singleSelected.end_time);
+      const originalDate = getGymDateFromIso(singleSelected.start_time, tz);
+      const originalTime = getGymTimeLabel(singleSelected.start_time, tz);
+      const originalEndDate = getGymDateFromIso(singleSelected.end_time, tz);
+      const originalEndTime = getGymTimeLabel(singleSelected.end_time, tz);
       const startChanged = bulkDate !== originalDate || bulkTime !== originalTime;
       const endChanged = bulkEndDate !== originalEndDate || bulkEndTime !== originalEndTime;
 
       if (startChanged || endChanged) {
-        const newStart = new Date(`${bulkDate}T${bulkTime}:00-04:00`);
-        const newEnd = new Date(`${bulkEndDate}T${bulkEndTime}:00-04:00`);
+        const newStart = gymDateTimeToUtc(bulkDate, bulkTime, tz);
+        const newEnd = gymDateTimeToUtc(bulkEndDate, bulkEndTime, tz);
         if (newEnd <= newStart) {
           toast(t('End must be after start'), 'error');
           return;
@@ -326,14 +393,14 @@ export default function ScheduleWeekCalendar({
           }`}
           aria-hidden={!someSelected}
         >
-          <span className="text-[10px] font-black text-pits-dim uppercase">
+          <span className="text-[11px] font-black text-pits-dim uppercase">
             {selectedIds.size} {t('selected')}
           </span>
           <select
             value={bulkCoach}
             onChange={(e) => setBulkCoach(e.target.value)}
             disabled={!someSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-black uppercase text-pits-ink outline-none"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-black uppercase text-pits-ink outline-none"
           >
             <option value="">{t('Coach')}</option>
             <option value="__none__">{t('Staff')}</option>
@@ -347,7 +414,7 @@ export default function ScheduleWeekCalendar({
             value={bulkType}
             onChange={(e) => setBulkType(e.target.value)}
             disabled={!someSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-black uppercase text-pits-ink outline-none"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-black uppercase text-pits-ink outline-none"
           >
             <option value="">{t('Type')}</option>
             {classTypes.map((row) => (
@@ -363,22 +430,22 @@ export default function ScheduleWeekCalendar({
             value={bulkCapacity}
             onChange={(e) => setBulkCapacity(e.target.value)}
             disabled={!someSelected}
-            className="w-20 px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none"
+            className="w-20 px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none"
           />
           <input
             type="date"
             value={bulkDate}
-            onChange={(e) => setBulkDate(e.target.value)}
+            onChange={(e) => moveStart(e.target.value, bulkTime)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start date')}
           />
           <input
             type="time"
             value={bulkTime}
-            onChange={(e) => setBulkTime(e.target.value)}
+            onChange={(e) => moveStart(bulkDate, e.target.value)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('Start time')}
           />
           <input
@@ -387,7 +454,7 @@ export default function ScheduleWeekCalendar({
             onChange={(e) => setBulkEndDate(e.target.value)}
             disabled={!singleSelected}
             min={bulkDate || undefined}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('End date')}
           />
           <input
@@ -395,14 +462,19 @@ export default function ScheduleWeekCalendar({
             value={bulkEndTime}
             onChange={(e) => setBulkEndTime(e.target.value)}
             disabled={!singleSelected}
-            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[10px] font-bold text-pits-ink outline-none disabled:opacity-40"
+            className="px-3 py-2 bg-pits-surface-muted border border-pits-edge rounded-lg text-[11px] font-bold text-pits-ink outline-none disabled:opacity-40"
             aria-label={t('End time')}
           />
+          {singleSelected && bulkTime && bulkTime < '05:00' ? (
+            <span className="text-[11px] font-semibold text-pits-warning">
+              {t('Starts at {{time}} (early morning). Did you mean PM?', { time: bulkTime })}
+            </span>
+          ) : null}
           <button
             type="button"
             disabled={saving || !someSelected}
             onClick={handleApplyBulk}
-            className="px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-pits-primary-dark transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-pits-primary-dark transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : t('Apply changes')}
           </button>
@@ -410,7 +482,7 @@ export default function ScheduleWeekCalendar({
             type="button"
             onClick={clearSelection}
             disabled={!someSelected}
-            className="px-3 py-2 text-pits-dim hover:text-pits-ink text-[10px] font-black uppercase disabled:opacity-50"
+            className="px-3 py-2 text-pits-dim hover:text-pits-ink text-[11px] font-black uppercase disabled:opacity-50"
           >
             {t('Clear')}
           </button>
@@ -418,7 +490,7 @@ export default function ScheduleWeekCalendar({
             type="button"
             disabled={saving || !someSelected}
             onClick={() => setDeleteConfirmOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-pits-error hover:bg-pits-primary-soft border border-pits-error/30 rounded-lg text-[10px] font-black uppercase transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-pits-error hover:bg-pits-primary-soft border border-pits-error/30 rounded-lg text-[11px] font-black uppercase transition-colors disabled:opacity-50"
           >
             <Trash2 size={14} />
             {t('Delete Class')}
@@ -427,9 +499,7 @@ export default function ScheduleWeekCalendar({
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse text-xs tracking-widest">
-          {t('Loading schedule...')}
-        </div>
+        <PageLoader label={t('Loading schedule...')} className="min-h-[20rem]" />
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[720px]">
@@ -440,17 +510,11 @@ export default function ScheduleWeekCalendar({
                   key={day}
                   className="px-2 py-3 text-center border-r border-pits-edge last:border-r-0 bg-pits-surface-muted/40"
                 >
-                  <p className="text-[10px] font-black text-pits-dim uppercase">
-                    {new Date(`${day}T12:00:00-04:00`).toLocaleDateString('en-US', {
-                      timeZone: 'America/Caracas',
-                      weekday: 'short',
-                    })}
+                  <p className="text-[11px] font-black text-pits-dim uppercase">
+                    {formatGymDay(day, { weekday: 'short' }, locale, tz)}
                   </p>
                   <p className="text-sm font-black text-pits-text">
-                    {new Date(`${day}T12:00:00-04:00`).toLocaleDateString('en-US', {
-                      timeZone: 'America/Caracas',
-                      day: 'numeric',
-                    })}
+                    {formatGymDay(day, { day: 'numeric' }, locale, tz)}
                   </p>
                 </div>
               ))}
@@ -461,7 +525,7 @@ export default function ScheduleWeekCalendar({
                 {HOURS.map((hour) => (
                   <div
                     key={hour}
-                    className="absolute left-0 right-0 pr-2 text-right text-[10px] font-bold text-pits-dim -translate-y-1/2"
+                    className="absolute left-0 right-0 pr-2 text-right text-[11px] font-bold text-pits-dim -translate-y-1/2"
                     style={{ top: (hour - START_HOUR) * SLOT_HEIGHT }}
                   >
                     {String(hour).padStart(2, '0')}:00
@@ -471,6 +535,7 @@ export default function ScheduleWeekCalendar({
 
               {weekDays.map((day) => {
                 const dayClasses = classesByDay.get(day) ?? [];
+                const lanes = layoutLanes(dayClasses);
                 return (
                   <div
                     key={day}
@@ -492,7 +557,7 @@ export default function ScheduleWeekCalendar({
                     ))}
 
                     {dayClasses.map((cls) => {
-                      const { hour, minute } = getCaracasHourMinute(cls.start_time);
+                      const { hour, minute } = getGymHourMinute(cls.start_time, tz);
                       const durationMin = getDurationMinutes(cls.start_time, cls.end_time);
                       const top = (hour - START_HOUR) * SLOT_HEIGHT + (minute / 60) * SLOT_HEIGHT;
                       const height = Math.max((durationMin / 60) * SLOT_HEIGHT - 4, 28);
@@ -500,18 +565,22 @@ export default function ScheduleWeekCalendar({
                       const bookingCount = cls.bookings[0]?.count ?? 0;
                       const waitlistCount = cls.waitlist?.[0]?.count ?? 0;
 
-                      if (hour < START_HOUR || hour > END_HOUR) return null;
+                      const { lane, lanes: laneCount } = lanes.get(cls.id) ?? { lane: 0, lanes: 1 };
 
                       return (
                         <div
                           key={cls.id}
-                          className={`absolute left-1 right-1 rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 text-white ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
+                          className={`absolute rounded-lg border px-1.5 py-1 text-left overflow-hidden shadow-sm transition-all flex items-start gap-1 text-white ${isSelected ? 'ring-2 ring-pits-primary ring-offset-1 ring-offset-pits-surface-elevated z-10' : 'z-1'}`}
                           style={{
                             ...classTypeBadgeStyle(colorByName[cls.class_type]),
                             top: top + 2,
                             height,
+                            left: `calc(${(lane / laneCount) * 100}% + 2px)`,
+                            width: `calc(${100 / laneCount}% - 4px)`,
                           }}
-                          title={`${cls.class_type} · ${getCaracasTimeLabel(cls.start_time)}`}
+                          aria-label={`${cls.class_type} · ${getGymTimeLabel(cls.start_time, tz)}`}
+                          onMouseEnter={(e) => setHovered({ cls, rect: e.currentTarget.getBoundingClientRect() })}
+                          onMouseLeave={() => setHovered((h) => (h?.cls.id === cls.id ? null : h))}
                         >
                           <input
                             type="checkbox"
@@ -522,16 +591,16 @@ export default function ScheduleWeekCalendar({
                             aria-label={t('Select class')}
                           />
                           <div className="flex-1 min-w-0 overflow-hidden">
-                            <p className="text-[10px] font-black uppercase truncate leading-tight">
+                            <p className="text-[11px] font-black uppercase truncate leading-tight">
                               {cls.class_type}
                             </p>
-                            <p className="text-[9px] font-bold truncate opacity-90 mt-0.5">
-                              {getCaracasTimeLabel(cls.start_time)}
+                            <p className="text-[11px] font-bold truncate opacity-90 mt-0.5">
+                              {getGymTimeLabel(cls.start_time, tz)}
                             </p>
-                            <p className="text-[9px] font-bold truncate opacity-80">
+                            <p className="text-[11px] font-bold truncate opacity-80">
                               {cls.coach?.full_name || t('Staff')}
                             </p>
-                            <p className="text-[9px] font-black opacity-75 mt-0.5">
+                            <p className="text-[11px] font-black opacity-75 mt-0.5">
                               {bookingCount}/{cls.max_capacity}
                               {waitlistCount > 0 ? ` · W${waitlistCount}` : ''}
                             </p>
@@ -547,9 +616,13 @@ export default function ScheduleWeekCalendar({
         </div>
       )}
 
-      <p className="px-4 py-3 text-[9px] font-bold text-pits-dim uppercase border-t border-pits-edge">
+      <p className="px-4 py-3 text-[11px] font-bold text-pits-dim uppercase border-t border-pits-edge">
         {t('Click a slot to schedule · Use checkboxes to multi-select')}
       </p>
+
+      {hovered && typeof document !== 'undefined'
+        ? createPortal(<ClassHoverCard hovered={hovered} tz={tz} lang={lang} t={t} color={colorByName[hovered.cls.class_type]} />, document.body)
+        : null}
 
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
@@ -572,6 +645,76 @@ export default function ScheduleWeekCalendar({
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
+    </div>
+  );
+}
+
+
+const CARD_WIDTH = 240;
+
+/** Everything about a class at a glance, shown next to its block on hover. */
+function ClassHoverCard({
+  hovered,
+  tz,
+  lang,
+  t,
+  color,
+}: {
+  hovered: { cls: ClassSession; rect: DOMRect };
+  tz: string;
+  lang: 'en' | 'es';
+  t: ReturnType<typeof useLanguage>['t'];
+  color?: string;
+}) {
+  const { cls, rect } = hovered;
+  const booked = cls.bookings[0]?.count ?? 0;
+  const waiting = cls.waitlist?.[0]?.count ?? 0;
+  const full = booked >= cls.max_capacity;
+  const pct = Math.min(100, (booked / Math.max(1, cls.max_capacity)) * 100);
+  const minutes = getDurationMinutes(cls.start_time, cls.end_time);
+  // Right of the block when there is room, otherwise left; keep inside the viewport vertically.
+  const left = rect.right + 8 + CARD_WIDTH < window.innerWidth ? rect.right + 8 : Math.max(8, rect.left - CARD_WIDTH - 8);
+  const top = Math.min(Math.max(8, rect.top), window.innerHeight - 220);
+
+  return (
+    <div
+      role="tooltip"
+      className="fixed z-[200] pointer-events-none rounded-xl border border-pits-edge bg-pits-surface-elevated p-3 shadow-xl text-pits-text"
+      style={{ left, top, width: CARD_WIDTH }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color || 'var(--color-pits-edge)' }} aria-hidden />
+        <p className="truncate text-sm font-bold">{cls.class_type}</p>
+      </div>
+      <p className="mt-0.5 text-xs text-pits-dim">{capitalizeFirst(formatDateLong(getGymDateFromIso(cls.start_time, tz), lang))}</p>
+      <dl className="mt-2 space-y-1.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Clock size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span>
+            {getGymTimeLabel(cls.start_time, tz)}–{getGymTimeLabel(cls.end_time, tz)}
+            <span className="text-pits-dim"> · {minutes} min</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <User size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span className={cls.coach?.full_name ? '' : 'font-semibold text-pits-warning'}>
+            {cls.coach?.full_name || t('No coach assigned')}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Users size={13} className="shrink-0 text-pits-dim" aria-hidden />
+          <span className={full ? 'font-semibold text-pits-danger' : ''}>
+            {t('{{booked}} of {{capacity}} booked', { booked, capacity: cls.max_capacity })}
+            {full ? ` · ${t('Full')}` : ''}
+          </span>
+        </div>
+      </dl>
+      <div className="mt-2 h-1.5 rounded-full bg-pits-surface-muted overflow-hidden">
+        <div className={`h-full rounded-full ${full ? 'bg-pits-danger' : pct > 80 ? 'bg-pits-warning' : 'bg-pits-positive'}`} style={{ width: `${pct}%` }} />
+      </div>
+      {waiting > 0 ? (
+        <p className="mt-1.5 text-xs text-pits-dim">{t('{{count}} waiting', { count: waiting })}</p>
+      ) : null}
     </div>
   );
 }

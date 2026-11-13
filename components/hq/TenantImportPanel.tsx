@@ -305,15 +305,15 @@ export default function TenantImportPanel({ tenantId }: Props) {
       )}
 
       {summary?.blockingErrors.map((message) => (
-        <p key={message} className="text-sm font-medium text-red-700">
+        <p key={message} className="text-sm font-medium text-pits-danger">
           {translateIssue(t, message)}
         </p>
       ))}
 
       {errorRows.length > 0 && (
-        <div className="overflow-x-auto border border-red-200 rounded-xl">
+        <div className="overflow-x-auto border border-pits-danger-edge rounded-xl">
           <table className="w-full text-left text-sm">
-            <thead className="bg-red-50 text-xs font-bold uppercase tracking-wider text-red-700">
+            <thead className="bg-pits-danger-soft text-xs font-bold uppercase tracking-wider text-pits-danger">
               <tr>
                 <th className="px-3 py-2">{t('Line')}</th>
                 <th className="px-3 py-2">{t('Row')}</th>
@@ -322,10 +322,10 @@ export default function TenantImportPanel({ tenantId }: Props) {
             </thead>
             <tbody>
               {errorRows.map((row) => (
-                <tr key={row.line} className="border-t border-red-100">
+                <tr key={row.line} className="border-t border-pits-danger-edge">
                   <td className="px-3 py-2 text-pits-ink-muted">{row.line}</td>
                   <td className="px-3 py-2">{row.label}</td>
-                  <td className="px-3 py-2 text-red-700">
+                  <td className="px-3 py-2 text-pits-danger">
                     {row.issues.map((issue) => translateIssue(t, issue)).join(' · ')}
                   </td>
                 </tr>
@@ -360,7 +360,7 @@ function MiniStat({
   return (
     <div className="bg-pits-surface-muted border border-pits-edge rounded-xl p-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-pits-ink-muted">{label}</p>
-      <p className={`text-lg font-black italic ${warn ? 'text-red-700' : 'text-pits-ink'}`}>{value}</p>
+      <p className={`text-lg font-black italic ${warn ? 'text-pits-danger' : 'text-pits-ink'}`}>{value}</p>
     </div>
   );
 }

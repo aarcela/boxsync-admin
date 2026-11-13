@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTenant } from '@/components/TenantContext';
 import { Profile, AthletePlan } from '@/lib/types/gym';
 import { athleteService } from '@/lib/services/athleteService';
 import { useToast } from '@/components/Toast';
@@ -11,6 +12,7 @@ export type SortDir = 'asc' | 'desc';
 const ITEMS_PER_PAGE = 20;
 
 export function useAthletes() {
+  const { timezone } = useTenant();
   const { toast } = useToast();
   const { t, lang } = useLanguage();
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -146,14 +148,14 @@ export function useAthletes() {
 
   const updateRenewDate = async (id: string, renewDate: string | null) => {
     const previous = profiles.find((p) => p.id === id)?.plan_period_start ?? null;
-    const nextIso = renewDate ? renewDateToIso(renewDate) : null;
+    const nextIso = renewDate ? renewDateToIso(renewDate, timezone) : null;
 
     setProfiles((prev) =>
       prev.map((p) => (p.id === id ? { ...p, plan_period_start: nextIso } : p))
     );
 
     try {
-      await athleteService.updatePlanPeriodStart(id, renewDate);
+      await athleteService.updatePlanPeriodStart(id, renewDate, timezone);
       toast(t('Renew date updated'), 'success');
     } catch {
       toast(t('Failed to update renew date'), 'error');
@@ -413,7 +415,7 @@ export function useAthletes() {
   ): Promise<BulkSummary> => {
     setBulkBusy(true);
     const summary: BulkSummary = { done: 0, skipped: 0, failed: 0 };
-    const nextIso = renewDate ? renewDateToIso(renewDate) : null;
+    const nextIso = renewDate ? renewDateToIso(renewDate, timezone) : null;
     try {
       for (const profile of profilesByIds(ids)) {
         if (profile.role !== 'member') {
@@ -421,7 +423,7 @@ export function useAthletes() {
           continue;
         }
         try {
-          await athleteService.updatePlanPeriodStart(profile.id, renewDate);
+          await athleteService.updatePlanPeriodStart(profile.id, renewDate, timezone);
           setProfiles((prev) =>
             prev.map((p) =>
               p.id === profile.id ? { ...p, plan_period_start: nextIso } : p

@@ -8,25 +8,23 @@ import {
   Wallet, 
   CheckCircle2, 
   XCircle,
-  MoreVertical,
   Search,
   Zap,
   Info,
-  CreditCard
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PaymentMethodFormModal from '@/components/PaymentMethodFormModal';
 import { paymentMethodService } from '@/lib/services/paymentMethodService';
 import { tenantCurrencyService } from '@/lib/services/tenantCurrencyService';
 import { tenantExchangeRateService } from '@/lib/services/tenantExchangeRateService';
 import { tenantSupportService } from '@/lib/services/tenantSupportService';
-import { PaymentMethod, PaymentMethodType, PaymentMethodFields } from '@/lib/types/gym';
+import { PaymentMethod } from '@/lib/types/gym';
 import {
   PAYMENT_METHOD_FIELD_DEFS,
   PAYMENT_METHOD_TYPE_LABELS,
-  PAYMENT_METHOD_TYPES,
 } from '@/lib/payment-method-fields';
 import { financialService } from '@/lib/services/financialService';
 import {
@@ -36,19 +34,16 @@ import {
   REFERENCE_CURRENCY_OPTIONS,
   computeEffectiveRate,
   currencyOptionLabel,
-  currencySymbol,
-  defaultCurrencyForMethodType,
   normalizeCurrencyCode,
   supportsLiveFx,
   type ExchangeRateSource,
   type TenantExchangeRateConfig,
 } from '@/lib/currency';
-import { 
-  createPaymentMethodAction, 
-  updatePaymentMethodAction, 
+import {   
   deletePaymentMethodAction,
   togglePaymentMethodStatusAction 
 } from './actions';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 function currencySelectValue(code: string, options: string[]) {
   return options.includes(code) ? code : CUSTOM_CURRENCY_VALUE;
@@ -58,7 +53,7 @@ export default function PaymentMethodsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const { tenantId: contextTenantId, currencies, setCurrencies } = useTenant();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -75,36 +70,9 @@ export default function PaymentMethodsPage() {
   const [savingSupport, setSavingSupport] = useState(false);
   const [livePromedio, setLivePromedio] = useState<number | null>(null);
 
-  // Form State
-  const [formData, setFormData] = useState<{
-    label: string;
-    currency: string;
-    method_type: PaymentMethodType;
-    fields: PaymentMethodFields;
-    details: string;
-    is_active: boolean;
-  }>({
-    label: '',
-    currency: currencies.local,
-    method_type: 'pago_movil',
-    fields: {},
-    details: '',
-    is_active: true
-  });
-
   useEffect(() => {
     setDraftCurrencies(currencies);
   }, [currencies]);
-
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      currency:
-        prev.currency === currencies.reference || prev.currency === currencies.local
-          ? prev.currency
-          : currencies.reference,
-    }));
-  }, [currencies.reference, currencies.local]);
 
   useEffect(() => {
     if (!supportsLiveFx(draftCurrencies) && rateConfig.baseSource !== 'custom') {
@@ -234,65 +202,8 @@ export default function PaymentMethodsPage() {
   };
 
   const handleOpenForm = (method?: PaymentMethod) => {
-    if (method) {
-      setEditingMethod(method);
-      setFormData({
-        label: method.label,
-        currency:
-          method.currency === currencies.local || method.currency === currencies.reference
-            ? method.currency
-            : defaultCurrencyForMethodType(method.method_type || 'otro', currencies),
-        method_type: method.method_type || 'otro',
-        fields: method.fields || {},
-        details: method.details || '',
-        is_active: method.is_active
-      });
-    } else {
-      setEditingMethod(null);
-      setFormData({
-        label: '',
-        currency: currencies.local,
-        method_type: 'pago_movil',
-        fields: {},
-        details: '',
-        is_active: true
-      });
-    }
+    setEditingMethod(method ?? null);
     setIsFormOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.label) return;
-
-    startTransition(async () => {
-      try {
-        const form = new FormData();
-        form.append('label', formData.label);
-        form.append('currency', formData.currency);
-        form.append('method_type', formData.method_type);
-        form.append('details', formData.details);
-        form.append('is_active', String(formData.is_active));
-        if (formData.method_type !== 'otro') {
-          for (const def of PAYMENT_METHOD_FIELD_DEFS[formData.method_type]) {
-            form.append(`field_${def.key}`, formData.fields[def.key] || '');
-          }
-        }
-
-        if (editingMethod) {
-          await updatePaymentMethodAction(editingMethod.id, form);
-          toast(t('Payment method updated'), 'success');
-        } else {
-          await createPaymentMethodAction(form);
-          toast(t('Payment method created'), 'success');
-        }
-        
-        setIsFormOpen(false);
-        if (tenantId) fetchMethods(tenantId);
-      } catch (error) {
-        toast(t('Action failed'), 'error');
-      }
-    });
   };
 
   const handleDelete = async () => {
@@ -346,26 +257,18 @@ export default function PaymentMethodsPage() {
     <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
       
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
-              {t('Payment Methods')}
-            </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
-              {t('System Config')}
-            </div>
-          </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Manage accepted payment channels and configurations')}
-          </p>
+          <h1 className="page-title">{t('Payment Methods')}</h1>
+          <p className="page-subtitle">{t('Manage accepted payment channels and configurations')}</p>
         </div>
 
-        <button 
+        <button
+          type="button"
           onClick={() => handleOpenForm()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           {t('Add Method')}
         </button>
       </div>
@@ -381,19 +284,11 @@ export default function PaymentMethodsPage() {
               {t('Plans are priced in the reference. Local methods convert at your rate.')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSaveMoneySettings}
-            disabled={savingMoney}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-          >
-            {savingMoney ? t('Processing...') : t('Save money settings')}
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Reference currency')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Reference currency')}</label>
             <select
               value={currencySelectValue(draftCurrencies.reference, REFERENCE_CURRENCY_OPTIONS)}
               onChange={(e) => {
@@ -427,11 +322,11 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">{t('What membership plans are priced in (Zelle, Binance).')}</p>
+            <p className="text-[11px] text-pits-dim font-medium">{t('What membership plans are priced in (Zelle, Binance).')}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Local currency')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Local currency')}</label>
             <select
               value={currencySelectValue(draftCurrencies.local, LOCAL_CURRENCY_OPTIONS)}
               onChange={(e) => {
@@ -467,11 +362,11 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red uppercase"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">{t('What athletes pay locally (Pago Móvil, cash).')}</p>
+            <p className="text-[11px] text-pits-dim font-medium">{t('What athletes pay locally (Pago Móvil, cash).')}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Exchange rate')}</label>
+            <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Exchange rate')}</label>
             <select
               value={rateConfig.baseSource}
               onChange={(e) =>
@@ -517,7 +412,7 @@ export default function PaymentMethodsPage() {
                 className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
               />
             )}
-            <p className="text-[10px] text-pits-dim font-medium">
+            <p className="text-[11px] text-pits-dim font-medium">
               {rateConfig.baseSource === 'custom'
                 ? `${t('Custom rate')}: 1 ${draftCurrencies.reference || 'REF'} = ${rateConfig.customRate || '—'} ${draftCurrencies.local || 'LOC'}`
                 : `${t('Margin %')} · ${t('Official and parallel use Venezuela live rates.')}`}
@@ -526,7 +421,7 @@ export default function PaymentMethodsPage() {
         </div>
 
         <div className="rounded-2xl border border-pits-edge bg-pits-surface-muted px-4 py-3">
-          <p className="text-[10px] font-black uppercase text-pits-dim mb-1">{t('Athlete checkout preview')}</p>
+          <p className="text-[11px] font-black uppercase text-pits-dim mb-1">{t('Athlete checkout preview')}</p>
           {effectiveRate ? (
             <p className="text-xs font-bold text-pits-text">
               {t('Local method example')}: 30 {draftCurrencies.reference} → {(30 * effectiveRate).toLocaleString(undefined, { maximumFractionDigits: 2 })} {draftCurrencies.local}
@@ -540,6 +435,17 @@ export default function PaymentMethodsPage() {
                 : t('Live rate unavailable. Switch to custom or check the pair.')}
             </p>
           )}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSaveMoneySettings}
+            disabled={savingMoney}
+            className="inline-flex items-center justify-center min-h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark disabled:opacity-50"
+          >
+            {savingMoney ? t('Processing...') : t('Save money settings')}
+          </button>
         </div>
       </div>
 
@@ -558,7 +464,7 @@ export default function PaymentMethodsPage() {
             type="button"
             onClick={handleSaveSupport}
             disabled={savingSupport}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[10px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[11px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
           >
             {savingSupport ? t('Processing...') : t('Save WhatsApp')}
           </button>
@@ -586,82 +492,63 @@ export default function PaymentMethodsPage() {
                   placeholder={t('Search methods...')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
                 />
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-pits-surface-elevated">
-                  <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Method')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Currency')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">{t('Status')}</th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">{t('Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-pits-edge">
-                  {loading ? (
-                    <tr><td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">{t('Initializing Data Stream...')}</td></tr>
-                  ) : filteredMethods.map(method => (
-                    <tr key={method.id} className="hover:bg-pits-surface-elevated transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl ${method.is_active ? 'bg-pits-surface-muted text-pits-text' : 'bg-pits-surface-muted text-pits-dim'}`}>
-                            <CreditCard size={16} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-pits-text uppercase tracking-tight">{method.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-pits-surface-muted text-pits-dim border border-pits-edge">
-                                {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-pits-dim font-medium truncate max-w-[200px]">{methodSummary(method)}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${method.currency === currencies.reference ? 'bg-pits-surface-muted text-pits-primary border-pits-edge' : 'bg-pits-primary-soft text-pits-success border-pits-edge'}`}>
-                          {method.currency === currencies.reference
-                            ? `${t('Reference')} · ${method.currency}`
-                            : `${t('Local')} · ${method.currency}`}
+            {loading ? (
+              <ListSkeleton rows={3} />
+            ) : filteredMethods.length === 0 ? (
+              <p className="px-4 py-12 text-center text-sm text-pits-dim">{t('No records found.')}</p>
+            ) : (
+              <ul className="divide-y divide-pits-edge">
+                {filteredMethods.map((method) => (
+                  <li key={method.id} className={`flex items-center gap-3 pl-4 pr-2 py-3 ${method.is_active ? '' : 'opacity-60'}`}>
+                    <button type="button" onClick={() => handleOpenForm(method)} className="min-w-0 flex-1 text-left">
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="truncate text-sm font-semibold text-pits-text">{method.label}</span>
+                        <span className="text-xs text-pits-dim">
+                          {t(PAYMENT_METHOD_TYPE_LABELS[method.method_type || 'otro'])} ·{' '}
+                          {method.currency === currencies.reference ? t('Reference') : t('Local')} {method.currency}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => handleToggleStatus(method)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${method.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-edge' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                        >
-                          {method.is_active ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
-                          {method.is_active ? t('Active') : t('Inactive')}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button 
-                            onClick={() => handleOpenForm(method)}
-                            className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-all"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => setMethodToDelete(method.id)}
-                            className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-primary-soft rounded-lg transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!loading && filteredMethods.length === 0 && (
-                    <tr><td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase">{t('No records found.')}</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      </span>
+                      <span className="block truncate text-xs text-pits-dim">{methodSummary(method)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={method.is_active}
+                      onClick={() => handleToggleStatus(method)}
+                      className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                        method.is_active
+                          ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                          : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                      }`}
+                    >
+                      {method.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                      {method.is_active ? t('Active') : t('Inactive')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenForm(method)}
+                      aria-label={t('Edit')}
+                      className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMethodToDelete(method.id)}
+                      aria-label={t('Delete')}
+                      className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -681,11 +568,11 @@ export default function PaymentMethodsPage() {
               
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">{t('Total Methods')}</span>
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">{t('Total Methods')}</span>
                   <span className="text-sm font-black text-pits-text">{methods.length}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-pits-ink/5 rounded-2xl border border-pits-edge">
-                  <span className="text-[10px] font-bold text-pits-dim uppercase">{t('Active Channels')}</span>
+                  <span className="text-[11px] font-bold text-pits-dim uppercase">{t('Active Channels')}</span>
                   <span className="text-sm font-black text-pits-success">{methods.filter(m => m.is_active).length}</span>
                 </div>
               </div>
@@ -699,11 +586,11 @@ export default function PaymentMethodsPage() {
             <ul className="space-y-3">
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one REF and one local method active for operational flexibility.')}</p>
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">{t('Keep at least one REF and one local method active for operational flexibility.')}</p>
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">{t('Details appear on athlete invoices. Provide clear instructions for bank transfers.')}</p>
+                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">{t('Details appear on athlete invoices. Provide clear instructions for bank transfers.')}</p>
               </li>
             </ul>
           </div>
@@ -712,164 +599,14 @@ export default function PaymentMethodsPage() {
 
       {/* MODAL FORM */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-pits-black/60 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
-          <div className="relative bg-pits-surface-elevated rounded-[40px] w-full max-w-md overflow-hidden shadow-2xl border border-pits-edge animate-in fade-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h2 className="text-2xl font-black text-pits-text tracking-tighter uppercase">
-                    {editingMethod ? t('Edit Method') : t('Add Method')}
-                  </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
-                    {t('Payment Channel Configuration')}
-                  </p>
-                </div>
-                <div className="p-3 bg-pits-primary-soft text-pits-red rounded-2xl"><Zap size={20} fill="currentColor"/></div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method Name / Label')}</label>
-                   <input 
-                     type="text" 
-                     placeholder={t('e.g. Bank Transfer Zelle')}
-                     required
-                     value={formData.label}
-                     onChange={(e) => setFormData({...formData, label: e.target.value})}
-                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim"
-                   />
-                </div>
-
-                <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Method Type')}</label>
-                   <select
-                     value={formData.method_type}
-                     onChange={(e) => {
-                       const method_type = e.target.value as PaymentMethodType;
-                       setFormData((prev) => ({
-                         ...prev,
-                         method_type,
-                         fields: {},
-                         currency: defaultCurrencyForMethodType(method_type, currencies),
-                       }));
-                     }}
-                     className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                   >
-                     {PAYMENT_METHOD_TYPES.map((type) => (
-                       <option key={type} value={type}>{t(PAYMENT_METHOD_TYPE_LABELS[type])}</option>
-                     ))}
-                   </select>
-                </div>
-
-                <div className="space-y-2">
-                   <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Athletes pay in')}</label>
-                   <div className="grid grid-cols-2 gap-2">
-                     <button
-                       type="button"
-                       onClick={() => setFormData({ ...formData, currency: currencies.local })}
-                       className={`rounded-2xl border px-3 py-3 text-left transition-all ${
-                         formData.currency === currencies.local
-                           ? 'border-pits-red bg-pits-primary-soft'
-                           : 'border-pits-edge bg-pits-surface-muted'
-                       }`}
-                     >
-                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Local')}</div>
-                       <div className="text-xs font-black text-pits-text mt-0.5">
-                         {currencies.local} ({currencySymbol(currencies.local)})
-                       </div>
-                     </button>
-                     <button
-                       type="button"
-                       onClick={() => setFormData({ ...formData, currency: currencies.reference })}
-                       className={`rounded-2xl border px-3 py-3 text-left transition-all ${
-                         formData.currency === currencies.reference
-                           ? 'border-pits-red bg-pits-primary-soft'
-                           : 'border-pits-edge bg-pits-surface-muted'
-                       }`}
-                     >
-                       <div className="text-[9px] font-black uppercase text-pits-dim">{t('Reference')}</div>
-                       <div className="text-xs font-black text-pits-text mt-0.5">
-                         {currencies.reference} ({currencySymbol(currencies.reference)})
-                       </div>
-                     </button>
-                   </div>
-                   <p className="text-[10px] text-pits-dim font-medium">
-                     {formData.currency === currencies.local
-                       ? (effectiveRate
-                           ? t('Local method converts the plan. Example: {{plan}} {{ref}} → {{localAmount}} {{local}}', {
-                               plan: '30',
-                               ref: currencies.reference,
-                               localAmount: (30 * effectiveRate).toLocaleString(undefined, { maximumFractionDigits: 2 }),
-                               local: currencies.local,
-                             })
-                           : t('Local methods convert the plan price using the box exchange rate.'))
-                       : t('Reference methods charge the same amount as the plan (no conversion).')}
-                   </p>
-                </div>
-
-                <div className="space-y-2">
-                      <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Status')}</label>
-                      <select 
-                        value={String(formData.is_active)}
-                        onChange={(e) => setFormData({...formData, is_active: e.target.value === 'true'})}
-                        className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-black text-pits-text outline-none focus:ring-2 focus:ring-pits-red"
-                      >
-                        <option value="true">{t('Active')}</option>
-                        <option value="false">{t('Inactive')}</option>
-                      </select>
-                </div>
-
-                {formData.method_type === 'otro' ? (
-                  <div className="space-y-2">
-                     <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Details / Instructions')}</label>
-                     <textarea
-                       rows={3}
-                       placeholder={t('Account number, bank name, etc.')}
-                       value={formData.details}
-                       onChange={(e) => setFormData({...formData, details: e.target.value})}
-                       className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim resize-none"
-                     />
-                  </div>
-                ) : (
-                  PAYMENT_METHOD_FIELD_DEFS[formData.method_type].map((def) => (
-                    <div key={def.key} className="space-y-2">
-                       <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t(def.label)}</label>
-                       <input
-                         type="text"
-                         value={formData.fields[def.key] || ''}
-                         onChange={(e) =>
-                           setFormData((prev) => ({
-                             ...prev,
-                             fields: { ...prev.fields, [def.key]: e.target.value },
-                           }))
-                         }
-                         className="w-full bg-pits-surface-muted border border-pits-edge rounded-2xl px-5 py-3.5 text-xs font-bold text-pits-text outline-none focus:ring-2 focus:ring-pits-red focus:bg-pits-surface-elevated transition-all placeholder:text-pits-dim"
-                       />
-                    </div>
-                  ))
-                )}
-
-                <div className="pt-4 flex gap-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsFormOpen(false)}
-                    className="flex-1 py-4 bg-pits-surface-muted text-pits-dim rounded-2xl text-[11px] font-black uppercase hover:bg-pits-surface-muted transition-all border border-pits-edge/50"
-                  >
-                    {t('Cancel')}
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isPending}
-                    className="flex-[2] py-4 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
-                  >
-                    {isPending ? t('Processing...') : editingMethod ? t('Save Changes') : t('Confirm Method')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <PaymentMethodFormModal
+          method={editingMethod}
+          effectiveRate={effectiveRate}
+          onClose={() => setIsFormOpen(false)}
+          onSaved={() => {
+            if (tenantId) void fetchMethods(tenantId);
+          }}
+        />
       )}
 
       <ConfirmDialog

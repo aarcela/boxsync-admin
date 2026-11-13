@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -20,8 +20,6 @@ import {
   BarChart3,
   MessageSquare,
   TrendingUp,
-  Wallet,
-  ChevronDown,
   Scale,
   MessagesSquare,
   Trophy,
@@ -40,12 +38,20 @@ import {
   QrCode,
   ListChecks,
   MessageCircle,
+  Search,
+  ArrowLeftRight,
+  ChevronDown,
+  User,
+  Languages,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import CommandPalette, { type PaletteLink } from '@/components/CommandPalette';
+import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
 import Tooltip from '@/components/Tooltip';
 import { financialService } from '@/lib/services/financialService';
 import {
@@ -60,45 +66,58 @@ import {
 import Image from 'next/image';
 import type { TranslationKey } from '@/lib/translations';
 
-type NavSubItem = {
+type NavTab = {
   name: string;
   href: string;
   icon: LucideIcon;
   tip: string;
 };
 
-type NavLinkItem = {
-  name: string;
-  href: string;
-  icon: LucideIcon;
-  tip: string;
-};
-
-type NavParentItem = {
-  name: string;
-  icon: LucideIcon;
-  tip: string;
-  subItems: NavSubItem[];
-};
-
-type NavItem = NavLinkItem | NavParentItem;
-
-type NavSection = {
+/** One sidebar entry. Groups with several tabs show a tab bar above their pages. */
+type NavGroup = {
   id: string;
-  /** Empty = no header (used when the only item is an accordion with the same name). */
-  label: string;
-  items: NavItem[];
+  name: string;
+  icon: LucideIcon;
+  tip: string;
+  tabs: NavTab[];
 };
+
+/** Home only matches itself; every other tab also owns its sub-routes (e.g. athletes/[id]). */
+function tabMatchLength(pathname: string, href: string): number {
+  if (href === '/dashboard') return pathname === href ? href.length : -1;
+  return pathname === href || pathname.startsWith(`${href}/`) ? href.length : -1;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  // Always start closed so SSR + first client paint match (avoid hydration mismatch).
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Desktop rail starts expanded and mobile drawer starts closed, so SSR and first paint
+  // match without a width animation on every page load.
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(e.target as Node)) setAccountMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountMenuOpen]);
   const { lang, setLanguage, t } = useLanguage();
   const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
   const { toast } = useToast();
-  const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const moneyCurrency = useMoneyCurrency();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(null);
   const [runningExpiry, setRunningExpiry] = useState(false);
@@ -107,13 +126,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [emailConfirmed, setEmailConfirmed] = useState(true);
   const [trialBannerTracked, setTrialBannerTracked] = useState(false);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const sync = () => setIsSidebarOpen(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
 
   const loadDueCount = useCallback(async () => {
     try {
@@ -159,161 +171,150 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return userFullName.slice(0, 2).toUpperCase();
   })();
 
-  const navSections = useMemo((): NavSection[] => {
-    const moneySubItems: NavSubItem[] = [
-      { name: t('Money overview'), href: '/dashboard/financials', icon: DollarSign, tip: t('Nav tip Money overview') },
-      { name: t('Income'), href: '/dashboard/income', icon: TrendingUp, tip: t('Nav tip Income') },
-      { name: t('Expenses'), href: '/dashboard/expenses', icon: Wallet, tip: t('Nav tip Expenses') },
-      { name: t('Who has paid'), href: '/dashboard/accountability', icon: Scale, tip: t('Nav tip Who has paid') },
-      { name: t('Membership Plans'), href: '/dashboard/plans', icon: Tags, tip: t('Nav tip Membership Plans') },
-      { name: t('How they pay'), href: '/dashboard/payment_methods', icon: CreditCard, tip: t('Nav tip How they pay') },
-      { name: t('Reports'), href: '/dashboard/financials/insights', icon: BarChart3, tip: t('Nav tip Reports') },
-    ];
-
-    if (userRole === 'admin') {
-      moneySubItems.push(
-        { name: t('Salary'), href: '/dashboard/salary', icon: Banknote, tip: t('Nav tip Salary') },
-        { name: t('Payroll'), href: '/dashboard/payroll', icon: Receipt, tip: t('Nav tip Payroll') },
-      );
-    }
-
-    return [
-      {
-        id: 'today',
-        label: t('Today'),
-        items: [
-          { name: t('Home'), href: '/dashboard', icon: LayoutDashboard, tip: t('Nav tip Home') },
-          { name: t('Nav Check-in'), href: '/dashboard/attendance', icon: ClipboardCheck, tip: t('Nav tip Check-in') },
-          { name: t('Users'), href: '/dashboard/athletes', icon: Users, tip: t('Nav tip Users') },
-        ],
-      },
+  const navGroups = useMemo((): NavGroup[] => {
+    const tab = (name: TranslationKey, href: string, icon: LucideIcon, tip: TranslationKey): NavTab => ({
+      name: t(name),
+      href,
+      icon,
+      tip: t(tip),
+    });
+    const groups: NavGroup[] = [
+      { id: 'home', name: t('Home'), icon: LayoutDashboard, tip: t('Nav tip Home'), tabs: [tab('Home', '/dashboard', LayoutDashboard, 'Nav tip Home')] },
+      { id: 'checkin', name: t('Nav Check-in'), icon: ClipboardCheck, tip: t('Nav tip Check-in'), tabs: [tab('Nav Check-in', '/dashboard/attendance', ClipboardCheck, 'Nav tip Check-in')] },
+      { id: 'users', name: t('Users'), icon: Users, tip: t('Nav tip Users'), tabs: [tab('Users', '/dashboard/athletes', Users, 'Nav tip Users')] },
       {
         id: 'classes',
-        label: '',
-        items: [
-          {
-            name: t('Classes'),
-            icon: Dumbbell,
-            tip: t('Nav tip Classes'),
-            subItems: [
-              { name: t('Schedule'), href: '/dashboard/schedule', icon: CalendarDays, tip: t('Nav tip Schedule') },
-              ...(features.wod
-                ? [{ name: t('Daily workouts'), href: '/dashboard/wods', icon: Dumbbell, tip: t('Nav tip Daily workouts') }]
-                : []),
-              { name: t('Class Types'), href: '/dashboard/class_types', icon: Layers, tip: t('Nav tip Class Types') },
-              ...(features.personalRecords
-                ? [{ name: t('Personal Records'), href: '/dashboard/personal_records', icon: Trophy, tip: t('Nav tip Personal Records') }]
-                : []),
-            ],
-          },
+        name: t('Classes'),
+        icon: Dumbbell,
+        tip: t('Nav tip Classes'),
+        tabs: [
+          tab('Schedule', '/dashboard/schedule', CalendarDays, 'Nav tip Schedule'),
+          ...(features.wod ? [tab('Daily workouts', '/dashboard/wods', Dumbbell, 'Nav tip Daily workouts')] : []),
+          ...(features.personalRecords
+            ? [tab('Personal Records', '/dashboard/personal_records', Trophy, 'Nav tip Personal Records')]
+            : []),
+          tab('Class Types', '/dashboard/class_types', Layers, 'Nav tip Class Types'),
         ],
       },
       {
         id: 'money',
-        label: '',
-        items: [
-          {
-            name: t('Money'),
-            icon: DollarSign,
-            tip: t('Nav tip Money'),
-            subItems: moneySubItems,
-          },
+        name: t('Money'),
+        icon: DollarSign,
+        tip: t('Nav tip Money'),
+        tabs: [
+          tab('Payments tab', '/dashboard/financials', DollarSign, 'Nav tip Payments tab'),
+          tab('This month', '/dashboard/accountability', Scale, 'Nav tip Month result'),
+          tab('Movements', '/dashboard/movements', ArrowLeftRight, 'Nav tip Movements'),
+          ...(userRole === 'admin'
+            ? [
+                tab('Salary', '/dashboard/salary', Banknote, 'Nav tip Salary'),
+                tab('Payroll', '/dashboard/payroll', Receipt, 'Nav tip Payroll'),
+              ]
+            : []),
         ],
       },
       {
-        id: 'talk',
-        label: t('Talk to members'),
-        items: [
-          { name: t('Announcements'), href: '/dashboard/news', icon: Megaphone, tip: t('Nav tip Announcements') },
-          { name: t('Push notifications'), href: '/dashboard/notifications', icon: Bell, tip: t('Nav tip Push notifications') },
+        id: 'messages',
+        name: t('Messages'),
+        icon: Megaphone,
+        tip: t('Nav tip Messages'),
+        tabs: [
+          tab('Announcements', '/dashboard/news', Megaphone, 'Nav tip Announcements'),
+          tab('Push notifications', '/dashboard/notifications', Bell, 'Nav tip Push notifications'),
           ...(features.community
-            ? [{ name: t('Community'), href: '/dashboard/community', icon: MessagesSquare, tip: t('Nav tip Community') }]
+            ? [tab('Community', '/dashboard/community', MessagesSquare, 'Nav tip Community')]
             : []),
-          { name: t('Feedback'), href: '/dashboard/feedback', icon: MessageSquare, tip: t('Nav tip Feedback') },
+          tab('Feedback', '/dashboard/feedback', MessageSquare, 'Nav tip Feedback'),
         ],
       },
       {
         id: 'results',
-        label: t('Results'),
-        items: [
-          { name: t('Box health'), href: '/dashboard/performance', icon: TrendingUp, tip: t('Nav tip Box health') },
-          { name: t('Ask AI'), href: '/dashboard/ask', icon: Sparkles, tip: t('Nav tip Ask AI') },
+        name: t('Results'),
+        icon: BarChart3,
+        tip: t('Nav tip Results'),
+        tabs: [
+          tab('Box health', '/dashboard/performance', TrendingUp, 'Nav tip Box health'),
+          tab('Ask AI', '/dashboard/ask', Sparkles, 'Nav tip Ask AI'),
+          tab('Revenue Rescue', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
+          tab('Founding Pilot', '/dashboard/pilot', Rocket, 'Nav tip Founding Pilot'),
         ],
       },
       {
         id: 'settings',
-        label: '',
-        items: [
-          {
-            name: t('Settings'),
-            icon: Settings,
-            tip: t('Nav tip Settings'),
-            subItems: [
-              ...(emailConfirmed
-                ? [
-                    {
-                      name: t('Athlete join QR'),
-                      href: '/dashboard/profile',
-                      icon: QrCode,
-                      tip: t('Nav tip Athlete join QR'),
-                    },
-                  ]
-                : []),
-              ...(signupSource === 'self_serve'
-                ? [
-                    {
-                      name: t('Setup assistant'),
-                      href: '/dashboard/setup',
-                      icon: ListChecks,
-                      tip: t('Configure your gym'),
-                    },
-                  ]
-                : []),
-              ...(userRole === 'admin'
-                ? [
-                    {
-                      name: t('Onboarding'),
-                      href: '/dashboard/onboarding',
-                      icon: ClipboardList,
-                      tip: t('Nav tip Onboarding'),
-                    },
-                    {
-                      name: t('Booking'),
-                      href: '/dashboard/booking',
-                      icon: CalendarClock,
-                      tip: t('Nav tip Booking'),
-                    },
-                    {
-                      name: t('Appearance'),
-                      href: '/dashboard/appearance',
-                      icon: Palette,
-                      tip: t('Nav tip Appearance'),
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
-      },
-      {
-        id: 'special',
-        label: t('Special'),
-        items: [
-          { name: t('Founding Pilot'), href: '/dashboard/pilot', icon: Rocket, tip: t('Nav tip Founding Pilot') },
+        name: t('Settings'),
+        icon: Settings,
+        tip: t('Nav tip Settings'),
+        tabs: [
+          ...(userRole === 'admin' ? [tab('Booking', '/dashboard/booking', CalendarClock, 'Nav tip Booking')] : []),
+          tab('Membership Plans', '/dashboard/plans', Tags, 'Nav tip Membership Plans'),
+          tab('How they pay', '/dashboard/payment_methods', CreditCard, 'Nav tip How they pay'),
+          ...(userRole === 'admin'
+            ? [
+                tab('Onboarding', '/dashboard/onboarding', ClipboardList, 'Nav tip Onboarding'),
+                tab('Appearance', '/dashboard/appearance', Palette, 'Nav tip Appearance'),
+              ]
+            : []),
+          ...(emailConfirmed ? [tab('Join QR', '/dashboard/profile', QrCode, 'Nav tip Athlete join QR')] : []),
+          ...(userRole === 'admin' || signupSource === 'self_serve'
+            ? [{ name: t('Setup assistant'), href: '/dashboard/setup', icon: ListChecks, tip: t('Configure your gym') }]
+            : []),
         ],
       },
     ];
+    return groups.filter((g) => g.tabs.length > 0);
   }, [t, userRole, features, emailConfirmed, signupSource]);
 
-  const toggleMenu = (menuName: string) => {
-    setOpenMenus((prev) => (prev.includes(menuName) ? [] : [menuName]));
+  /** The group and tab that own the current page (longest matching href wins). */
+  const activeNav = useMemo(() => {
+    let best: { group: NavGroup; tab: NavTab; len: number } | null = null;
+    for (const group of navGroups) {
+      for (const navTab of group.tabs) {
+        const len = tabMatchLength(pathname, navTab.href);
+        if (len > (best?.len ?? -1)) best = { group, tab: navTab, len };
+      }
+    }
+    return best;
+  }, [navGroups, pathname]);
+
+  const paletteLinks = useMemo(
+    (): PaletteLink[] =>
+      navGroups.flatMap((group) =>
+        group.tabs.map((navTab) => ({
+          name: navTab.name,
+          href: navTab.href,
+          icon: navTab.icon,
+          group: group.tabs.length > 1 ? group.name : undefined,
+        })),
+      ),
+    [navGroups],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      } else if (e.key === '/' && !typing) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const closeSidebarOnMobile = () => setMobileOpen(false);
+
+  const toggleSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) setCollapsed((c) => !c);
+    else setMobileOpen((o) => !o);
   };
 
-  const closeSidebarOnMobile = () => {
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  };
+  /** Hidden only on desktop while the rail is collapsed; the mobile drawer is always full width. */
+  const whenExpanded = collapsed ? 'lg:hidden' : '';
 
   useEffect(() => {
     if (pathname.includes('/dashboard/wods') && !features.wod) {
@@ -361,160 +362,90 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-pits-surface overflow-hidden">
       
       {/* MOBILE BACKDROP */}
-      {isSidebarOpen && (
-        <div 
+      {mobileOpen && (
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() => setMobileOpen(false)}
         />
       )}
-      
+
       {/* SIDEBAR */}
-      <aside 
-        className={`bg-pits-shell text-pits-shell-ink transition-all duration-300 ease-in-out flex flex-col overflow-x-hidden
-          fixed inset-y-0 left-0 z-50 lg:relative lg:translate-x-0
-          ${isSidebarOpen 
-            ? 'w-64 translate-x-0' 
-            : '-translate-x-full lg:translate-x-0 lg:w-20'}
+      <aside
+        className={`bg-pits-shell text-pits-shell-ink transition-[width,transform] duration-200 ease-out flex flex-col overflow-x-hidden
+          fixed inset-y-0 left-0 z-50 w-64 lg:relative lg:translate-x-0
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${collapsed ? 'lg:w-20' : 'lg:w-64'}
         `}
       >
         {/* Brand */}
-        <div className="h-16 flex items-center justify-between px-4">
-          <div className={`flex-1 flex items-center py-4 ${isSidebarOpen ? 'justify-start pl-2' : 'justify-center'}`}>
-            {isSidebarOpen ? (
-               <>
-              <Image src="/assets/logo.png" alt="Logo" className="w-10 h-10" width={40} height={40} />
-              <span className="font-black text-2xl text-pits-white ml-2">WODUS</span>
-               </>
-            ) : (
-              <span className="font-black text-2xl text-pits-shell-accent">W</span>
-            )}
+        <div className="h-16 flex items-center justify-between px-4 shrink-0">
+          <div className={`flex-1 flex items-center py-4 pl-2 ${collapsed ? 'lg:justify-center lg:pl-0' : ''}`}>
+            <Image src="/assets/logo.png" alt="Logo" className={`w-10 h-10 ${collapsed ? 'lg:hidden' : ''}`} width={40} height={40} />
+            <span className={`font-black text-2xl text-pits-white ml-2 whitespace-nowrap ${whenExpanded}`}>WODUS</span>
+            <span className={`font-black text-2xl text-pits-shell-accent hidden ${collapsed ? 'lg:inline' : ''}`}>W</span>
           </div>
-          
+
           {/* Close button for mobile */}
-          {isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
-            >
-              <X size={20} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label={t('Close')}
+            className="lg:hidden p-2 text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Navigation — min-h-0 + overflow so expanded submenus stay scrollable */}
-        <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-4 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {navSections.map((section) => (
-            <div key={section.id} className="space-y-1">
-              {isSidebarOpen && section.label && (
-                <p className="px-3 pt-1 pb-1 text-[9px] font-black uppercase tracking-widest text-pits-shell-ink-muted/70">
-                  {section.label}
-                </p>
-              )}
-              {!isSidebarOpen && section.id !== 'today' && (
-                <div className="mx-2 my-2 border-t border-pits-shell-edge" />
-              )}
-              {section.items.map((item) => {
-                const hasSubItems = 'subItems' in item && item.subItems && item.subItems.length > 0;
-                const isMenuOpen =
-                  openMenus.includes(item.name) ||
-                  ('subItems' in item && item.subItems?.some((sub) => pathname === sub.href) === true);
-                const isActive =
-                  'href' in item
-                    ? pathname === item.href
-                    : 'subItems' in item && item.subItems?.some((sub) => pathname === sub.href);
-
-                return (
-                  <div key={`${section.id}-${item.name}`} className="space-y-1">
-                    {hasSubItems ? (
-                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => toggleMenu(item.name)}
-                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                            ${isActive
-                              ? 'border-pits-shell-accent text-pits-shell-ink'
-                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                          `}
-                        >
-                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                          {isSidebarOpen && (
-                            <>
-                              <span className="ml-3 font-bold text-sm uppercase tracking-wide flex-1 text-left min-w-0 break-words leading-tight">
-                                {item.name}
-                              </span>
-                              <ChevronDown
-                                size={16}
-                                className={`shrink-0 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
-                              />
-                            </>
-                          )}
-                        </button>
-                      </Tooltip>
-                    ) : 'href' in item ? (
-                      <Tooltip content={item.tip} side="right" className="w-full min-w-0">
-                        <Link
-                          href={item.href}
-                          onClick={closeSidebarOnMobile}
-                          className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent
-                            ${isActive
-                              ? 'border-pits-shell-accent text-pits-shell-ink'
-                              : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                          `}
-                        >
-                          <item.icon size={20} className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                          {isSidebarOpen && (
-                            <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
-                              {item.name}
-                            </span>
-                          )}
-                        </Link>
-                      </Tooltip>
-                    ) : null}
-
-                    {hasSubItems && isMenuOpen && isSidebarOpen && 'subItems' in item && (
-                      <div className="ml-2 min-w-0 space-y-1 border-l border-pits-shell-edge pl-2">
-                        {item.subItems.map((sub) => {
-                          const isSubActive = pathname === sub.href;
-                          return (
-                            <Tooltip key={sub.href} content={sub.tip} side="right" className="w-full min-w-0">
-                              <Link
-                                href={sub.href}
-                                onClick={closeSidebarOnMobile}
-                                className={`w-full min-w-0 flex items-center p-2 rounded-lg transition-colors group border-2 border-transparent
-                                  ${isSubActive
-                                    ? 'border-pits-shell-accent text-pits-shell-ink'
-                                    : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'}
-                                `}
-                              >
-                                <sub.icon size={16} className={`shrink-0 ${isSubActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`} />
-                                <span className="ml-3 font-bold text-[11px] uppercase tracking-wide min-w-0 break-words leading-tight">
-                                  {sub.name}
-                                </span>
-                              </Link>
-                            </Tooltip>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        <nav
+          aria-label={t('Menu')}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-1 px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {navGroups.map((group) => {
+            const isActive = activeNav?.group.id === group.id;
+            return (
+              <div key={group.id}>
+                {group.id === 'settings' ? <div className="mx-2 my-3 border-t border-pits-shell-edge" /> : null}
+                <Tooltip content={group.tip} side="right" className="w-full min-w-0">
+                  <Link
+                    href={group.tabs[0].href}
+                    onClick={closeSidebarOnMobile}
+                    aria-label={group.name}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full min-w-0 flex items-center p-3 rounded-lg transition-colors group border-2 border-transparent ${
+                      collapsed ? 'lg:justify-center' : ''
+                    } ${
+                      isActive
+                        ? 'border-pits-shell-accent text-pits-shell-ink'
+                        : 'text-pits-shell-ink-muted hover:border-pits-shell-edge hover:text-pits-shell-ink'
+                    }`}
+                  >
+                    <group.icon
+                      size={20}
+                      className={`shrink-0 ${isActive ? 'text-pits-shell-accent' : 'text-pits-shell-ink-muted group-hover:text-pits-shell-accent'}`}
+                    />
+                    <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
+                      {group.name}
+                    </span>
+                  </Link>
+                </Tooltip>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer / Logout */}
-        <div className="p-4">
+        <div className="p-4 shrink-0">
           <button
+            type="button"
             onClick={handleLogout}
-            className="flex items-center w-full min-w-0 p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors"
+            aria-label={t('Log Out')}
+            className={`flex items-center w-full min-w-0 p-2 rounded-lg text-pits-shell-ink-muted hover:border hover:border-pits-shell-edge hover:text-pits-shell-accent transition-colors ${collapsed ? 'lg:justify-center' : ''}`}
           >
             <LogOut size={20} className="shrink-0" />
-            {isSidebarOpen && (
-              <span className="ml-3 font-bold text-sm uppercase tracking-wide min-w-0 break-words leading-tight">
-                {t('Log Out')}
-              </span>
-            )}
+            <span className={`ml-3 font-bold text-sm uppercase tracking-wide min-w-0 truncate ${whenExpanded}`}>
+              {t('Log Out')}
+            </span>
           </button>
         </div>
       </aside>
@@ -524,32 +455,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Top Header */}
         <header className="h-16 bg-pits-shell shadow-lg flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={t('Menu')}
               className="p-2 rounded-md hover:bg-pits-shell-edge text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
             >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+              <Menu size={20} />
             </button>
             
-            {/* Language Toggle */}
-            <div className="flex items-center bg-pits-black border border-pits-shell-edge rounded-full p-1 ml-2">
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'en' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
-                }`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLanguage('es')}
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all ${
-                  lang === 'es' ? 'bg-pits-shell-accent text-pits-dark-text shadow-sm' : 'text-pits-shell-ink-muted hover:text-pits-shell-ink'
-                }`}
-              >
-                ES
-              </button>
-            </div>
 
             {boxName && (
               <div className="min-w-0 flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-3">
@@ -557,7 +471,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {boxName}
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-wider truncate ${
+                  className={`text-[11px] font-black uppercase tracking-wider truncate ${
                     platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt)
                       ? 'text-red-400'
                       : platformPlan === 'trial' && isTrialEndingSoon(platformPlan, trialEndsAt)
@@ -571,7 +485,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         isTrialExpired(platformPlan, trialEndsAt)
                           ? t('Trial ended')
                           : t('Trial ends {{date}}', {
-                              date: new Date(trialEndsAt).toLocaleDateString(),
+                              date: formatDate(trialEndsAt, lang),
                             })
                       }`
                     : ''}
@@ -581,56 +495,107 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Tooltip
-              content={
-                dueCount > 0
-                  ? t('Nav tip memberships due', { count: dueCount })
-                  : t('Nav tip Update expired memberships')
-              }
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label={t('Search')}
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-pits-shell-edge bg-pits-black/40 text-pits-shell-ink-muted hover:text-pits-shell-ink hover:border-pits-shell-ink-muted transition-colors"
             >
+              <Search size={16} />
+              <span className="hidden md:inline text-xs font-semibold">{t('Search')}</span>
+              <kbd className="hidden md:inline text-[11px] font-semibold border border-pits-shell-edge rounded px-1">⌘K</kbd>
+            </button>
+            {dueCount > 0 ? (
+              <Tooltip content={t('Nav tip memberships due', { count: dueCount })}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmExpiryOpen(true)}
+                  disabled={runningExpiry}
+                  className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 bg-pits-warning-soft hover:bg-pits-warning-edge text-pits-warning border-pits-warning-edge"
+                >
+                  <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
+                  <span className="hidden sm:inline text-xs font-semibold">
+                    {t('{{count}} memberships due', { count: dueCount })}
+                  </span>
+                  <span className="sm:hidden text-xs font-bold">{dueCount > 99 ? '99+' : dueCount}</span>
+                </button>
+              </Tooltip>
+            ) : null}
+
+            <div className="relative" ref={accountMenuRef}>
               <button
                 type="button"
-                onClick={() => setConfirmExpiryOpen(true)}
-                disabled={runningExpiry}
-                className={`relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 ${
-                  dueCount > 0
-                    ? 'bg-pits-red/15 hover:bg-pits-red/25 text-pits-red border-pits-red/40'
-                    : 'bg-pits-shell-edge hover:bg-pits-black text-pits-shell-ink-muted hover:text-pits-shell-accent border-pits-shell-edge'
-                }`}
+                onClick={() => setAccountMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
+                className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
               >
-                <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">
-                  {t('Update expired memberships')}
+                <span className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
+                  {userInitials}
                 </span>
-                {dueCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-pits-red text-white text-[9px] font-black leading-none flex items-center justify-center">
-                    {dueCount > 99 ? '99+' : dueCount}
-                  </span>
-                )}
+                <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
+                  {userFullName || t('Admin')}
+                </span>
+                <ChevronDown size={14} className="ml-1 text-pits-shell-ink-muted hidden sm:inline" />
               </button>
-            </Tooltip>
-
-            <Link
-              href="/dashboard/profile"
-              className="flex items-center rounded-lg px-2 py-1.5 -mr-2 hover:bg-pits-shell-edge transition-colors"
-            >
-            <div className="w-8 h-8 bg-pits-shell-accent rounded-full flex items-center justify-center text-pits-dark-text font-bold text-xs">
-              {userInitials}
+              {accountMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-56 rounded-xl border border-pits-edge bg-pits-surface-elevated shadow-2xl py-1 z-[60] text-pits-text"
+                >
+                  <Link
+                    href="/dashboard/profile"
+                    role="menuitem"
+                    onClick={() => setAccountMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-pits-surface-muted"
+                  >
+                    <User size={16} className="text-pits-dim" />
+                    {t('My Profile')}
+                  </Link>
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Languages size={16} className="text-pits-dim" />
+                      {t('Language')}
+                    </span>
+                    <div className="flex rounded-lg border border-pits-edge p-0.5" role="group" aria-label={t('Language')}>
+                      {(['es', 'en'] as const).map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          aria-pressed={lang === code}
+                          onClick={() => setLanguage(code)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+                            lang === code ? 'bg-pits-text text-white' : 'text-pits-dim hover:text-pits-text'
+                          }`}
+                        >
+                          {code.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="my-1 border-t border-pits-edge" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-pits-danger hover:bg-pits-danger-soft"
+                  >
+                    <LogOut size={16} />
+                    {t('Log Out')}
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <span className="ml-3 font-bold text-sm text-pits-shell-ink-muted hidden sm:inline">
-              {userFullName || t('Admin')}
-            </span>
-            </Link>
           </div>
         </header>
 
         {!emailConfirmed && (
-          <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold uppercase tracking-wider">
+          <div className="px-4 py-2 bg-pits-warning-soft text-pits-warning text-xs font-bold uppercase tracking-wider">
             {t('Check your email to activate your account.')}
           </div>
         )}
         {platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt) && (
-          <div className="px-4 py-2 bg-red-50 text-red-800 text-xs font-bold uppercase tracking-wider">
+          <div className="px-4 py-2 bg-pits-danger-soft text-pits-danger text-xs font-bold uppercase tracking-wider">
             {t('Your trial has ended. The dashboard is read-only.')}
           </div>
         )}
@@ -654,9 +619,64 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               : 'overflow-y-auto overflow-x-hidden'
           }`}
         >
+          {activeNav && activeNav.group.tabs.length > 1 ? (
+            <nav
+              aria-label={activeNav.group.name}
+              className="-mx-4 lg:-mx-6 -mt-4 lg:-mt-6 mb-4 lg:mb-6 px-4 lg:px-6 border-b border-pits-border bg-pits-surface-elevated shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <div className="flex items-center gap-3 min-w-max">
+              <ul className="flex gap-1 min-w-max">
+                {activeNav.group.tabs.map((navTab) => {
+                  const selected = navTab.href === activeNav.tab.href;
+                  return (
+                    <li key={navTab.href}>
+                      <Link
+                        href={navTab.href}
+                        aria-current={selected ? 'page' : undefined}
+                        className={`inline-flex items-center gap-2 px-3 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                          selected
+                            ? 'border-pits-primary text-pits-text'
+                            : 'border-transparent text-pits-dim hover:text-pits-text'
+                        }`}
+                      >
+                        <navTab.icon size={16} className={selected ? 'text-pits-primary' : ''} />
+                        {navTab.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              {activeNav.group.id === 'money' && moneyCurrency.hasTwo ? (
+                <div
+                  className="ml-auto flex rounded-lg border border-pits-edge bg-pits-surface-muted p-0.5"
+                  role="group"
+                  aria-label={t('Currency')}
+                >
+                  {(['reference', 'local'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={moneyCurrency.mode === mode}
+                      onClick={() => moneyCurrency.setMode(mode)}
+                      className={`px-3 min-h-8 rounded-md text-xs font-semibold ${
+                        moneyCurrency.mode === mode
+                          ? 'bg-pits-surface-elevated text-pits-text shadow-sm'
+                          : 'text-pits-dim hover:text-pits-text'
+                      }`}
+                    >
+                      {mode === 'reference' ? moneyCurrency.currencies.reference : moneyCurrency.currencies.local}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              </div>
+            </nav>
+          ) : null}
           {children}
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} pages={paletteLinks} />
 
       <ConfirmDialog
         isOpen={confirmExpiryOpen}
@@ -719,11 +739,10 @@ function TrialFounderBanner({
     });
   }, [tracked, onTrack]);
 
-  const label = date
-    ? new Date(date).toLocaleDateString()
-    : '';
+  const { lang } = useLanguage();
+  const label = date ? formatDate(date, lang) : '';
   return (
-    <div className="px-4 py-2 bg-orange-50 text-orange-900 text-xs font-bold flex flex-wrap items-center gap-3">
+    <div className="px-4 py-2 bg-pits-warning-soft text-pits-warning text-xs font-bold flex flex-wrap items-center gap-3">
       <span>
         {t('Your trial ends on {{date}}. Write us to keep your founding price.', {
           date: label,

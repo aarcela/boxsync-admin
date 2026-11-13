@@ -7,8 +7,10 @@ import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Phone, Filter, ArrowRight
 } from 'lucide-react';
+import { formatDateShort, formatTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
+import { ListSkeleton, EmptyState } from '@/components/LoadingStates';
 
 interface Feedback {
   id: string;
@@ -152,7 +154,8 @@ export default function FeedbackPage() {
           allTimeAR,
           allTimeCount: c.aCount,
           trend,
-          alert: (c.wCount >= 3 && weekAR < ALERT_THRESHOLD) || (weekAR < allTimeAR - 0.5)
+          // Only flag a drop when there are ratings this week; no ratings isn't a bad week.
+          alert: c.wCount > 0 && ((c.wCount >= 3 && weekAR < ALERT_THRESHOLD) || weekAR < allTimeAR - 0.5)
         };
       });
 
@@ -228,10 +231,10 @@ export default function FeedbackPage() {
       {/* COMPACT STRATEGIC HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-pits-surface-elevated p-4 rounded-xl border border-pits-edge shadow-sm gap-4 shrink-0">
         <div>
-          <h2 className="text-2xl font-black text-pits-text uppercase italic tracking-tighter leading-none mb-1">
+          <h1 className="page-title mb-1">
             {t('Service Quality Control')}
-          </h2>
-          <p className="text-pits-dim font-bold text-[10px] uppercase tracking-widest opacity-60">
+          </h1>
+          <p className="page-subtitle">
             {t('Strategic monitoring and coach evaluation')}
           </p>
         </div>
@@ -240,14 +243,14 @@ export default function FeedbackPage() {
         <div className="flex gap-2 w-full md:w-auto">
           <div className="flex items-center gap-3 px-3 py-1.5 bg-pits-surface-muted rounded-lg border border-pits-edge min-w-[110px]">
              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Avg Rating')}</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Avg Rating')}</span>
                 <span className="text-lg font-black text-pits-text leading-none">{globalAvg.toFixed(1)}</span>
              </div>
              <TrendingUp size={14} className="text-pits-success" />
           </div>
           <div className="flex items-center gap-3 px-3 py-1.5 bg-pits-surface-muted rounded-lg border border-pits-edge min-w-[110px]">
              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Critical')}</span>
+                <span className="text-[11px] font-black text-pits-dim uppercase tracking-tighter leading-none">{t('Critical')}</span>
                 <span className={`text-lg font-black leading-none ${criticalCount > 0 ? 'text-pits-error' : 'text-pits-text'}`}>{criticalCount}</span>
              </div>
              <AlertTriangle size={14} className={criticalCount > 0 ? 'text-pits-error animate-pulse' : 'text-pits-dim'} />
@@ -259,11 +262,6 @@ export default function FeedbackPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
         {evaluations.map((val) => (
           <div key={val.id} className={`bg-pits-surface-elevated p-3 rounded-xl border shadow-sm relative overflow-hidden transition-all hover:border-pits-red ${val.alert ? 'border-pits-edge' : 'border-pits-edge'}`}>
-            {val.alert && (
-              <div className="absolute top-0 right-0 bg-pits-error text-pits-text text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-widest">
-                {t('Needs Attention')}
-              </div>
-            )}
             
             <div className="flex justify-between items-start mb-2">
               <div className="max-w-[70%]">
@@ -271,43 +269,48 @@ export default function FeedbackPage() {
                   {val.name}
                 </h3>
                 <div className="flex items-center gap-1.5">
+                   {val.alert && (
+                     <span className="px-1.5 py-0.5 rounded bg-pits-danger-soft text-pits-danger text-[11px] font-semibold">
+                       {t('Needs Attention')}
+                     </span>
+                   )}
                    {val.trend === 'up' && <TrendingUp size={12} className="text-pits-success" />}
                    {val.trend === 'down' && <TrendingDown size={12} className="text-pits-error" />}
-                   <span className={`text-[10px] font-black uppercase tracking-widest ${
+                   <span className={`text-[11px] font-black uppercase tracking-widest ${
                      val.trend === 'up' ? 'text-pits-success' : val.trend === 'down' ? 'text-pits-error' : 'text-pits-dim'
                    }`}>
-                     {val.trend === 'up' ? 'Improving' : val.trend === 'down' ? 'Declining' : 'Stable'}
+                     {val.trend === 'up' ? t('Improving') : val.trend === 'down' ? t('Declining') : t('Stable')}
                    </span>
                 </div>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className={`text-xl font-black leading-none ${getARColor(val.monthAR)}`}>
-                  {val.monthAR > 0 ? val.monthAR.toFixed(1) : "N/A"}
+                  {val.monthAR > 0 ? val.monthAR.toFixed(1) : '—'}
                 </span>
-                <span className="text-[9px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">30D Avg</span>
+                <span className="text-[11px] font-extrabold text-pits-dim uppercase leading-none mt-1 tracking-tighter">{t('30-day average')}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-1 p-2 bg-pits-surface-elevated rounded-xl border border-pits-edge">
                {[
-                 { l: 'Today', v: val.todayAR },
-                 { l: '7 Days', v: val.weekAR },
-                 { l: '30 Days', v: val.monthAR },
-                 { l: 'All Time', v: val.allTimeAR }
+                 { l: t('Today short'), v: val.todayAR },
+                 { l: t('7d'), v: val.weekAR },
+                 { l: t('30d'), v: val.monthAR },
+                 { l: t('All time short'), v: val.allTimeAR }
                ].map((p, i) => (
                  <div key={i} className="flex flex-col items-center border-r last:border-0 border-pits-edge/50">
-                    <span className="text-[8px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l.split(' ')[0]}</span>
+                    <span className="text-[11px] font-black text-pits-dim tracking-tighter uppercase mb-0.5">{p.l}</span>
                     <span className={`text-[13px] font-black ${getARColor(p.v)}`}>{p.v > 0 ? p.v.toFixed(1) : '-'}</span>
                  </div>
                ))}
             </div>
           </div>
         ))}
-        {evaluations.length === 0 && Array.from({length: 3}).map((_, i) => (
-           <div key={i} className="bg-pits-surface-elevated border border-dashed border-pits-edge p-3 rounded-xl flex flex-col items-center justify-center min-h-[70px]">
-              <div className="text-[8px] font-bold text-pits-dim uppercase tracking-widest">{t('N/A')}</div>
-           </div>
-        ))}
+        {evaluations.length === 0 && (
+          <div className="md:col-span-3 bg-pits-surface-elevated border border-dashed border-pits-edge p-4 rounded-xl text-center text-sm text-pits-dim">
+            {t('No ratings yet.')}
+          </div>
+        )}
       </div>
 
       {/* COMPACT SEARCH & FILTERS */}
@@ -327,9 +330,9 @@ export default function FeedbackPage() {
              <select
                value={filterCoach}
                onChange={(e) => { setFilterCoach(e.target.value); setCurrentPage(1); }}
-               className="flex-1 md:flex-none bg-pits-surface-muted border border-pits-edge rounded-lg px-2 py-2 text-[10px] font-bold text-pits-text outline-none focus:border-pits-red cursor-pointer"
+               className="flex-1 md:flex-none bg-pits-surface-muted border border-pits-edge rounded-lg px-2 py-2 text-[11px] font-bold text-pits-text outline-none focus:border-pits-red cursor-pointer"
              >
-               <option value="all" className="text-black">All Coaches</option>
+               <option value="all" className="text-black">{t('All Coaches')}</option>
                {coaches.map(c => (
                  <option key={c.id} value={c.id} className="text-black">{c.full_name}</option>
                ))}
@@ -338,7 +341,7 @@ export default function FeedbackPage() {
              <div className="flex items-center gap-1 bg-pits-ink/5 border border-pits-edge rounded-lg p-1">
                 <button
                   onClick={() => { setFilterRating(null); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${
+                  className={`px-3 min-h-9 rounded-md text-[11px] font-black uppercase transition-all ${
                     filterRating === null ? 'bg-pits-surface-elevated text-pits-text' : 'text-pits-dim hover:text-pits-text'
                   }`}
                 >
@@ -348,7 +351,7 @@ export default function FeedbackPage() {
                   <button
                     key={r}
                     onClick={() => { setFilterRating(r); setCurrentPage(1); }}
-                    className={`px-2 py-1 rounded-md text-[9px] font-black flex items-center gap-1 transition-all ${
+                    className={`px-2.5 min-h-9 rounded-md text-[11px] font-black flex items-center gap-1 transition-all ${
                       filterRating === r ? 'bg-pits-surface-elevated text-pits-text font-black' : 'text-pits-dim hover:text-pits-text font-bold'
                     }`}
                   >
@@ -363,28 +366,23 @@ export default function FeedbackPage() {
       <div className="flex-1 bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden flex flex-col">
         <div className="p-3 bg-pits-surface-muted border-b border-pits-edge flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-black text-pits-text text-[10px] uppercase tracking-widest italic">
+            <h3 className="font-black text-pits-text text-[11px] uppercase tracking-widest italic">
               {t('All Feedback')}
             </h3>
-            <span className="bg-pits-panel text-pits-text text-[9px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
+            <span className="bg-pits-panel text-pits-text text-[11px] px-1.5 py-0.5 rounded-md font-black">{totalCount}</span>
           </div>
-          <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-wider text-pits-dim">
+          <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-wider text-pits-dim">
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-error" /> {t('Critical')}</span>
-              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-primary-soft0" /> {t('Neutral')}</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-warning" /> {t('Neutral')}</span>
               <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pits-success" /> {t('Excellent')}</span>
           </div>
         </div>
 
         <div className="overflow-y-auto flex-1 custom-scrollbar">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-pits-dim">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pits-red"></div>
-            </div>
+            <ListSkeleton rows={4} />
           ) : feedback.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-pits-dim p-12">
-              <MessageSquare size={48} className="mb-4 opacity-20" />
-              <p className="font-bold text-sm uppercase italic tracking-widest">{t('No feedback found.')}</p>
-            </div>
+            <EmptyState icon={MessageSquare} title={t('No feedback found.')} hint={t('Ratings from {members} after class will show up here.')} />
           ) : (
             <div className="divide-y divide-pits-edge">
               {feedback.map((item) => (
@@ -409,7 +407,7 @@ export default function FeedbackPage() {
                           <h4 className="font-black text-pits-text uppercase italic tracking-tighter text-xl leading-none">
                             {item.athlete?.full_name || t('Anonymous')}
                           </h4>
-                          <span className="text-[9px] font-black text-pits-dim border border-pits-edge px-2 py-0.5 rounded uppercase tracking-tighter">
+                          <span className="text-[11px] font-black text-pits-dim border border-pits-edge px-2 py-0.5 rounded uppercase tracking-tighter">
                             {t('Athlete')}
                           </span>
                         </div>
@@ -427,12 +425,12 @@ export default function FeedbackPage() {
                         <div className="flex items-center gap-2 text-[11px] font-black text-pits-text bg-pits-surface-muted px-3 py-1.5 rounded-lg">
                           <User size={12} className="text-pits-red" />
                           <span className="text-pits-dim uppercase tracking-tighter">{t('Coach:')}</span>
-                          <span className="uppercase italic">{item.coach?.full_name || t('N/A')}</span>
+                          <span className="uppercase italic">{item.coach?.full_name || '—'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] font-black text-pits-text bg-pits-surface-muted px-3 py-1.5 rounded-lg">
                           <Calendar size={12} className="text-pits-red" />
                           <span className="uppercase italic">
-                            {item.class?.class_type || t('Class')} • {item.class?.start_time ? new Date(item.class.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : t('N/A')}
+                            {item.class?.class_type || t('Class')} • {item.class?.start_time ? formatTime(item.class.start_time, lang) : t('N/A')}
                           </span>
                         </div>
                       </div>
@@ -454,7 +452,7 @@ export default function FeedbackPage() {
                           </a>
                         ) : (
                           <button 
-                            onClick={() => toast(`Contact ${item.athlete?.full_name || t('Athlete')} directly (No phone on file)`, 'warning')}
+                            onClick={() => toast(t('No phone on file for {{name}}.', { name: item.athlete?.full_name || t('Athlete') }), 'warning')}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black uppercase italic tracking-wider transition-all shadow-sm bg-pits-surface-muted text-pits-dim border border-pits-edge cursor-not-allowed"
                           >
                             <Phone size={14} />
@@ -462,8 +460,8 @@ export default function FeedbackPage() {
                           </button>
                         )}
                         
-                        <span className="text-[10px] font-bold text-pits-dim uppercase tracking-widest ml-2">
-                          {new Date(item.created_at).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric' })}
+                        <span className="text-[11px] font-bold text-pits-dim uppercase tracking-widest ml-2">
+                          {formatDateShort(item.created_at, lang)}
                         </span>
                       </div>
                     </div>
@@ -476,7 +474,7 @@ export default function FeedbackPage() {
 
         {/* FOOTER PAGINATION */}
         <div className="p-4 bg-pits-surface-muted border-t border-pits-edge flex items-center justify-between">
-          <p className="text-[10px] font-black text-pits-dim uppercase tracking-widest italic">
+          <p className="text-[11px] font-black text-pits-dim uppercase tracking-widest italic">
             {t('Showing {{count}} of {{total}} entries', { count: feedback.length, total: totalCount })}
           </p>
           <div className="flex items-center gap-2">

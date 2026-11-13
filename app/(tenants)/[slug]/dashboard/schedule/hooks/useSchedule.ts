@@ -3,8 +3,10 @@ import { classService } from '@/lib/services/classService';
 import { coachBriefService, CoachBrief } from '@/lib/services/coachBriefService';
 import { ClassSession, Booking, CapacityInsight, WaitlistEntry } from '@/lib/types/gym';
 import { guestService, GuestBooking } from '@/lib/services/guestService';
+import { useTenant } from '@/components/TenantContext';
 
 export function useSchedule() {
+  const { timezone } = useTenant();
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -21,8 +23,8 @@ export function useSchedule() {
     setLoading(true);
     try {
       const [classData, insightData] = await Promise.all([
-        classService.getUpcomingClasses(),
-        classService.getCapacityInsights(),
+        classService.getUpcomingClasses(timezone),
+        classService.getCapacityInsights(timezone),
       ]);
       setClasses(classData);
       setCapacityInsights(insightData);
@@ -31,7 +33,7 @@ export function useSchedule() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timezone]);
 
   useEffect(() => {
     fetchSchedule();

@@ -29,6 +29,18 @@
   --color-pits-shell-ink: #F5F5F5;
   --color-pits-shell-ink-muted: #9BA1A6;
   --color-pits-shell-accent: #D7FF00;
+  --color-pits-danger: #B42318;
+  --color-pits-danger-soft: #FEF3F2;
+  --color-pits-danger-edge: #FECDCA;
+  --color-pits-warning: #B54708;
+  --color-pits-warning-soft: #FFFAEB;
+  --color-pits-warning-edge: #FEDF89;
+  --color-pits-positive: #067647;
+  --color-pits-positive-soft: #ECFDF3;
+  --color-pits-positive-edge: #ABEFC6;
+  --color-pits-info: #175CD3;
+  --color-pits-info-soft: #EFF8FF;
+  --color-pits-info-edge: #B2DDFF;
   --color-pits-bg: #E3E5E8;
   --color-pits-text: #15171A;
   --color-pits-dim: #646A72;

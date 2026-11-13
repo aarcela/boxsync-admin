@@ -168,8 +168,11 @@ export const pilotProgramService = {
     gymName: string;
     baseline: PilotBaseline;
     metrics: PilotMetrics;
+    /** Symbol of the gym's reference currency, e.g. "€". */
+    currencySymbol?: string;
   }): string {
     const { gymName, baseline, metrics } = params;
+    const cur = params.currencySymbol ?? '$';
     const memberDelta = metrics.activeMembers - baseline.starting_active_members;
     const mrrDelta = metrics.currentMrr - Number(baseline.starting_mrr);
     return [
@@ -178,14 +181,14 @@ export const pilotProgramService = {
       '',
       `Starting active members: ${baseline.starting_active_members}`,
       `Current active members: ${metrics.activeMembers} (${memberDelta >= 0 ? '+' : ''}${memberDelta})`,
-      `Starting MRR: $${Number(baseline.starting_mrr).toFixed(0)}`,
-      `Current MRR: $${metrics.currentMrr.toFixed(0)} (${mrrDelta >= 0 ? '+' : ''}$${mrrDelta.toFixed(0)})`,
+      `Starting monthly revenue: ${cur}${Number(baseline.starting_mrr).toFixed(0)}`,
+      `Current monthly revenue: ${cur}${metrics.currentMrr.toFixed(0)} (${mrrDelta >= 0 ? '+' : ''}${cur}${mrrDelta.toFixed(0)})`,
       '',
       `Interventions created: ${metrics.interventionsCreated}`,
       `Coach conversations completed: ${metrics.interventionsContacted}`,
       `Members returned to class: ${metrics.membersReturned}`,
       `Payments recovered: ${metrics.paymentsRecovered}`,
-      `Revenue attributed to resolved interventions: $${metrics.recoveredRevenue.toFixed(0)}`,
+      `Revenue attributed to resolved interventions: ${cur}${metrics.recoveredRevenue.toFixed(0)}`,
       '',
       'All figures are based on recorded WODUS attendance, payment, and intervention events.',
     ].join('\n');

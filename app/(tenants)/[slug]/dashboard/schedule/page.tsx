@@ -1,24 +1,32 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { usePaletteCommand } from '@/components/CommandPalette';
 import Image from 'next/image';
-import { Plus, Trash2, Clock, User, X, Edit3, Copy, AlertCircle, Users, Calendar, ShieldAlert, Info } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Trash2, X, Edit3, Copy, AlertCircle, Calendar, ShieldAlert, Info, List, ClipboardCheck, ChevronDown } from 'lucide-react';
 import CreateClassModal, { ClassFormPrefill, ClassModalMode } from '@/components/CreateClassModal';
 import { useSchedule } from './hooks/useSchedule';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { capitalizeFirst, formatDateLong, formatDateTime } from '@/lib/utils/format-date';
+import type { TranslationKey } from '@/lib/translations';
+import ScheduleList from './components/ScheduleList';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
 import ScheduleWeekCalendar from './components/ScheduleWeekCalendar';
 import Tooltip from '@/components/Tooltip';
 import { classTypeService } from '@/lib/services/classTypeService';
-import { ClassSession, ClassTypeRow } from '@/lib/types/gym';
-import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
+import { CapacityInsight, ClassSession, ClassTypeRow } from '@/lib/types/gym';
+import { currencySymbol } from '@/lib/currency';
+import { classTypeColorMap } from '@/lib/utils/classTypeStyles';
+import { getGymDate, getGymTimeLabel } from '@/lib/utils/date';
 
 type ViewTab = 'list' | 'calendar';
 
 export default function SchedulePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const {
     classes,
     loading,
@@ -36,10 +44,12 @@ export default function SchedulePage() {
   } = useSchedule();
 
   const { toast } = useToast();
-  const { tenantId } = useTenant();
+  const { tenantId, timezone: tz, currencies } = useTenant();
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>('list');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(() => searchParams.get('new') === '1');
   const [modalMode, setModalMode] = useState<ClassModalMode>('create');
   const [modalPrefill, setModalPrefill] = useState<ClassFormPrefill | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<string | undefined>();
@@ -54,6 +64,13 @@ export default function SchedulePage() {
   }>({ isOpen: false, classId: '', classType: '', bookingCount: 0 });
 
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
+  const selectedClass = selectedClassId ? classes.find((c) => c.id === selectedClassId) ?? null : null;
+  const statusTone = (status: string) =>
+    status === 'attended'
+      ? 'bg-pits-positive-soft text-pits-positive'
+      : status === 'no_show'
+        ? 'bg-pits-danger-soft text-pits-danger'
+        : 'bg-pits-info-soft text-pits-info';
 
   useEffect(() => {
     if (!tenantId) return;
@@ -62,6 +79,15 @@ export default function SchedulePage() {
       .then(setClassTypes)
       .catch((err) => console.error(err));
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!isDetailsModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsDetailsModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isDetailsModalOpen]);
 
   const handleDeleteConfirm = async () => {
     const { classId } = deleteConfirm;
@@ -75,6 +101,14 @@ export default function SchedulePage() {
     }
   };
 
+  const askDelete = (session: ClassSession) =>
+    setDeleteConfirm({
+      isOpen: true,
+      classId: session.id,
+      classType: session.class_type,
+      bookingCount: session.bookings[0]?.count || 0,
+    });
+
   const openCreateModal = (date?: string, time?: string) => {
     setModalMode('create');
     setModalPrefill(null);
@@ -82,6 +116,22 @@ export default function SchedulePage() {
     setModalInitialTime(time);
     setIsModalOpen(true);
   };
+
+  const insightText = (insight: CapacityInsight) => {
+    const params = {
+      ...insight.params,
+      amount: `${currencySymbol(currencies.reference)}${Number(insight.params.amount ?? 0).toLocaleString()}`,
+    };
+    if (insight.kind === 'low_occupancy') {
+      return { title: t('Insight low occupancy title', params), detail: t('Insight low occupancy detail', params) };
+    }
+    if (insight.kind === 'high_demand') {
+      return { title: t('Insight high demand title', params), detail: t('Insight high demand detail', params) };
+    }
+    return { title: t('Insight no-show title', params), detail: t('Insight no-show detail', params) };
+  };
+
+  usePaletteCommand('new-class', () => openCreateModal());
 
   const sessionToPrefill = (session: ClassSession): ClassFormPrefill => ({
     id: session.id,
@@ -113,6 +163,7 @@ export default function SchedulePage() {
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+    if (searchParams.get('new')) router.replace('/dashboard/schedule');
     setModalMode('create');
     setModalPrefill(null);
     setModalInitialDate(undefined);
@@ -131,85 +182,73 @@ export default function SchedulePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-3xl font-black text-pits-text uppercase italic tracking-tighter">
+            <h1 className="page-title">
               {t('Class Schedule')}
-            </h2>
+            </h1>
             <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
               <Info size={16} className="text-pits-dim cursor-help" />
             </Tooltip>
           </div>
-          <p className="text-pits-dim font-medium text-sm">
-            {t('Manage upcoming classes and coach assignments.')}
-          </p>
+          <p className="page-subtitle">{t('Manage upcoming classes and coach assignments.')}</p>
         </div>
         <button 
           onClick={() => openCreateModal()}
-          className="flex items-center justify-center px-6 py-3 bg-pits-primary text-pits-dark-text rounded-lg font-black uppercase text-xs tracking-widest shadow-lg shadow-pits-primary/50 hover:bg-pits-primary-dark transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} className="mr-2" />
+          <Plus size={16} />
           {t('Schedule Class')}
         </button>
       </div>
 
       {capacityInsights.length > 0 && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3" aria-label="Capacity insights">
-          {capacityInsights.map((insight) => (
-            <div
-              key={insight.id}
-              className={`rounded-xl border p-4 ${
-                insight.kind === 'no_show'
-                  ? 'border-red-500/30 bg-red-500/5'
-                  : insight.kind === 'high_demand'
-                    ? 'border-green-500/30 bg-green-500/5'
-                  : 'border-amber-500/30 bg-amber-500/5'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle
-                  size={18}
-                  className={
+        <details className="group rounded-xl border border-pits-warning-edge bg-pits-warning-soft">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm">
+            <AlertCircle size={16} className="shrink-0 text-pits-warning" aria-hidden />
+            <span className="font-semibold text-pits-text">
+              {t('Schedule tips ({{count}})', { count: capacityInsights.length })}
+            </span>
+            <span className="hidden sm:inline truncate text-pits-dim">· {insightText(capacityInsights[0]).title}</span>
+            <ChevronDown size={16} className="ml-auto shrink-0 text-pits-dim transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <ul className="space-y-3 border-t border-pits-warning-edge px-4 py-3">
+            {capacityInsights.map((insight) => (
+              <li key={insight.id} className="text-sm">
+                <p
+                  className={`font-semibold ${
                     insight.kind === 'no_show'
-                      ? 'text-red-400'
+                      ? 'text-pits-danger'
                       : insight.kind === 'high_demand'
-                        ? 'text-green-400'
-                        : 'text-amber-400'
-                  }
-                />
-                <div>
-                  <p className="text-xs font-black uppercase text-pits-text">{insight.title}</p>
-                  <p className="mt-1 text-xs text-pits-dim">{insight.detail}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </section>
+                        ? 'text-pits-positive'
+                        : 'text-pits-text'
+                  }`}
+                >
+                  {insightText(insight).title}
+                </p>
+                <p className="mt-0.5 text-xs text-pits-dim">{insightText(insight).detail}</p>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setViewTab('list')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-            viewTab === 'list'
-              ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
-              : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
-          }`}
-        >
-          <Clock size={14} />
-          {t('Class List')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewTab('calendar')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-            viewTab === 'calendar'
-              ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
-              : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
-          }`}
-        >
-          <Calendar size={14} />
-          {t('Class Calendar')}
-        </button>
+      <div className="inline-flex rounded-xl border border-pits-edge bg-pits-surface-elevated p-1" role="group">
+        {([
+          { id: 'list' as const, label: t('View as list'), icon: List },
+          { id: 'calendar' as const, label: t('View as calendar'), icon: Calendar },
+        ]).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={viewTab === id}
+            onClick={() => setViewTab(id)}
+            className={`inline-flex items-center gap-2 min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors ${
+              viewTab === id ? 'bg-pits-text text-white' : 'text-pits-dim hover:text-pits-text'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
       </div>
 
       {viewTab === 'calendar' ? (
@@ -218,164 +257,36 @@ export default function SchedulePage() {
           onCreateSlot={(date, time) => openCreateModal(date, time)}
           onClassesChanged={handleScheduleSuccess}
         />
+      ) : loading ? (
+        <div className="space-y-2" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-14 rounded-xl bg-pits-surface-elevated border border-pits-edge animate-pulse" />
+          ))}
+        </div>
+      ) : classes.length === 0 ? (
+        <div className="rounded-xl border border-pits-edge bg-pits-surface-elevated p-10 text-center">
+          <p className="text-sm text-pits-dim">{t('No upcoming classes found. Schedule one above.')}</p>
+          <button
+            type="button"
+            onClick={() => openCreateModal()}
+            className="mt-3 text-sm font-semibold text-pits-info hover:underline"
+          >
+            {t('Schedule Class')}
+          </button>
+        </div>
       ) : (
-      <div className="bg-pits-surface-elevated rounded-xl border border-pits-edge shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">{t('Loading schedule...')}</div>
-        ) : classes.length === 0 ? (
-          <div className="p-12 text-center text-pits-primary font-bold italic uppercase tracking-widest text-xs">
-            {t('No upcoming classes found. Schedule one above.')}
-          </div>
-        ) : (
-          <div className="divide-y divide-pits-edge">
-            {classes.map((session) => {
-              const startDate = new Date(session.start_time);
-              
-              const startDateStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(startDate);
-              const todayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-              const isToday = startDateStr === todayStr;
-
-              const dayStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', weekday: 'short' }).format(startDate);
-              const dateNumStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Caracas', day: 'numeric' }).format(startDate);
-              const timeStr = startDate.toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' });
-
-              const bookingCount = session.bookings[0]?.count || 0;
-              const waitlistCount = session.waitlist?.[0]?.count || 0;
-              const occupancyRate = (bookingCount / session.max_capacity) * 100;
-              const isHighOccupancy = occupancyRate > 80;
-
-              return (
-                <div key={session.id} className="p-5 hover:bg-pits-surface-muted/40 transition-colors flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-pits-edge last:border-0">
-                  
-                  {/* Left: Date & Time */}
-                  <div className="flex items-center gap-5 min-w-[280px]">
-                    <div className={`
-                      flex flex-col items-center justify-center w-16 h-16 rounded-xl border-2 shrink-0
-                      ${isToday ? 'bg-pits-card border-pits-red/20 text-pits-red animate-pulse-subtle' : 'bg-pits-background border-pits-border text-pits-primary'}
-                    `}>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{dayStr}</span>
-                      <span className="text-2xl font-black">{dateNumStr}</span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                       <div className="flex items-center gap-2">
-                          <span
-                            className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white shadow-sm"
-                            style={classTypeBadgeStyle(colorByName[session.class_type])}
-                          >
-                            {session.class_type}
-                          </span>
-                          <span className="text-xs font-black text-pits-text flex items-center bg-pits-surface-muted border border-pits-edge px-2 py-0.5 rounded italic">
-                            <Clock size={12} className="mr-1 text-pits-primary" />
-                            {timeStr}
-                          </span>
-                       </div>
-                       <div className={`flex items-center text-xs font-bold transition-colors ${!session.coach?.full_name ? 'text-orange-400 bg-orange-950/40 px-2 py-1 rounded-lg border border-orange-900/50' : 'text-pits-dim'}`}>
-                         <User size={12} className={`mr-1.5 ${!session.coach?.full_name ? 'text-orange-400' : 'text-pits-dim'}`} />
-                         {session.coach?.full_name ? session.coach.full_name.toUpperCase() : t('Staff')}
-                         {!session.coach?.full_name && <AlertCircle size={12} className="ml-1.5" />}
-                       </div>
-                    </div>
-                  </div>
-
-                  {/* Center: Occupancy Visualization */}
-                  <div className="flex-1 max-w-md w-full">
-                    <div className="flex justify-between items-end mb-2">
-                      <div className="flex items-center gap-2">
-                        <Users size={14} className="text-pits-dim" />
-                        <span className="text-[10px] font-black text-pits-dim uppercase tracking-widest">{t('Bookings')}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-lg font-black italic ${
-                          bookingCount >= session.max_capacity ? 'text-pits-red' : 
-                          isHighOccupancy ? 'text-orange-500' : 'text-pits-text'
-                        }`}>
-                          {bookingCount}
-                        </span>
-                        <span className="text-pits-dim font-bold ml-1 text-sm">/ {session.max_capacity}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar Container */}
-                    <div className="h-2 w-full bg-pits-surface-muted rounded-full overflow-hidden border border-pits-edge">
-                      <div 
-                        className={`h-full transition-all duration-500 rounded-full ${
-                          bookingCount >= session.max_capacity ? 'bg-pits-red' :
-                          isHighOccupancy ? 'bg-orange-500' :
-                          bookingCount > 0 ? 'bg-green-500' : 'bg-pits-edge'
-                        }`}
-                        style={{ width: `${Math.min(100, occupancyRate)}%` }}
-                      />
-                    </div>
-                    
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[9px] font-bold text-pits-dim uppercase tracking-tighter">
-                        {occupancyRate.toFixed(0)}% {t('Capacity')}
-                      </span>
-                      {bookingCount >= session.max_capacity ? (
-                        <span className="text-[9px] font-black text-pits-red uppercase italic animate-pulse">
-                          {t('Full')}{waitlistCount > 0 ? ` · ${waitlistCount} waitlisted` : ''}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-bold text-pits-dim uppercase italic">
-                          {session.max_capacity - bookingCount} {t('Spots')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2 self-end xl:self-center">
-                    <button 
-                      onClick={() => {
-                        setSelectedClassId(session.id);
-                        setIsDetailsModalOpen(true);
-                      }}
-                      className="flex items-center gap-1 px-3 py-2 text-pits-text hover:bg-pits-surface-muted border border-transparent hover:border-pits-edge rounded-lg transition-all font-black text-[10px] uppercase tracking-widest italic"
-                      title={t('DETAILS')}
-                    >
-                      {t('DETAILS')}
-                    </button>
-                    
-                    {/* Edit / Duplicate / Delete */}
-                    <div className="flex items-center border-l border-pits-edge ml-2 pl-2 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(session)}
-                        className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors"
-                        title={t('Edit Class')}
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openDuplicateModal(session)}
-                        className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-colors"
-                        title={t('Duplicate Class')}
-                      >
-                        <Copy size={16} />
-                      </button>
-                      <button 
-                        onClick={() => setDeleteConfirm({
-                          isOpen: true,
-                          classId: session.id,
-                          classType: session.class_type,
-                          bookingCount: bookingCount
-                        })}
-                        className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-colors"
-                        title={t('Cancel Class')}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        <ScheduleList
+          classes={classes}
+          timezone={tz}
+          colorByName={colorByName}
+          onOpen={(session) => {
+            setSelectedClassId(session.id);
+            setIsDetailsModalOpen(true);
+          }}
+          onEdit={openEditModal}
+          onDuplicate={openDuplicateModal}
+          onDelete={askDelete}
+        />
       )}
 
       <CreateClassModal 
@@ -388,223 +299,225 @@ export default function SchedulePage() {
         prefill={modalPrefill}
       />
 
-      {isDetailsModalOpen && selectedClassId && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-pits-background/50 p-4 backdrop-blur-sm"
+      {isDetailsModalOpen && selectedClass && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-pits-black/50 sm:p-4 backdrop-blur-sm"
           onClick={() => setIsDetailsModalOpen(false)}
         >
-          <div 
-            className="bg-pits-background rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden"
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="class-details-title"
+            className="bg-pits-surface-elevated rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-4 border-b border-pits-border shrink-0">
-              <h3 className="text-xl font-black text-pits-text uppercase italic">{t('Class Details')}</h3>
-              <button 
+            <div className="flex items-start justify-between gap-3 p-4 border-b border-pits-edge shrink-0">
+              <div className="min-w-0">
+                <h3 id="class-details-title" className="text-lg font-bold text-pits-text truncate">
+                  {selectedClass.class_type} · {getGymTimeLabel(selectedClass.start_time, tz)}
+                </h3>
+                <p className="text-sm text-pits-dim">
+                  {capitalizeFirst(formatDateLong(getGymDate(new Date(selectedClass.start_time), tz), lang))}
+                  {' · '}
+                  {selectedClass.coach?.full_name || t('No coach assigned')}
+                  {' · '}
+                  {t('{{booked}} of {{capacity}} booked', {
+                    booked: selectedClass.bookings[0]?.count || 0,
+                    capacity: selectedClass.max_capacity,
+                  })}
+                </p>
+              </div>
+              <button
+                type="button"
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="p-1 rounded bg-pits-background text-pits-primary hover:text-pits-primary-dark transition-colors"
+                aria-label={t('Close')}
+                className="flex items-center justify-center w-9 h-9 shrink-0 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain">
-              {(() => {
-                const cls = classes.find(c => c.id === selectedClassId);
-                if (!cls) return null;
-                return (
-                  <div className="space-y-6">
-                    <div className="bg-pits-background p-4 rounded-xl border border-pits-border grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Type')}</p>
-                        <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.class_type}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Class Time')}</p>
-                        <p className="font-bold text-pits-text text-sm italic">
-                          {new Date(cls.start_time).toLocaleTimeString('en-US', { timeZone: 'America/Caracas', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Coach')}</p>
-                        <p className="font-bold text-pits-text text-sm uppercase italic tracking-tighter">{cls.coach?.full_name || t('Staff')}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-pits-primary uppercase font-black tracking-wider">{t('Capacity')}</p>
-                        <p className="font-bold text-pits-text text-sm italic">{cls.bookings[0]?.count || 0} / {cls.max_capacity}</p>
-                      </div>
-                    </div>
 
-                    <div className="rounded-xl border border-pits-primary/30 bg-pits-primary-soft p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ShieldAlert size={16} className="text-pits-primary" />
-                        <h4 className="text-xs font-black text-pits-primary uppercase tracking-wider italic">
-                          {t('Private Coach Brief')}
-                        </h4>
-                      </div>
-                      {loadingRoster ? (
-                        <p className="text-pits-dim text-sm">{t('Loading schedule...')}</p>
-                      ) : coachBriefError ? (
-                        <p className="text-pits-error text-sm">{coachBriefError}</p>
-                      ) : coachBrief ? (
-                        <div className="space-y-4">
-                          <p className="text-pits-text text-xs leading-relaxed">{coachBrief.notice}</p>
-                          <div className="rounded-lg border border-pits-edge bg-pits-surface-muted p-3">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-pits-dim">
-                              {t("Today's WOD")}
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0 overscroll-contain space-y-5">
+              <section>
+                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-pits-text">
+                  {t('Athletes')}
+                  <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
+                    <Info size={12} className="text-pits-dim cursor-help" />
+                  </Tooltip>
+                </h4>
+                {loadingRoster ? (
+                  <div className="space-y-2" aria-busy="true">
+                    {[0, 1].map((i) => (
+                      <div key={i} className="h-12 rounded-lg bg-pits-surface-muted animate-pulse" />
+                    ))}
+                  </div>
+                ) : roster.length === 0 && guestRoster.length === 0 ? (
+                  <p className="rounded-lg bg-pits-surface-muted p-4 text-center text-sm text-pits-dim">{t('No bookings yet.')}</p>
+                ) : (
+                  <ul className="divide-y divide-pits-edge rounded-lg border border-pits-edge">
+                    {roster.map((booking) => (
+                      <li key={booking.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative w-8 h-8 shrink-0 rounded-full bg-pits-surface-muted flex items-center justify-center text-xs font-bold text-pits-dim overflow-hidden">
+                            {booking.profiles.avatar_url ? (
+                              <Image src={booking.profiles.avatar_url} alt="" fill className="object-cover" />
+                            ) : (
+                              booking.profiles.full_name?.charAt(0)
+                            )}
+                          </div>
+                          <span className="truncate text-sm font-medium text-pits-text">{booking.profiles.full_name}</span>
+                        </div>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusTone(booking.status)}`}>
+                          {t(booking.status as TranslationKey)}
+                        </span>
+                      </li>
+                    ))}
+                    {guestRoster.map((guest) => (
+                      <li key={guest.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 shrink-0 rounded-full bg-pits-warning-soft flex items-center justify-center text-xs font-bold text-pits-warning">
+                            {guest.full_name?.charAt(0) || 'G'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-2 text-sm font-medium text-pits-text">
+                              <span className="truncate">{guest.full_name}</span>
+                              <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-pits-warning-soft text-pits-warning">
+                                {t('Guest')}
+                              </span>
                             </p>
-                            <p className="text-pits-text font-bold mt-1">
-                              {coachBrief.wodTitle || t('No WOD scheduled')}
+                            <p className="text-[11px] text-pits-dim truncate">
+                              {[guest.whatsapp, guest.instagram].filter(Boolean).join(' · ') || t('No contact saved')}
                             </p>
                           </div>
-                          {coachBrief.athletes.map((athlete) => (
-                            <div key={athlete.userId} className="rounded-lg border border-pits-edge bg-pits-background p-4">
-                              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                                <p className="font-black text-pits-text">{athlete.name}</p>
-                                <span className="text-[10px] uppercase tracking-widest text-pits-dim">
-                                  {athlete.level || t('Level not set')}
-                                </span>
-                              </div>
-                              <div className="space-y-2 text-sm text-pits-dim">
-                                {athlete.suggestedLoad && (
-                                  <p><strong className="text-pits-text">{t('Suggested load')}:</strong> {athlete.suggestedLoad}</p>
-                                )}
-                                <p><strong className="text-pits-text">{t('Scaling')}:</strong> {athlete.scalingNote}</p>
-                                <p><strong className="text-pits-text">{t('Pacing target')}:</strong> {athlete.pacingTarget}</p>
-                                {athlete.healthCaution && (
-                                  <p className="rounded-lg border border-pits-primary/40 bg-pits-surface-elevated p-3 text-pits-text leading-relaxed">
-                                    <strong>{t('Health caution')}:</strong> {athlete.healthCaution}
-                                  </p>
-                                )}
-                                <details className="text-xs">
-                                  <summary className="cursor-pointer font-bold uppercase tracking-wider text-pits-primary">
-                                    {t('Why this guidance')}
-                                  </summary>
-                                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                                    {athlete.explanation.map((reason) => <li key={reason}>{reason}</li>)}
-                                  </ul>
-                                </details>
-                              </div>
-                            </div>
-                          ))}
                         </div>
-                      ) : null}
-                    </div>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusTone(guest.status)}`}>
+                          {t(guest.status as TranslationKey)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
 
-                    <div>
-                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic flex items-center gap-1.5">
-                        {t('Athletes')}
-                        <Tooltip content={t('Athlete booking window tip')} wide side="bottom">
-                          <Info size={12} className="text-pits-dim cursor-help" />
-                        </Tooltip>
-                      </h4>
-                      {loadingRoster ? (
-                        <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('Loading schedule...')}</p>
-                      ) : roster.length === 0 && guestRoster.length === 0 ? (
-                        <p className="text-pits-primary text-sm p-4 bg-pits-background rounded-lg text-center font-bold uppercase italic tracking-widest">{t('No bookings yet.')}</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {roster.map(booking => (
-                            <div key={booking.id} className="flex justify-between items-center p-3 rounded-lg border border-pits-border bg-pits-background shadow-sm">
-                              <div className="flex items-center gap-3">
-                                <div className="relative w-8 h-8 rounded-full bg-pits-background flex items-center justify-center text-xs font-bold text-pits-primary overflow-hidden">
-                                  {booking.profiles.avatar_url ? (
-                                    <Image
-                                      src={booking.profiles.avatar_url}
-                                      alt={booking.profiles.full_name || ''}
-                                      fill
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    booking.profiles.full_name?.charAt(0)
-                                  )}
-                                </div>
-                                <span className="font-bold text-pits-text text-sm">{booking.profiles.full_name}</span>
-                              </div>
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
-                                ${booking.status === 'attended' ? 'bg-green-100 text-green-700' : 
-                                  booking.status === 'no_show' ? 'bg-red-100 text-red-700' :
-                                  'bg-blue-100 text-blue-700'}
-                              `}>
-                                {booking.status}
-                              </span>
-                            </div>
-                          ))}
+              {!loadingRoster && waitlist.length > 0 ? (
+                <section>
+                  <h4 className="mb-2 text-sm font-semibold text-pits-text">
+                    {t('Waitlist ({{count}})', { count: waitlist.length })}
+                  </h4>
+                  <ol className="divide-y divide-pits-edge rounded-lg border border-pits-edge">
+                    {waitlist.map((entry, index) => (
+                      <li key={entry.id} className="flex items-center gap-3 px-3 py-2.5">
+                        <span className="w-6 h-6 shrink-0 rounded-full bg-pits-surface-muted text-pits-dim flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-pits-text">{entry.profiles.full_name}</p>
+                          <p className="text-[11px] text-pits-dim">
+                            {t('Joined {{date}}', { date: formatDateTime(entry.joined_at, lang) })}
+                          </p>
                         </div>
-                      )}
-                      {guestRoster.length > 0 ? (
-                        <div className="mt-3 space-y-2">
-                          {guestRoster.map((guest) => (
-                            <div key={guest.id} className="flex justify-between items-center p-3 rounded-lg border border-amber-200 bg-amber-50/40 shadow-sm">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="relative w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700">
-                                  {guest.full_name?.charAt(0) || 'G'}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-pits-text text-sm truncate">{guest.full_name}</span>
-                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">{t('Guest')}</span>
-                                  </div>
-                                  <p className="text-[10px] text-pits-dim truncate">
-                                    {[guest.whatsapp, guest.instagram].filter(Boolean).join(' · ') || t('No contact saved')}
-                                  </p>
-                                </div>
-                              </div>
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wide
-                                ${guest.status === 'attended' ? 'bg-green-100 text-green-700' :
-                                  guest.status === 'no_show' ? 'bg-red-100 text-red-700' :
-                                  'bg-blue-100 text-blue-700'}
-                              `}>
-                                {guest.status}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ) : null}
 
-                    <div>
-                      <h4 className="text-xs font-black text-pits-dim uppercase tracking-wider mb-3 italic">
-                        Waitlist ({waitlist.length})
-                      </h4>
-                      {loadingRoster ? (
-                        <p className="text-pits-dim text-sm">Loading waitlist...</p>
-                      ) : waitlist.length === 0 ? (
-                        <p className="text-pits-dim text-sm p-4 bg-pits-background rounded-lg text-center">
-                          No athletes are waiting.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {waitlist.map((entry, index) => (
-                            <div
-                              key={entry.id}
-                              className="flex items-center gap-3 p-3 rounded-lg border border-pits-border bg-pits-background"
-                            >
-                              <span className="w-7 h-7 rounded-full bg-pits-primary/10 text-pits-primary flex items-center justify-center text-xs font-black">
-                                {index + 1}
-                              </span>
-                              <div>
-                                <p className="font-bold text-pits-text text-sm">{entry.profiles.full_name}</p>
-                                <p className="text-[10px] text-pits-dim">
-                                  Joined {new Date(entry.joined_at).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+              <details className="group rounded-lg border border-pits-edge">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold text-pits-text">
+                  <ShieldAlert size={16} className="text-pits-dim" aria-hidden />
+                  {t('Private Coach Brief')}
+                  <ChevronDown size={16} className="ml-auto text-pits-dim transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <div className="border-t border-pits-edge p-3">
+                  {loadingRoster ? (
+                    <p className="text-pits-dim text-sm">{t('Loading schedule...')}</p>
+                  ) : coachBriefError ? (
+                    <p className="text-pits-danger text-sm">{coachBriefError}</p>
+                  ) : coachBrief ? (
+                    <div className="space-y-3">
+                      <p className="text-pits-text text-xs leading-relaxed">{coachBrief.notice}</p>
+                      <p className="text-sm">
+                        <span className="text-pits-dim">{t("Today's WOD")}: </span>
+                        <span className="font-semibold text-pits-text">{coachBrief.wodTitle || t('No WOD scheduled')}</span>
+                      </p>
+                      {coachBrief.athletes.map((athlete) => (
+                        <div key={athlete.userId} className="rounded-lg bg-pits-surface-muted p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <p className="font-semibold text-pits-text text-sm">{athlete.name}</p>
+                            <span className="text-[11px] text-pits-dim">{athlete.level || t('Level not set')}</span>
+                          </div>
+                          <div className="space-y-1.5 text-sm text-pits-dim">
+                            {athlete.suggestedLoad && (
+                              <p><strong className="text-pits-text">{t('Suggested load')}:</strong> {athlete.suggestedLoad}</p>
+                            )}
+                            <p><strong className="text-pits-text">{t('Scaling')}:</strong> {athlete.scalingNote}</p>
+                            <p><strong className="text-pits-text">{t('Pacing target')}:</strong> {athlete.pacingTarget}</p>
+                            {athlete.healthCaution && (
+                              <p className="rounded-lg border border-pits-danger-edge bg-pits-danger-soft p-2.5 text-pits-text leading-relaxed">
+                                <strong>{t('Health caution')}:</strong> {athlete.healthCaution}
+                              </p>
+                            )}
+                            <details className="text-xs">
+                              <summary className="cursor-pointer font-semibold text-pits-info">{t('Why this guidance')}</summary>
+                              <ul className="list-disc pl-5 mt-2 space-y-1">
+                                {athlete.explanation.map((reason) => <li key={reason}>{reason}</li>)}
+                              </ul>
+                            </details>
+                          </div>
                         </div>
-                      )}
+                      ))}
                     </div>
-                  </div>
-                );
-              })()}
+                  ) : null}
+                </div>
+              </details>
             </div>
-            
-            <div className="p-4 border-t border-pits-edge flex justify-end bg-pits-surface-muted rounded-b-xl shrink-0">
-              <button
-                onClick={() => setIsDetailsModalOpen(false)}
-                className="px-6 py-2 bg-pits-surface-elevated border border-pits-edge text-pits-text font-black uppercase italic tracking-widest text-xs rounded-lg hover:bg-pits-edge transition-colors shadow-sm"
+
+            <div className="flex flex-wrap items-center gap-2 p-3 border-t border-pits-edge bg-pits-surface-muted shrink-0">
+              <Link
+                href={`/dashboard/attendance?date=${getGymDate(new Date(selectedClass.start_time), tz)}&class=${selectedClass.id}`}
+                className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark"
               >
-                {t('Close')}
-              </button>
+                <ClipboardCheck size={16} />
+                {t('Take attendance')}
+              </Link>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    openEditModal(selectedClass);
+                  }}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-elevated"
+                  aria-label={t('Edit Class')}
+                  title={t('Edit Class')}
+                >
+                  <Edit3 size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    openDuplicateModal(selectedClass);
+                  }}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-elevated"
+                  aria-label={t('Duplicate Class')}
+                  title={t('Duplicate Class')}
+                >
+                  <Copy size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    askDelete(selectedClass);
+                  }}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                  aria-label={t('Cancel Class')}
+                  title={t('Cancel Class')}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

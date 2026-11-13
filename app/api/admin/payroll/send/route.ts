@@ -5,6 +5,8 @@ import { buildCoachPayrollReports } from '@/lib/payroll/payrollReport';
 import { generateCoachPayrollPdf } from '@/lib/payroll/generatePayrollPdf';
 import { sendCoachPayrollEmail } from '@/lib/email/payrollEmail';
 import { attachCoachAuthEmails } from '@/lib/payroll/coachEmails';
+import { parseTenantCurrencyConfig } from '@/lib/currency';
+import { parseGymTimezone } from '@/lib/gym-timezone';
 
 export async function POST(request: Request) {
   const staffAuth = await requireStaffApi();
@@ -27,9 +29,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const classes = await payrollService.getPayrollClasses(tenantId, startUtc, endUtc);
+    const [classes, { data: tenantRow }] = await Promise.all([
+      payrollService.getPayrollClasses(tenantId, startUtc, endUtc),
+      staffAuth.supabase.from('tenants').select('settings').eq('id', tenantId).maybeSingle(),
+    ]);
+    const currency = parseTenantCurrencyConfig(tenantRow?.settings).reference;
+    const tz = parseGymTimezone(tenantRow?.settings);
     const reports = await attachCoachAuthEmails(
-      buildCoachPayrollReports(classes, periodLabel)
+      buildCoachPayrollReports(classes, periodLabel, currency, tz)
     );
 
     if (reports.length === 0) {

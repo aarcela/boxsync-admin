@@ -108,7 +108,7 @@ export default function AddGuestModal({
 
         <div className="p-5 space-y-3 overflow-y-auto">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
+            <label className="block text-[11px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
               {t('Name')} *
             </label>
             <input
@@ -123,7 +123,7 @@ export default function AddGuestModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
+              <label className="block text-[11px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
                 WhatsApp
               </label>
               <input
@@ -135,7 +135,7 @@ export default function AddGuestModal({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
+              <label className="block text-[11px] font-black uppercase tracking-wider text-pits-dim mb-1.5">
                 Instagram
               </label>
               <input
@@ -155,7 +155,7 @@ export default function AddGuestModal({
           ) : null}
 
           {error ? (
-            <p className="text-xs text-red-600 font-semibold">{error}</p>
+            <p className="text-xs text-pits-danger font-semibold">{error}</p>
           ) : null}
 
           <button
@@ -169,7 +169,7 @@ export default function AddGuestModal({
           </button>
 
           <div className="pt-2 border-t border-pits-edge">
-            <p className="text-[10px] font-black uppercase tracking-wider text-pits-dim mb-2">
+            <p className="text-[11px] font-black uppercase tracking-wider text-pits-dim mb-2">
               {t('Recent guests')}
             </p>
             {loadingRecent ? (
@@ -189,7 +189,7 @@ export default function AddGuestModal({
                     className="w-full text-left px-3 py-2 rounded-lg border border-pits-edge hover:bg-pits-surface-muted transition-colors disabled:opacity-60"
                   >
                     <p className="text-sm font-bold text-pits-text">{guest.full_name}</p>
-                    <p className="text-[10px] text-pits-dim mt-0.5 truncate">
+                    <p className="text-[11px] text-pits-dim mt-0.5 truncate">
                       {[guest.whatsapp, guest.instagram].filter(Boolean).join(' · ') ||
                         t('No contact saved')}
                     </p>

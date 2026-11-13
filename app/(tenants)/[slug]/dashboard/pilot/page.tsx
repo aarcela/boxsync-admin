@@ -12,12 +12,15 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
+import { formatDate } from '@/lib/utils/format-date';
 import { useToast } from '@/components/Toast';
 import {
   PilotBaseline,
   PilotMetrics,
   pilotProgramService,
 } from '@/lib/services/pilotProgramService';
+import { PageLoader } from '@/components/LoadingStates';
 
 const EMPTY_METRICS: PilotMetrics = {
   activeMembers: 0,
@@ -35,7 +38,9 @@ const EMPTY_METRICS: PilotMetrics = {
 
 export default function PilotPage() {
   const tenant = useTenant();
+  const cur = currencySymbol(tenant.currencies.reference);
   const { lang } = useLanguage();
+  const monthlyRevenueLabel = lang === 'es' ? 'Ingreso mensual' : 'Monthly revenue';
   const { toast } = useToast();
   const [baseline, setBaseline] = useState<PilotBaseline | null>(null);
   const [metrics, setMetrics] = useState<PilotMetrics>(EMPTY_METRICS);
@@ -127,6 +132,7 @@ export default function PilotPage() {
       gymName: tenant.name,
       baseline,
       metrics,
+      currencySymbol: cur,
     });
     await navigator.clipboard.writeText(report);
     toast(
@@ -139,9 +145,7 @@ export default function PilotPage() {
 
   if (loading) {
     return (
-      <div className="flex h-80 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-pits-primary border-t-transparent" />
-      </div>
+      <PageLoader />
     );
   }
 
@@ -152,7 +156,7 @@ export default function PilotPage() {
           <div className="mb-6 inline-flex rounded-2xl bg-pits-primary-soft p-4 text-pits-primary">
             <Rocket size={30} />
           </div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+          <h1 className="page-title">
             {lang === 'es' ? 'Piloto Fundador de 60 Días' : '60-Day Founding Gym Pilot'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-pits-dim">
@@ -166,7 +170,7 @@ export default function PilotPage() {
               label={lang === 'es' ? 'Miembros activos' : 'Active members'}
               value={metrics.activeMembers}
             />
-            <PreviewMetric label="MRR" value={`$${metrics.currentMrr.toFixed(0)}`} />
+            <PreviewMetric label={monthlyRevenueLabel} value={`${cur}${metrics.currentMrr.toFixed(0)}`} />
             <PreviewMetric
               label={lang === 'es' ? 'Riesgos abiertos' : 'Open risks'}
               value={metrics.openAtRisk}
@@ -174,7 +178,7 @@ export default function PilotPage() {
           </div>
 
           <label className="mt-8 block">
-            <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-pits-dim">
+            <span className="mb-2 block text-[11px] font-black uppercase tracking-widest text-pits-dim">
               {lang === 'es' ? 'Contexto y objetivos' : 'Context and goals'}
             </span>
             <textarea
@@ -218,20 +222,20 @@ export default function PilotPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-primary">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-pits-primary">
             {lang === 'es' ? `Día ${day} de 60` : `Day ${day} of 60`}
           </span>
           <h1 className="mt-1 text-3xl font-black uppercase italic tracking-tighter text-pits-text">
             {lang === 'es' ? 'Resultados del Piloto' : 'Pilot Outcomes'}
           </h1>
           <p className="mt-1 text-sm font-medium text-pits-dim">
-            {baseline.start_date} → {baseline.target_end_date}
+            {formatDate(baseline.start_date, lang)} → {formatDate(baseline.target_end_date, lang)}
           </p>
         </div>
         <button
           type="button"
           onClick={() => void copyCaseStudy()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-pits-panel px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-pits-primary hover:text-pits-dark-text"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-pits-edge bg-pits-surface-elevated px-4 text-sm font-semibold text-pits-text shadow-sm hover:bg-pits-surface-muted"
         >
           <Clipboard size={15} />
           {lang === 'es' ? 'Copiar reporte' : 'Copy case-study report'}
@@ -241,7 +245,7 @@ export default function PilotPage() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <OutcomeCard
           label={lang === 'es' ? 'Ingreso atribuido' : 'Attributed revenue'}
-          value={`$${metrics.recoveredRevenue.toFixed(0)}`}
+          value={`${cur}${metrics.recoveredRevenue.toFixed(0)}`}
           detail={`${metrics.interventionsResolved} ${lang === 'es' ? 'casos resueltos' : 'resolved cases'}`}
           icon={DollarSign}
         />
@@ -278,10 +282,10 @@ export default function PilotPage() {
               delta={memberDelta}
             />
             <ComparisonRow
-              label="MRR"
-              before={`$${Number(baseline.starting_mrr).toFixed(0)}`}
-              current={`$${metrics.currentMrr.toFixed(0)}`}
-              delta={`${mrrDelta >= 0 ? '+' : ''}$${mrrDelta.toFixed(0)}`}
+              label={monthlyRevenueLabel}
+              before={`${cur}${Number(baseline.starting_mrr).toFixed(0)}`}
+              current={`${cur}${metrics.currentMrr.toFixed(0)}`}
+              delta={`${mrrDelta >= 0 ? '+' : ''}${cur}${mrrDelta.toFixed(0)}`}
             />
             <ComparisonRow
               label={lang === 'es' ? 'Riesgos abiertos' : 'Open risks'}
@@ -306,14 +310,14 @@ export default function PilotPage() {
           <button
             type="button"
             onClick={() => void saveNotes()}
-            className="mt-3 min-h-10 rounded-xl bg-pits-primary px-4 text-[10px] font-black uppercase tracking-widest text-pits-dark-text"
+            className="mt-3 min-h-10 rounded-xl bg-pits-primary px-4 text-[11px] font-black uppercase tracking-widest text-pits-dark-text"
           >
             {lang === 'es' ? 'Guardar notas' : 'Save notes'}
           </button>
         </div>
       </section>
 
-      <p className="text-center text-[9px] font-bold uppercase tracking-widest text-pits-dim">
+      <p className="text-center text-[11px] font-bold uppercase tracking-widest text-pits-dim">
         {lang === 'es'
           ? 'Solo se reportan eventos registrados en WODUS. Correlación no implica causalidad.'
           : 'Only WODUS-recorded events are reported. Correlation does not imply causation.'}
@@ -331,7 +335,7 @@ function PreviewMetric({
 }) {
   return (
     <div className="rounded-xl bg-pits-surface-muted p-4">
-      <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">
+      <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
         {label}
       </p>
       <p className="mt-1 text-2xl font-black italic text-pits-text">{value}</p>
@@ -353,13 +357,13 @@ function OutcomeCard({
   return (
     <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated p-5 shadow-sm">
       <div className="flex items-start justify-between">
-        <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">
+        <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
           {label}
         </p>
         <Icon size={18} className="text-pits-primary" />
       </div>
       <p className="mt-4 text-3xl font-black italic text-pits-text">{value}</p>
-      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-pits-dim">
+      <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-pits-dim">
         {detail}
       </p>
     </div>
@@ -382,7 +386,7 @@ function ComparisonRow({
   const numericDelta =
     typeof delta === 'number'
       ? delta
-      : Number(String(delta).replace(/[+$,]/g, '')) || 0;
+      : Number(String(delta).replace(/[^0-9.-]/g, '')) || 0;
   const positive = inverse ? numericDelta <= 0 : numericDelta >= 0;
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 rounded-xl bg-pits-surface-muted p-3">

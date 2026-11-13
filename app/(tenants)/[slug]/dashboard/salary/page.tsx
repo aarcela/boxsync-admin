@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import type { TranslationKey } from '@/lib/translations';
+import { useTenant } from '@/components/TenantContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
 import { classTypeService } from '@/lib/services/classTypeService';
@@ -27,6 +29,7 @@ import {
   toggleSalaryTierStatusAction,
   assignCoachSalaryTierAction,
 } from './actions';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 function emptyRates(typeNames: string[]): Record<string, string> {
   return typeNames.reduce(
@@ -38,9 +41,12 @@ function emptyRates(typeNames: string[]): Record<string, string> {
   );
 }
 
+const ROLE_LABELS: Record<string, TranslationKey> = { admin: 'Admin', manager: 'Manager', coach: 'Coach', member: 'Member' };
+
 export default function SalaryPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { currencies } = useTenant();
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -244,18 +250,15 @@ export default function SalaryPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-ink tracking-tighter uppercase">
+            <h1 className="page-title">
               {t('Coach Salaries')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
-              {t('Admin Only')}
-            </div>
           </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
+          <p className="page-subtitle">
             {t('Manage pay tiers and coach salary assignments')}
           </p>
           {!isAdmin && callerRole && (
-            <p className="text-[10px] font-bold text-pits-secondary uppercase mt-2">
+            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
               {t('Only admins can manage coach salaries.')}
             </p>
           )}
@@ -275,7 +278,7 @@ export default function SalaryPage() {
       {isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
-            <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px]">
+            <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-pits-edge flex flex-col md:flex-row justify-between gap-4">
                 <h2 className="text-sm font-black text-pits-ink uppercase tracking-tighter flex items-center gap-2">
                   <Banknote size={16} className="text-pits-red" />
@@ -291,112 +294,60 @@ export default function SalaryPage() {
                     placeholder={t('Search tiers...')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
                   />
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-pits-surface-muted/60">
-                    <tr>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Tier Name')}
-                      </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Rates Configured')}
-                      </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Status')}
-                      </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
-                        {t('Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-pits-edge">
-                    {loading ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse"
-                        >
-                          {t('Initializing Data Stream...')}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredTiers.map((tier) => (
-                        <tr
-                          key={tier.id}
-                          className="hover:bg-pits-surface-muted/40 transition-colors group"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`p-2 rounded-xl ${tier.is_active ? 'bg-pits-primary text-pits-dark-text' : 'bg-pits-surface-muted text-pits-dim'}`}
-                              >
-                                <Banknote size={16} />
-                              </div>
-                              <div>
-                                <div className="text-xs font-bold text-pits-ink uppercase tracking-tight">
-                                  {tier.name}
-                                </div>
-                                <div className="text-[10px] text-pits-dim font-medium truncate max-w-[220px]">
-                                  {tier.description || t('No details provided')}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
-                              {tier.rates?.length ?? 0} {t('class types')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleToggleStatus(tier)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${tier.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                            >
-                              {tier.is_active ? (
-                                <CheckCircle2 size={10} />
-                              ) : (
-                                <XCircle size={10} />
-                              )}
-                              {tier.is_active ? t('Active') : t('Inactive')}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => handleOpenForm(tier)}
-                                className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-all"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              <button
-                                onClick={() => setTierToDelete(tier.id)}
-                                className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-all"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                    {!loading && filteredTiers.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-20 text-center text-pits-dim font-bold uppercase"
-                        >
-                          {t('No records found.')}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              {loading ? (
+                <ListSkeleton rows={2} />
+              ) : filteredTiers.length === 0 ? (
+                <p className="px-4 py-12 text-center text-sm text-pits-dim">{t('No records found.')}</p>
+              ) : (
+                <ul className="divide-y divide-pits-edge">
+                  {filteredTiers.map((tier) => (
+                    <li key={tier.id} className={`flex items-center gap-3 pl-4 pr-2 py-3 ${tier.is_active ? '' : 'opacity-60'}`}>
+                      <button type="button" onClick={() => handleOpenForm(tier)} className="min-w-0 flex-1 text-left">
+                        <span className="block truncate text-sm font-semibold text-pits-text">{tier.name}</span>
+                        <span className="block truncate text-xs text-pits-dim">
+                          {tier.rates?.length ?? 0} {t('class types')}
+                          {tier.description ? ` · ${tier.description}` : ''}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={tier.is_active}
+                        onClick={() => handleToggleStatus(tier)}
+                        className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                          tier.is_active
+                            ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                            : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                        }`}
+                      >
+                        {tier.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                        {tier.is_active ? t('Active') : t('Inactive')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenForm(tier)}
+                        aria-label={t('Edit')}
+                        className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTierToDelete(tier.id)}
+                        aria-label={t('Delete')}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden">
@@ -407,79 +358,36 @@ export default function SalaryPage() {
                 </h2>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-pits-surface-muted/60">
-                    <tr>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Coach')}
-                      </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Role')}
-                      </th>
-                      <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                        {t('Pay Tier')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-pits-edge">
-                    {loading ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="py-12 text-center text-pits-dim font-bold uppercase animate-pulse"
-                        >
-                          {t('Loading...')}
-                        </td>
-                      </tr>
-                    ) : coaches.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="py-12 text-center text-pits-dim font-bold uppercase"
-                        >
-                          {t('No coaches found.')}
-                        </td>
-                      </tr>
-                    ) : (
-                      coaches.map((coach) => (
-                        <tr
-                          key={coach.id}
-                          className="hover:bg-pits-surface-muted/40 transition-colors"
-                        >
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-bold text-pits-ink uppercase">
-                              {coach.full_name}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 rounded text-[9px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
-                              {coach.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <select
-                              value={coach.salary_tier_id ?? ''}
-                              onChange={(e) =>
-                                handleAssignTier(coach.id, e.target.value)
-                              }
-                              disabled={isPending}
-                              className="w-full max-w-[200px] bg-pits-surface-muted border border-pits-edge rounded-xl px-3 py-2 text-[10px] font-bold uppercase text-pits-ink outline-none focus:ring-2 focus:ring-pits-red"
-                            >
-                              <option value="">{t('Unassigned')}</option>
-                              {activeTiers.map((tier) => (
-                                <option key={tier.id} value={tier.id}>
-                                  {tier.name}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              {loading ? (
+                <p className="px-4 py-8 text-center text-sm text-pits-dim">{t('Loading...')}</p>
+              ) : coaches.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-pits-dim">{t('No coaches found.')}</p>
+              ) : (
+                <ul className="divide-y divide-pits-edge">
+                  {coaches.map((coach) => (
+                    <li key={coach.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-pits-text">{coach.full_name}</p>
+                        <p className="text-xs text-pits-dim">{t(ROLE_LABELS[coach.role] ?? 'Coach')}</p>
+                      </div>
+                      <select
+                        value={coach.salary_tier_id ?? ''}
+                        onChange={(e) => handleAssignTier(coach.id, e.target.value)}
+                        disabled={isPending}
+                        aria-label={t('Pay Tier')}
+                        className="min-h-10 w-40 shrink-0 bg-pits-surface-muted border border-pits-edge rounded-xl px-3 text-sm font-medium text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                      >
+                        <option value="">{t('Unassigned')}</option>
+                        {activeTiers.map((tier) => (
+                          <option key={tier.id} value={tier.id}>
+                            {tier.name}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -498,13 +406,13 @@ export default function SalaryPage() {
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Total Tiers')}
                     </span>
                     <span className="text-sm font-black text-pits-ink">{tiers.length}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Assigned Coaches')}
                     </span>
                     <span className="text-sm font-black text-pits-success">
@@ -522,13 +430,13 @@ export default function SalaryPage() {
               <ul className="space-y-3">
                 <li className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
-                    {t('Set a USD rate for each class type within every pay tier.')}
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
+                    {t('Set a rate in {{currency}} for each class type within every pay tier.', { currency: currencies.reference })}
                   </p>
                 </li>
                 <li className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-tight">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
                     {t('Unassign a coach by selecting Unassigned in the tier dropdown.')}
                   </p>
                 </li>
@@ -551,7 +459,7 @@ export default function SalaryPage() {
                   <h2 className="text-2xl font-black text-pits-ink tracking-tighter uppercase">
                     {editingTier ? t('Edit Pay Tier') : t('Add Pay Tier')}
                   </h2>
-                  <p className="text-[10px] font-bold text-pits-dim uppercase tracking-widest mt-1">
+                  <p className="text-[11px] font-bold text-pits-dim uppercase tracking-widest mt-1">
                     {t('Tier Configuration')}
                   </p>
                 </div>
@@ -562,7 +470,7 @@ export default function SalaryPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Tier Name')}
                   </label>
                   <input
@@ -576,7 +484,7 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Description')}
                   </label>
                   <textarea
@@ -591,13 +499,13 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
-                    {t('Rate per Class (USD)')}
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
+                    {t('Rate per class ({{currency}})', { currency: currencies.reference })}
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {classTypeNames.map((classType) => (
                       <div key={classType} className="space-y-1">
-                        <label className="text-[8px] font-black text-pits-dim uppercase ml-1">
+                        <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                           {classType}
                         </label>
                         <input
@@ -620,7 +528,7 @@ export default function SalaryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Status')}
                   </label>
                   <select

@@ -4,6 +4,7 @@ import { requirePlatformAdminApi } from '@/lib/require-platform-admin-api';
 import { hqStatsService } from '@/lib/services/hqStatsService';
 import { tenantService } from '@/lib/services/tenantService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { fetchGymTimezone } from '@/lib/gym-timezone';
 import { HQ_IMPORT_JOB_TTL_MS, parseCsv, sha256Utf8 } from '@/lib/hq-import/csv';
 import { commitMemberRows, commitPlanRows } from '@/lib/hq-import/commit';
 import { hqImportTemplate, isHqImportKind, type HqImportKind } from '@/lib/hq-import/templates';
@@ -91,6 +92,7 @@ async function runValidation(
     platformPlan: context.platformPlan,
     memberCount: context.stats?.memberCount ?? 0,
     activeMemberCount: context.stats?.activeMemberCount ?? 0,
+    timezone: await fetchGymTimezone(supabaseAdmin, tenantId),
   });
   return { kind, summary: result.summary, creates: result.creates };
 }

@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   Tags,
-  Info,
-  Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
@@ -25,6 +23,7 @@ import {
   deleteClassTypeAction,
   toggleClassTypeStatusAction,
 } from './actions';
+import { ListSkeleton } from '@/components/LoadingStates';
 
 export default function ClassTypesPage() {
   const { toast } = useToast();
@@ -163,168 +162,108 @@ export default function ClassTypesPage() {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
-              {t('Class Types')}
-            </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[10px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
-              {t('System Config')}
-            </div>
-          </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Manage class categories used in schedule, booking and payroll')}
-          </p>
+          <h1 className="page-title">{t('Class Types')}</h1>
+          <p className="page-subtitle">{t('Manage class categories used in schedule, booking and payroll')}</p>
         </div>
-
         <button
+          type="button"
           onClick={() => handleOpenForm()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           {t('Add Class Type')}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px]">
-            <div className="px-6 py-4 border-b border-pits-edge">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} />
-                <input
-                  type="text"
-                  placeholder={t('Search class types...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 focus:ring-pits-red transition-all"
+      {types.length > 6 ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} aria-hidden />
+          <input
+            type="search"
+            placeholder={t('Search class types...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full min-h-10 pl-9 pr-3 bg-pits-surface-elevated border border-pits-edge rounded-xl text-sm text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+          />
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated overflow-hidden">
+        {loading ? (
+          <ListSkeleton rows={3} />
+        ) : filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <p className="text-sm text-pits-dim">{t('No class types found')}</p>
+            <button
+              type="button"
+              onClick={() => handleOpenForm()}
+              className="mt-3 text-sm font-semibold text-pits-info hover:underline"
+            >
+              {t('Add Class Type')}
+            </button>
+          </div>
+        ) : (
+          <ul className="divide-y divide-pits-edge">
+            {filtered.map((row) => (
+              <li key={row.id} className={`flex items-center gap-3 pl-4 pr-2 py-2.5 ${row.is_active ? '' : 'opacity-60'}`}>
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full border border-black/10"
+                  style={{ backgroundColor: row.color_hex }}
+                  aria-hidden
                 />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-pits-surface-elevated">
-                  <tr>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Type')}
-                    </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Duration')}
-                    </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Status')}
-                    </th>
-                    <th className="px-6 py-4 text-[9px] font-black text-pits-dim uppercase tracking-widest text-right">
-                      {t('Actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-pits-edge">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">
-                        {t('Initializing Data Stream...')}
-                      </td>
-                    </tr>
-                  ) : filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-20 text-center text-pits-dim font-bold uppercase">
-                        {t('No class types found')}
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.map((row) => (
-                      <tr key={row.id} className="hover:bg-pits-surface-elevated transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-8 h-8 rounded-xl border border-pits-edge shadow-sm"
-                              style={{ backgroundColor: row.color_hex }}
-                            />
-                            <div>
-                              <div className="text-xs font-bold text-pits-text uppercase tracking-tight">
-                                {row.name}
-                              </div>
-                              <div className="text-[10px] text-pits-dim font-medium">
-                                {row.is_open_box ? t('Open Box plan type') : t('Standard class type')}
-                                {' · '}
-                                {t('Order')}: {row.sort_order}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[10px] font-black uppercase text-pits-text">
-                            {row.default_duration_min} {t('min')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggleStatus(row)}
-                            disabled={isPending}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-black uppercase border transition-all ${
-                              row.is_active
-                                ? 'bg-pits-primary-soft text-pits-success border-pits-edge'
-                                : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
-                            }`}
-                          >
-                            {row.is_active ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
-                            {row.is_active ? t('Active') : t('Inactive')}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleOpenForm(row)}
-                              className="p-2 text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted rounded-lg transition-all"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => setTypeToDelete(row.id)}
-                              className="p-2 text-pits-dim hover:text-pits-red hover:bg-pits-primary-soft rounded-lg transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} className="text-pits-primary" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-pits-text">
-                {t('How it works')}
-              </h3>
-            </div>
-            <ul className="space-y-2 text-[11px] text-pits-dim font-medium leading-relaxed">
-              <li className="flex gap-2">
-                <Info size={12} className="mt-0.5 shrink-0 text-pits-primary" />
-                {t('Active types appear when creating classes and on the schedule.')}
+                <button type="button" onClick={() => handleOpenForm(row)} className="min-w-0 flex-1 text-left py-1">
+                  <span className="block truncate text-sm font-semibold text-pits-text">{row.name}</span>
+                  <span className="block text-xs text-pits-dim">
+                    {row.default_duration_min} {t('min')}
+                    {row.is_open_box ? ` · ${t('Open Box plan type')}` : ''}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={row.is_active}
+                  onClick={() => handleToggleStatus(row)}
+                  disabled={isPending}
+                  className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                    row.is_active
+                      ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                      : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                  }`}
+                  title={row.is_active ? t('Inactive') : t('Active')}
+                >
+                  {row.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                  {row.is_active ? t('Active') : t('Inactive')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenForm(row)}
+                  aria-label={t('Edit')}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeToDelete(row.id)}
+                  aria-label={t('Delete')}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                >
+                  <Trash2 size={16} />
+                </button>
               </li>
-              <li className="flex gap-2">
-                <Info size={12} className="mt-0.5 shrink-0 text-pits-primary" />
-                {t('Open Box types are used for open-box-only membership plans.')}
-              </li>
-              <li className="flex gap-2">
-                <Info size={12} className="mt-0.5 shrink-0 text-pits-primary" />
-                {t('Renaming a type updates existing classes and salary rates.')}
-              </li>
-            </ul>
-          </div>
-        </div>
+            ))}
+          </ul>
+        )}
       </div>
+
+      <ul className="space-y-1 text-xs text-pits-dim">
+        <li>{t('Active types appear when creating classes and on the schedule.')}</li>
+        <li>{t('Open Box types are used for open-box-only membership plans.')}</li>
+        <li>{t('Renaming a type updates existing classes and salary rates.')}</li>
+      </ul>
 
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -346,7 +285,7 @@ export default function ClassTypesPage() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Name')}</label>
+                <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Name')}</label>
                 <input
                   required
                   value={formData.name}
@@ -357,7 +296,7 @@ export default function ClassTypesPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Color')}</label>
+                <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Color')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -379,7 +318,7 @@ export default function ClassTypesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
                     {t('Duration (min)')}
                   </label>
                   <input
@@ -397,7 +336,7 @@ export default function ClassTypesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase ml-1">{t('Sort order')}</label>
+                  <label className="text-[11px] font-black text-pits-dim uppercase ml-1">{t('Sort order')}</label>
                   <input
                     type="number"
                     value={formData.sort_order}
@@ -422,7 +361,7 @@ export default function ClassTypesPage() {
                     }
                     className="rounded border-pits-edge"
                   />
-                  <span className="text-[10px] font-black uppercase text-pits-text">
+                  <span className="text-[11px] font-black uppercase text-pits-text">
                     {t('Open Box type (plan restriction)')}
                   </span>
                 </label>
@@ -435,7 +374,7 @@ export default function ClassTypesPage() {
                     }
                     className="rounded border-pits-edge"
                   />
-                  <span className="text-[10px] font-black uppercase text-pits-text">{t('Active')}</span>
+                  <span className="text-[11px] font-black uppercase text-pits-text">{t('Active')}</span>
                 </label>
               </div>
 

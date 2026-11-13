@@ -14,7 +14,7 @@ interface TooltipProps {
 }
 
 const bubbleClass =
-  'px-2.5 py-1.5 bg-pits-ink text-pits-shell-ink text-[10px] font-bold tracking-wide rounded pointer-events-none w-max whitespace-normal leading-snug';
+  'px-2.5 py-1.5 bg-pits-ink text-pits-shell-ink text-[11px] font-bold tracking-wide rounded pointer-events-none w-max whitespace-normal leading-snug';
 
 export default function Tooltip({
   children,

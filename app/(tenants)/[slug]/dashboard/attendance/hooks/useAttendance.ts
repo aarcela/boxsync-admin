@@ -1,14 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getCaracasDate } from '@/lib/utils/date';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getGymDate } from '@/lib/utils/date';
 import { classService } from '@/lib/services/classService';
 import { guestService, GuestBooking } from '@/lib/services/guestService';
 import { Booking, ClassSession, BookingStatus } from '@/lib/types/gym';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
 
-export function useAttendance() {
+/** `initial` comes from `?date=YYYY-MM-DD&class=<id>` (e.g. Schedule → Take attendance). */
+export function useAttendance(initial?: { date?: string | null; classId?: string | null }) {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { timezone } = useTenant();
   
   // State
   const [date, setDate] = useState('');
@@ -21,9 +24,11 @@ export function useAttendance() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Initial date setup
+  const initialRef = useRef(initial);
   useEffect(() => {
-    setDate(getCaracasDate());
-  }, []);
+    const wanted = initialRef.current?.date;
+    setDate(wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) ? wanted : getGymDate(new Date(), timezone));
+  }, [timezone]);
 
   // 1. Fetch Classes for selected Date
   const fetchClasses = useCallback(async (selectedDate: string) => {
@@ -35,13 +40,21 @@ export function useAttendance() {
     setGuestRoster([]);
     
     try {
-      const data = await classService.getClassesByDate(selectedDate);
+      const data = await classService.getClassesByDate(selectedDate, timezone);
       setClasses(data);
 
       if (data.length === 0) return;
 
+      // Opened for a specific class: select it once, then behave as usual.
+      const wantedClass = initialRef.current?.classId;
+      if (wantedClass && data.some((cls) => cls.id === wantedClass)) {
+        initialRef.current = undefined;
+        setSelectedClassId(wantedClass);
+        return;
+      }
+
       // Today: closest class to now. Other days: first class, so roster is ready.
-      const todayStr = getCaracasDate();
+      const todayStr = getGymDate(new Date(), timezone);
       if (selectedDate === todayStr) {
         const now = new Date();
         let closestId = data[0].id;
@@ -64,7 +77,7 @@ export function useAttendance() {
     } finally {
       setLoadingClasses(false);
     }
-  }, [toast, t]);
+  }, [toast, t, timezone]);
 
   useEffect(() => {
     fetchClasses(date);
@@ -175,42 +188,55 @@ export function useAttendance() {
 
   const markRemaining = async (newStatus: Extract<BookingStatus, 'attended' | 'no_show'>) => {
     const pending = roster.filter(b => b.status === 'booked');
+    // Guests have no plan, so they are never blocked; they count in "remaining" too.
+    const pendingGuests = guestRoster.filter((g) => g.status === 'booked');
     const blocked = newStatus === 'attended'
       ? pending.filter((b) => b.payment?.checkin_blocked)
       : [];
     const toUpdate = pending.filter((b) => !blocked.some((blockedRow) => blockedRow.id === b.id));
-    if (pending.length === 0) {
+    if (pending.length === 0 && pendingGuests.length === 0) {
       toast(t('All athletes are already marked as {{status}}', { status: t(newStatus) }), 'info');
       return;
     }
-    if (toUpdate.length === 0) {
+    const done = toUpdate.length + pendingGuests.length;
+    if (done === 0) {
       toast(t('Skipped overdue check-ins', { done: 0, skipped: blocked.length }), 'info');
       return;
     }
 
     const previousRoster = [...roster];
+    const previousGuests = [...guestRoster];
     const updateIds = new Set(toUpdate.map((b) => b.id));
+    const guestIds = new Set(pendingGuests.map((g) => g.id));
     setRoster((prev: Booking[]) => prev.map((b: Booking) =>
       updateIds.has(b.id) ? { ...b, status: newStatus } : b
     ));
+    setGuestRoster((prev) => prev.map((g) => (guestIds.has(g.id) ? { ...g, status: newStatus } : g)));
+    // Missed guests stop taking a spot.
+    if (selectedClassId && newStatus === 'no_show' && pendingGuests.length > 0) {
+      updateClassBookingCount(selectedClassId, -pendingGuests.length);
+    }
 
     try {
-      await classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus);
+      await Promise.all([
+        toUpdate.length > 0 ? classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus) : Promise.resolve(),
+        ...pendingGuests.map((g) => guestService.updateStatus(g.id, newStatus)),
+      ]);
       if (blocked.length > 0) {
-        toast(t('Skipped overdue check-ins', {
-          done: toUpdate.length,
-          skipped: blocked.length,
-        }), 'success');
+        toast(t('Skipped overdue check-ins', { done, skipped: blocked.length }), 'success');
       } else {
-        toast(t('{{count}} athletes marked as {{status}}', {
-          count: toUpdate.length,
-          status: t(newStatus),
-        }), 'success');
+        toast(t('{{count}} athletes marked as {{status}}', { count: done, status: t(newStatus) }), 'success');
       }
     } catch (error) {
       console.error(error);
       setRoster(previousRoster); // Rollback
+      setGuestRoster(previousGuests);
+      if (selectedClassId && newStatus === 'no_show' && pendingGuests.length > 0) {
+        updateClassBookingCount(selectedClassId, pendingGuests.length);
+      }
       toast(t('Some updates may have failed'), 'error');
+      // Partial success is possible; reload the real state.
+      if (selectedClassId) void fetchRoster(selectedClassId);
     }
   };
 

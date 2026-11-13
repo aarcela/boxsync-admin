@@ -26,16 +26,16 @@ function addCoachSection(doc: jsPDF, report: CoachPayrollReport, startY: number)
 
   autoTable(doc, {
     startY: startY + 12,
-    head: [['Date', 'Time', 'Class', 'Pay (USD)']],
+    head: [['Date', 'Time', 'Class', `Pay (${report.currency})`]],
     body:
       report.lines.length > 0
         ? report.lines.map((line) => [
             line.date,
             line.time,
             line.classType,
-            `$${line.rateUsd.toFixed(2)}`,
+            `${line.rateUsd.toFixed(2)} ${report.currency}`,
           ])
-        : [['—', '—', 'No confirmed classes', '$0.00']],
+        : [['—', '—', 'No confirmed classes', `0.00 ${report.currency}`]],
     styles: { fontSize: 9 },
     headStyles: { fillColor: BRAND_HEADER_RGB, textColor: BRAND_HEADER_TEXT_RGB },
   });
@@ -44,7 +44,7 @@ function addCoachSection(doc: jsPDF, report: CoachPayrollReport, startY: number)
     .finalY;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Total: $${report.totalUsd.toFixed(2)}`, 14, finalY + 8);
+  doc.text(`Total: ${report.totalUsd.toFixed(2)} ${report.currency}`, 14, finalY + 8);
 
   return finalY + 18;
 }
@@ -73,7 +73,7 @@ export function generateFullPayrollPdf(reports: CoachPayrollReport[]): Uint8Arra
   doc.text(`Period: ${periodLabel}`, 14, 28);
 
   const grandTotal = reports.reduce((sum, r) => sum + r.totalUsd, 0);
-  doc.text(`Grand Total: $${grandTotal.toFixed(2)}`, 14, 34);
+  doc.text(`Grand Total: ${grandTotal.toFixed(2)} ${reports[0]?.currency ?? ''}`.trim(), 14, 34);
 
   let y = 44;
 

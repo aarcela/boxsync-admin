@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Loader2, Save, Repeat } from 'lucide-react';
-import { addDays, format } from 'date-fns';
+import { X, Loader2, Repeat } from 'lucide-react';
 import { useToast } from './Toast';
+import { useLanguage } from './LanguageContext';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { classService } from '@/lib/services/classService';
 import { ClassTypeRow } from '@/lib/types/gym';
 import { classTypeDurationMap } from '@/lib/utils/classTypeStyles';
-import { getCaracasDateFromIso } from '@/lib/utils/date';
+import {
+  addDaysToDateStr,
+  getGymDate,
+  getGymDateFromIso,
+  getGymTimeLabel,
+  gymDateTimeToUtc,
+  weekdayIndex,
+} from '@/lib/utils/date';
+import { capitalizeFirst, formatDate, formatWeekdayShort } from '@/lib/utils/format-date';
+import { useTenant } from '@/components/TenantContext';
 
 export type ClassModalMode = 'create' | 'edit' | 'duplicate';
 
@@ -36,52 +45,21 @@ interface Coach {
 }
 
 const inputClass =
-  'w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-sm font-medium text-pits-ink focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none';
+  'w-full min-h-11 px-3 bg-pits-surface-muted border border-pits-edge rounded-xl text-sm font-medium text-pits-text focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary outline-none';
+const labelClass = 'block text-xs font-semibold text-pits-dim mb-1.5';
 
-const DAYS_OF_WEEK = [
-  { label: 'M', value: 1 },
-  { label: 'T', value: 2 },
-  { label: 'W', value: 3 },
-  { label: 'T', value: 4 },
-  { label: 'F', value: 5 },
-  { label: 'S', value: 6 },
-  { label: 'S', value: 0 },
-];
+/** Monday-first week; values match `weekdayIndex` (0 = Sunday). 2026-11-09 is a Monday. */
+const WEEK = [1, 2, 3, 4, 5, 6, 0].map((value, i) => ({ value, sample: addDaysToDateStr('2026-11-09', i) }));
+const DEFAULT_REPEAT_WEEKS = 4;
 
-function defaultDurationMinutes(classType: string, durationByName: Record<string, number>): number {
+function defaultDuration(classType: string, durationByName: Record<string, number>): number {
   return durationByName[classType] ?? (classType === 'Open Box' ? 120 : 60);
 }
 
-function toCaracasTimeInput(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Caracas',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  let hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-  if (hour === 24) hour = 0;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function parseCaracasDateTime(dateStr: string, timeStr: string): Date {
-  return new Date(`${dateStr}T${timeStr}:00-04:00`);
-}
-
-function computeEndFromStart(
-  startDate: string,
-  startTime: string,
-  durationMin: number
-): { endDate: string; endTime: string } {
-  const start = parseCaracasDateTime(startDate, startTime);
-  const end = new Date(start.getTime() + durationMin * 60000);
-  return {
-    endDate: getCaracasDateFromIso(end.toISOString()),
-    endTime: toCaracasTimeInput(end.toISOString()),
-  };
-}
-
+/**
+ * Schedule, edit or duplicate a class. One date + start time + duration (prefilled from the
+ * class type); "Repeat" adds weekdays and an end date and shows how many classes it will create.
+ */
 export default function CreateClassModal({
   isOpen,
   onClose,
@@ -92,213 +70,163 @@ export default function CreateClassModal({
   prefill = null,
 }: CreateClassModalProps) {
   const { toast } = useToast();
+  const { t, lang } = useLanguage();
+  const { tenantId, timezone: tz } = useTenant();
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
-  
-  // Basic Form State
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [time, setTime] = useState('07:00');
-  const [endDate, setEndDate] = useState(() =>
-    computeEndFromStart(format(new Date(), 'yyyy-MM-dd'), '07:00', 60).endDate
-  );
-  const [endTime, setEndTime] = useState(() =>
-    computeEndFromStart(format(new Date(), 'yyyy-MM-dd'), '07:00', 60).endTime
-  );
-  const [coachId, setCoachId] = useState('');
-  const [type, setType] = useState('CrossFit');
-  const [capacity, setCapacity] = useState('12');
-  const [tenantId, setTenantId] = useState<string | null>(null);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
 
-  // Recurring State
+  const [date, setDate] = useState(() => getGymDate(new Date(), tz));
+  const [time, setTime] = useState('07:00');
+  const [duration, setDuration] = useState('60');
+  const [coachId, setCoachId] = useState('');
+  const [type, setType] = useState('');
+  const [capacity, setCapacity] = useState('12');
+
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  const [untilDate, setUntilDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
+  const [untilDate, setUntilDate] = useState(() => addDaysToDateStr(getGymDate(new Date(), tz), 7 * DEFAULT_REPEAT_WEEKS));
 
   const isEdit = mode === 'edit';
   const durationByName = classTypeDurationMap(classTypes);
 
-  const syncEndFromStart = (startDate: string, startTime: string, classType: string) => {
-    const next = computeEndFromStart(
-      startDate,
-      startTime,
-      defaultDurationMinutes(classType, durationByName)
-    );
-    setEndDate(next.endDate);
-    setEndTime(next.endTime);
-  };
+  // Reset the form each time it opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsRecurring(false);
+    if (prefill) {
+      const startDate = getGymDateFromIso(prefill.start_time, tz);
+      const minutes = Math.round(
+        (new Date(prefill.end_time).getTime() - new Date(prefill.start_time).getTime()) / 60000,
+      );
+      setDate(startDate);
+      setTime(getGymTimeLabel(prefill.start_time, tz));
+      setDuration(String(minutes > 0 ? minutes : 60));
+      setType(prefill.class_type || '');
+      setCapacity(String(prefill.max_capacity || 12));
+      setCoachId(prefill.coach_id || '');
+      setSelectedDays([weekdayIndex(startDate)]);
+      setUntilDate(addDaysToDateStr(startDate, 7 * DEFAULT_REPEAT_WEEKS));
+      return;
+    }
+    const startDate = initialDate || getGymDate(new Date(), tz);
+    setDate(startDate);
+    setTime(initialTime || '07:00');
+    setType('');
+    setDuration('60');
+    setCapacity('12');
+    setCoachId('');
+    setSelectedDays([weekdayIndex(startDate)]);
+    setUntilDate(addDaysToDateStr(startDate, 7 * DEFAULT_REPEAT_WEEKS));
+  }, [isOpen, initialDate, initialTime, prefill, mode, tz]);
 
-  const shiftEndWithStart = (
-    prevDate: string,
-    prevTime: string,
-    nextDate: string,
-    nextTime: string
-  ) => {
-    const prevStart = parseCaracasDateTime(prevDate, prevTime);
-    const prevEnd = parseCaracasDateTime(endDate, endTime);
-    const durationMs = Math.max(prevEnd.getTime() - prevStart.getTime(), 30 * 60000);
-    const nextStart = parseCaracasDateTime(nextDate, nextTime);
-    if (Number.isNaN(nextStart.getTime())) return;
-    const nextEnd = new Date(nextStart.getTime() + durationMs);
-    setEndDate(getCaracasDateFromIso(nextEnd.toISOString()));
-    setEndTime(toCaracasTimeInput(nextEnd.toISOString()));
-  };
+  // Coaches and class types for this gym.
+  useEffect(() => {
+    if (!isOpen || !tenantId) return;
+    let cancelled = false;
+    void (async () => {
+      const [{ data: staff }, types] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('tenant_id', tenantId)
+          .in('role', ['coach', 'manager', 'admin'])
+          .order('full_name'),
+        classTypeService.getClassTypes(tenantId, true).catch((err) => {
+          console.error(err);
+          return [] as ClassTypeRow[];
+        }),
+      ]);
+      if (cancelled) return;
+      setCoaches((staff as Coach[] | null) ?? []);
+      setClassTypes(types);
+      // New class: start from the first type and its usual length.
+      setType((current) => {
+        if (current && types.some((row) => row.name === current)) return current;
+        const first = types[0]?.name ?? current;
+        if (!prefill && first) setDuration(String(defaultDuration(first, classTypeDurationMap(types))));
+        return first;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, tenantId, prefill]);
 
   useEffect(() => {
     if (!isOpen) return;
-
-    setIsRecurring(false);
-    setSelectedDays([]);
-    setUntilDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
-
-    if (prefill) {
-      const nextDate = getCaracasDateFromIso(prefill.start_time);
-      const nextTime = toCaracasTimeInput(prefill.start_time);
-      setDate(nextDate);
-      setTime(nextTime);
-      setEndDate(getCaracasDateFromIso(prefill.end_time));
-      setEndTime(toCaracasTimeInput(prefill.end_time));
-      setType(prefill.class_type || 'CrossFit');
-      setCapacity(String(prefill.max_capacity || 12));
-      setCoachId(prefill.coach_id || '');
-      return;
-    }
-
-    const nextDate = initialDate || format(new Date(), 'yyyy-MM-dd');
-    const nextTime = initialTime || '07:00';
-    const nextType = 'CrossFit';
-    setDate(nextDate);
-    setTime(nextTime);
-    setType(nextType);
-    setCapacity('12');
-    setCoachId('');
-    syncEndFromStart(nextDate, nextTime, nextType);
-  }, [isOpen, initialDate, initialTime, prefill, mode]);
-
-  useEffect(() => {
-    const fetchCoaches = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      const activeTenantId = profile?.tenant_id ?? null;
-      setTenantId(activeTenantId);
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('role', ['coach', 'manager', 'admin']);
-      if (data) setCoaches(data);
-
-      if (activeTenantId) {
-        try {
-          const types = await classTypeService.getClassTypes(activeTenantId, true);
-          setClassTypes(types);
-          if (types.length > 0 && !types.some((row) => row.name === type)) {
-            setType(types[0].name);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
     };
-    if (isOpen) fetchCoaches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
-  const toggleDay = (dayValue: number) => {
-    setSelectedDays(prev => 
-      prev.includes(dayValue) ? prev.filter(d => d !== dayValue) : [...prev, dayValue]
-    );
-  };
+  const minutes = parseInt(duration, 10);
+  const start = gymDateTimeToUtc(date, time, tz);
+  const validStart = !Number.isNaN(start.getTime());
+  const endLabel =
+    validStart && minutes > 0 ? getGymTimeLabel(new Date(start.getTime() + minutes * 60000).toISOString(), tz) : '';
+
+  /** Gym-local calendar days in the repeat range, so weekday and wall-clock time survive DST. */
+  const occurrenceDays = (() => {
+    if (!isRecurring) return [date];
+    const days: string[] = [];
+    for (let day = date; day <= untilDate && days.length < 400; day = addDaysToDateStr(day, 1)) {
+      if (selectedDays.includes(weekdayIndex(day))) days.push(day);
+    }
+    return days;
+  })();
+
+  const toggleDay = (value: number) =>
+    setSelectedDays((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tenantId) return toast(t('Action failed'), 'error');
+    if (!validStart) return toast(t('Pick a valid date and time.'), 'error');
+    if (!(minutes > 0)) return toast(t('Duration must be at least 1 minute.'), 'error');
+    const maxCapacity = parseInt(capacity, 10);
+    if (!Number.isFinite(maxCapacity) || maxCapacity < 1) return toast(t('Max athletes must be at least 1.'), 'error');
+    if (occurrenceDays.length === 0) return toast(t('No days match. Pick weekdays or a later end date.'), 'error');
+
+    const durationMs = minutes * 60000;
     setLoading(true);
-
     try {
-      if (!tenantId) {
-        throw new Error('Missing tenant context. Sign out and sign in again.');
-      }
-
-      const start = parseCaracasDateTime(date, time);
-      const end = parseCaracasDateTime(endDate, endTime);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        throw new Error('Invalid start or end date/time.');
-      }
-      if (end <= start) {
-        throw new Error('End must be after start.');
-      }
-
-      const maxCapacity = parseInt(capacity, 10);
-      if (!Number.isFinite(maxCapacity) || maxCapacity < 1) {
-        throw new Error('Max athletes must be at least 1.');
-      }
-
       if (isEdit) {
-        if (!prefill?.id) throw new Error('Missing class to update.');
+        if (!prefill?.id) throw new Error('missing class id');
         await classService.updateClass(prefill.id, {
           start_time: start.toISOString(),
-          end_time: end.toISOString(),
+          end_time: new Date(start.getTime() + durationMs).toISOString(),
           coach_id: coachId || null,
           class_type: type,
           max_capacity: maxCapacity,
         });
-        toast('Class updated successfully.', 'success');
-        onSuccess();
-        onClose();
-        return;
-      }
-
-      const classesToInsert = [];
-      const durationMs = end.getTime() - start.getTime();
-
-      if (!isRecurring) {
-        classesToInsert.push({
-          tenant_id: tenantId,
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          coach_id: coachId || null,
-          class_type: type,
-          max_capacity: maxCapacity,
-        });
+        toast(t('Class updated'), 'success');
       } else {
-        if (selectedDays.length === 0) throw new Error('Select at least one day for recurrence.');
-        
-        let currentIterDate = parseCaracasDateTime(date, time);
-        const endLimit = new Date(`${untilDate}T23:59:59-04:00`);
-
-        while (currentIterDate <= endLimit) {
-          if (selectedDays.includes(currentIterDate.getDay())) {
-            classesToInsert.push({
-              tenant_id: tenantId,
-              start_time: currentIterDate.toISOString(),
-              end_time: new Date(currentIterDate.getTime() + durationMs).toISOString(),
-              coach_id: coachId || null,
-              class_type: type,
-              max_capacity: maxCapacity,
-            });
-          }
-          currentIterDate = addDays(currentIterDate, 1);
-        }
+        const rows = occurrenceDays.map((day) => {
+          const occurrence = gymDateTimeToUtc(day, time, tz);
+          return {
+            tenant_id: tenantId,
+            start_time: occurrence.toISOString(),
+            end_time: new Date(occurrence.getTime() + durationMs).toISOString(),
+            coach_id: coachId || null,
+            class_type: type,
+            max_capacity: maxCapacity,
+          };
+        });
+        const { error } = await supabase.from('classes').insert(rows);
+        if (error) throw error;
+        toast(
+          rows.length === 1 ? t('Class scheduled') : t('{{count}} classes scheduled', { count: rows.length }),
+          'success',
+        );
       }
-
-      if (classesToInsert.length === 0) throw new Error('No valid dates found in range.');
-
-      const { error } = await supabase.from('classes').insert(classesToInsert);
-      if (error) throw error;
-
-      toast(`Successfully scheduled ${classesToInsert.length} class${classesToInsert.length > 1 ? 'es' : ''}.`, 'success');
       onSuccess();
       onClose();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to schedule class';
-      toast(errorMessage, 'error');
+    } catch (error) {
+      console.error(error);
+      toast(t('Could not save the class. Try again.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -306,96 +234,54 @@ export default function CreateClassModal({
 
   if (!isOpen) return null;
 
-  const title =
-    mode === 'edit' ? 'Edit Class' : mode === 'duplicate' ? 'Duplicate Class' : 'Schedule Classes';
+  const title = isEdit ? t('Edit Class') : mode === 'duplicate' ? t('Duplicate Class') : t('Schedule Class');
   const submitLabel = isEdit
-    ? 'Save Changes'
-    : isRecurring
-      ? 'Bulk Schedule'
-      : mode === 'duplicate'
-        ? 'Schedule Duplicate'
-        : 'Schedule Single Class';
+    ? t('Save Changes')
+    : occurrenceDays.length > 1
+      ? t('Schedule {{count}} classes', { count: occurrenceDays.length })
+      : t('Schedule Class');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pits-background/50 backdrop-blur-sm">
-      <div className="bg-pits-surface-elevated border border-pits-edge rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-pits-edge flex justify-between items-center">
-          <h3 className="font-black text-lg text-pits-text uppercase italic tracking-tighter">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-pits-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="class-form-title"
+        className="bg-pits-surface-elevated border border-pits-edge rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-pits-edge flex justify-between items-center shrink-0">
+          <h3 id="class-form-title" className="text-lg font-bold text-pits-text">
             {title}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-pits-surface-muted rounded-full text-pits-dim hover:text-pits-ink transition-colors">
-            <X size={20} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('Close')}
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="p-5 space-y-4 overflow-y-auto overscroll-contain">
             <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Start Date</label>
-              <input
-                type="date"
+              <label htmlFor="class-type" className={labelClass}>{t('Class type')}</label>
+              <select
+                id="class-type"
                 required
-                value={date}
-                onChange={e => {
-                  const nextDate = e.target.value;
-                  shiftEndWithStart(date, time, nextDate, time);
-                  setDate(nextDate);
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value);
+                  setDuration(String(defaultDuration(e.target.value, durationByName)));
                 }}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Start Time</label>
-              <input
-                type="time"
-                required
-                value={time}
-                onChange={e => {
-                  const nextTime = e.target.value;
-                  shiftEndWithStart(date, time, date, nextTime);
-                  setTime(nextTime);
-                }}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">End Date</label>
-              <input
-                type="date"
-                required
-                value={endDate}
-                min={date}
-                onChange={e => setEndDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">End Time</label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                onChange={e => setEndTime(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Type</label>
-              <select 
-                value={type} 
-                onChange={e => {
-                  const newType = e.target.value;
-                  setType(newType);
-                  syncEndFromStart(date, time, newType);
-                }} 
                 className={inputClass}
               >
+                {type && !classTypes.some((row) => row.name === type) ? <option value={type}>{type}</option> : null}
                 {classTypes.map((row) => (
                   <option key={row.id} value={row.name}>
                     {row.name}
@@ -403,74 +289,175 @@ export default function CreateClassModal({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase mb-2">Coach</label>
-              <select value={coachId} onChange={e => setCoachId(e.target.value)} required className={inputClass}>
-                <option value="">Select Coach</option>
-                {coaches.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-              </select>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="col-span-2 sm:col-span-1">
+                <label htmlFor="class-date" className={labelClass}>
+                  {isRecurring ? t('Starts on') : t('Date')}
+                </label>
+                <input
+                  id="class-date"
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    if (!isRecurring && e.target.value) setSelectedDays([weekdayIndex(e.target.value)]);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="class-time" className={labelClass}>{t('Start time')}</label>
+                <input
+                  id="class-time"
+                  type="time"
+                  required
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="class-duration" className={labelClass}>{t('Duration (min)')}</label>
+                <input
+                  id="class-duration"
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={5}
+                  step={5}
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
             </div>
-          </div>
+            {endLabel ? (
+              <p className="-mt-2 text-xs text-pits-dim">
+                {t('Ends at {{time}}', { time: endLabel })}
+                {time && time < '05:00' ? (
+                  <span className="block mt-0.5 font-semibold text-pits-warning">
+                    {t('Starts at {{time}} (early morning). Did you mean PM?', { time })}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
 
-          <div>
-            <label className="block text-xs font-bold text-pits-dim uppercase mb-2">
-              Max athletes
-            </label>
-            <input
-              type="number"
-              required
-              min={1}
-              step={1}
-              value={capacity}
-              onChange={e => setCapacity(e.target.value)}
-              className={inputClass}
-            />
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="class-coach" className={labelClass}>{t('Coach')}</label>
+                <select
+                  id="class-coach"
+                  required
+                  value={coachId}
+                  onChange={(e) => setCoachId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">{t('Choose…')}</option>
+                  {coaches.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="class-capacity" className={labelClass}>{t('Spots')}</label>
+                <input
+                  id="class-capacity"
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={1}
+                  step={1}
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
 
-          {!isEdit && (
-            <div className={`p-4 rounded-xl border-2 transition-all ${isRecurring ? 'bg-pits-card border-pits-red/20' : 'bg-pits-surface-muted border-pits-edge'}`}>
-              <label className="flex items-center cursor-pointer mb-3">
-                <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} className="w-4 h-4 text-pits-red rounded border-pits-edge focus:ring-pits-red" />
-                <span className="ml-3 text-sm font-black text-pits-text uppercase italic tracking-tight flex items-center">
-                  <Repeat size={14} className="mr-2" />
-                  Repeat this class
-                </span>
-              </label>
+            {!isEdit && (
+              <div className={`rounded-xl border p-3 ${isRecurring ? 'border-pits-primary/40 bg-pits-primary-soft' : 'border-pits-edge'}`}>
+                <label className="flex items-center gap-3 min-h-9 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="w-4 h-4 rounded border-pits-edge text-pits-primary focus:ring-pits-primary/40"
+                  />
+                  <Repeat size={14} className="text-pits-dim" aria-hidden />
+                  <span className="text-sm font-semibold text-pits-text">{t('Repeat every week')}</span>
+                </label>
 
-              {isRecurring && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                  <div>
-                    <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Repeat on</label>
-                    <div className="flex justify-between">
-                      {DAYS_OF_WEEK.map(day => (
-                        <button
-                          key={day.value}
-                          type="button"
-                          onClick={() => toggleDay(day.value)}
-                          className={`w-9 h-9 rounded-full font-bold text-xs border-2 transition-all ${selectedDays.includes(day.value) ? 'bg-pits-primary border-pits-primary text-pits-dark-text' : 'bg-pits-surface-elevated border-pits-edge text-pits-dim'}`}
-                        >
-                          {day.label}
-                        </button>
-                      ))}
+                {isRecurring && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-7 gap-1.5" role="group" aria-label={t('Repeat on')}>
+                      {WEEK.map((day) => {
+                        const on = selectedDays.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => toggleDay(day.value)}
+                            className={`h-10 rounded-lg text-xs font-semibold border ${
+                              on
+                                ? 'bg-pits-primary border-pits-primary text-pits-dark-text'
+                                : 'bg-pits-surface-elevated border-pits-edge text-pits-dim'
+                            }`}
+                          >
+                            {capitalizeFirst(formatWeekdayShort(day.sample, lang)).slice(0, 3)}
+                          </button>
+                        );
+                      })}
                     </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label htmlFor="class-until" className="text-xs font-semibold text-pits-dim">
+                        {t('Until')}
+                      </label>
+                      <input
+                        id="class-until"
+                        type="date"
+                        min={date}
+                        value={untilDate}
+                        onChange={(e) => setUntilDate(e.target.value)}
+                        className={`${inputClass} w-auto flex-1`}
+                      />
+                    </div>
+                    <p className="text-xs text-pits-dim">
+                      {occurrenceDays.length === 0
+                        ? t('No days match. Pick weekdays or a later end date.')
+                        : t('{{count}} classes, {{first}} to {{last}}', {
+                            count: occurrenceDays.length,
+                            first: formatDate(occurrenceDays[0], lang),
+                            last: formatDate(occurrenceDays[occurrenceDays.length - 1], lang),
+                          })}
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-pits-dim uppercase mb-2">Until Date</label>
-                    <input type="date" value={untilDate} onChange={e => setUntilDate(e.target.value)} className={inputClass} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-4 rounded-lg flex items-center justify-center text-pits-dark-text font-black uppercase tracking-widest text-sm shadow-lg transition-all ${loading ? 'bg-pits-gunmetal cursor-not-allowed' : 'bg-pits-primary hover:bg-pits-primary-dark shadow-pits-primary/20'}`}
-          >
-            {loading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
-            {submitLabel}
-          </button>
+          <div className="flex gap-2 p-4 border-t border-pits-edge shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-11 px-4 rounded-xl border border-pits-edge text-sm font-semibold text-pits-text hover:bg-pits-surface-muted"
+            >
+              {t('Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !type || occurrenceDays.length === 0}
+              className="flex-1 min-h-11 rounded-xl inline-flex items-center justify-center gap-2 bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+              {submitLabel}
+            </button>
+          </div>
         </form>
       </div>
     </div>

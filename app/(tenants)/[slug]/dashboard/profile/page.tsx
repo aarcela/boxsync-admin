@@ -14,11 +14,14 @@ import {
   Check,
   Printer,
   RefreshCw,
+  Eye,
+  EyeOff,
+  X,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import QRCode from 'qrcode';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
+import { formatDate } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
@@ -35,6 +38,7 @@ import { checkinCodeService } from '@/lib/services/checkinCodeService';
 import { tenantSupportService } from '@/lib/services/tenantSupportService';
 import { normalizeWhatsAppRecipient } from '@/lib/whatsapp';
 import type { TranslationKey } from '@/lib/translations';
+import { PageLoader } from '@/components/LoadingStates';
 
 type StaffProfile = {
   full_name: string | null;
@@ -60,6 +64,12 @@ function toSupportWhatsAppUrl(value: string): string {
   return digits ? `https://wa.me/${digits}` : '';
 }
 
+/** The support contact may be stored as a wa.me link; show it as a phone number. */
+function supportToPhone(value: string): string {
+  const match = value.trim().match(/^https?:\/\/wa\.me\/(\d+)/i);
+  return match ? `+${match[1]}` : value;
+}
+
 function roleLabel(role: string, t: (key: TranslationKey) => string): string {
   if (role === 'admin') return t('Admin');
   if (role === 'manager') return t('Manager');
@@ -67,14 +77,17 @@ function roleLabel(role: string, t: (key: TranslationKey) => string): string {
 }
 
 export default function ProfilePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const { slug, name: tenantName, tenantId } = useTenant();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<StaffProfile | null>(null);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [savedPhone, setSavedPhone] = useState('');
+  const [fullName, setFullName] = useState('');
   const [phoneSaving, setPhoneSaving] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const [userId, setUserId] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -275,6 +288,7 @@ export default function ProfilePage() {
       window.setTimeout(() => setCopiedField(null), 2000);
     } catch (error) {
       console.error(error);
+      toast(t('Could not copy. Select the text and copy it by hand.'), 'error');
     }
   };
 
@@ -301,6 +315,7 @@ export default function ProfilePage() {
         if (!isStaffRole(data?.role)) throw new Error('staff_only');
 
         setProfile(data as StaffProfile);
+        setFullName(data.full_name || '');
 
         let phoneValue = data.phone || '';
         if (!phoneValue) {
@@ -310,7 +325,9 @@ export default function ProfilePage() {
             phoneValue = '';
           }
         }
+        phoneValue = supportToPhone(phoneValue);
         setPhone(phoneValue);
+        setSavedPhone(phoneValue);
       } catch (error) {
         console.error(error);
         toast(t('Failed to load profile'), 'error');
@@ -324,25 +341,33 @@ export default function ProfilePage() {
 
   const handleSavePhone = async () => {
     if (!userId) return;
+    const name = fullName.trim();
+    if (!name) {
+      toast(t('Your name can’t be empty.'), 'error');
+      return;
+    }
     setPhoneSaving(true);
     try {
       const trimmed = phone.trim();
       const { error } = await supabase
         .from('profiles')
-        .update({ phone: trimmed || null })
+        .update({ phone: trimmed || null, full_name: name })
         .eq('id', userId);
       if (error) throw error;
 
-      await tenantSupportService.updateForTenant(
-        tenantId,
-        toSupportWhatsAppUrl(trimmed)
-      );
+      // The support contact is gym-wide; only touch it when the phone actually changed.
+      if (trimmed !== savedPhone.trim()) {
+        await tenantSupportService.updateForTenant(tenantId, toSupportWhatsAppUrl(trimmed));
+      }
 
-      setProfile((prev) => (prev ? { ...prev, phone: trimmed || null } : prev));
-      toast(t('Phone saved'), 'success');
+      setProfile((prev) => (prev ? { ...prev, phone: trimmed || null, full_name: name } : prev));
+      setFullName(name);
+      setPhone(trimmed);
+      setSavedPhone(trimmed);
+      toast(t('Profile saved'), 'success');
     } catch (error) {
       console.error(error);
-      toast(t('Failed to save phone'), 'error');
+      toast(t('Failed to save profile'), 'error');
     } finally {
       setPhoneSaving(false);
     }
@@ -391,11 +416,18 @@ export default function ProfilePage() {
     }
   };
 
+  const profileDirty =
+    !!profile && (fullName.trim() !== (profile.full_name || '') || phone.trim() !== savedPhone.trim());
+  const pwLongEnough = newPassword.length >= MIN_RESET_PASSWORD_LENGTH;
+  const pwMatch = confirmPassword.length > 0 && newPassword === confirmPassword;
+  const pwReady = currentPassword.length > 0 && pwLongEnough && pwMatch;
+
+  const inputClass =
+    'w-full h-11 px-3 bg-pits-surface border border-pits-edge rounded-lg text-sm text-pits-ink focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60';
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 className="animate-spin text-pits-primary" size={32} />
-      </div>
+      <PageLoader />
     );
   }
 
@@ -411,7 +443,7 @@ export default function ProfilePage() {
     <>
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-pits-ink uppercase tracking-tight">
+        <h1 className="page-title">
           {t('My Profile')}
         </h1>
         <p className="text-sm text-pits-ink-muted mt-1">
@@ -420,7 +452,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm overflow-hidden">
-        <div className="p-6 flex items-center gap-5 border-b border-pits-edge bg-pits-surface-muted/40">
+        <div className="p-4 sm:p-6 flex items-center gap-4 sm:gap-5 border-b border-pits-edge bg-pits-surface-muted/40">
           <div className="w-16 h-16 bg-pits-primary rounded-full flex items-center justify-center text-pits-dark-text font-black text-xl shrink-0">
             {getInitials(profile.full_name)}
           </div>
@@ -428,89 +460,90 @@ export default function ProfilePage() {
             <h2 className="text-xl font-black text-pits-ink truncate">
               {profile.full_name || t('Admin')}
             </h2>
-            <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-pits-primary/15 text-pits-primary text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-pits-primary/15 text-pits-primary text-xs font-semibold">
               <Shield size={12} />
               {roleLabel(profile.role, t)}
             </span>
           </div>
         </div>
 
-        <dl className="p-6 grid gap-4 sm:grid-cols-2">
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
-            <Mail size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
-                {t('Email')}
-              </dt>
-              <dd className="text-sm font-bold text-pits-ink truncate mt-0.5">
-                {email || '—'}
-              </dd>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge sm:col-span-2">
-            <Phone size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
-                {t('Phone')}
-              </dt>
-              <p className="text-[11px] text-pits-ink-muted mt-0.5">
-                {t('Shown to athletes in the app as your box support contact')}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-pits-ink">
+                <User size={15} className="text-pits-ink-muted" /> {t('Full name')}
+              </span>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={phoneSaving}
+                autoComplete="name"
+                className={inputClass}
+              />
+            </label>
+            <div>
+              <p className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-pits-ink">
+                <Mail size={15} className="text-pits-ink-muted" /> {t('Email')}
               </p>
-              <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+              <p className="flex h-11 items-center truncate rounded-lg border border-pits-edge bg-pits-surface-muted/50 px-3 text-sm text-pits-ink-muted">
+                {email || '—'}
+              </p>
+            </div>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-pits-ink">
+                <Phone size={15} className="text-pits-ink-muted" /> {t('Phone')}
+              </span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={phoneSaving}
+                autoComplete="tel"
+                placeholder="+58 412 000 0000"
+                className={inputClass}
+              />
+              <span className="mt-1.5 block text-xs text-pits-ink-muted">
+                {t('Shown to athletes in the app as your box support contact')}
+              </span>
+            </label>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-xs text-pits-ink-muted">
+              <Calendar size={13} />
+              {t('Member since')} {profile.created_at ? formatDate(profile.created_at, lang) : '—'}
+            </p>
+            {profileDirty ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFullName(profile.full_name || '');
+                    setPhone(savedPhone);
+                  }}
                   disabled={phoneSaving}
-                  placeholder="+58 412 000 0000"
-                  className="flex-1 p-3 bg-pits-surface border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
-                />
+                  className="min-h-11 sm:min-h-9 flex-1 sm:flex-none rounded-lg px-3 text-sm font-semibold text-pits-ink-muted hover:text-pits-ink hover:bg-pits-surface-muted disabled:opacity-50"
+                >
+                  {t('Discard changes')}
+                </button>
                 <button
                   type="button"
                   onClick={() => void handleSavePhone()}
-                  disabled={phoneSaving}
-                  className={`px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-xs shrink-0 transition-all
-                    ${phoneSaving ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-dark-text hover:brightness-95'}
-                  `}
+                  disabled={phoneSaving || !fullName.trim()}
+                  className="min-h-11 sm:min-h-9 flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-pits-primary px-4 text-sm font-bold text-pits-dark-text hover:brightness-95 disabled:opacity-50"
                 >
-                  {phoneSaving ? t('Updating...') : t('Save Changes')}
+                  {phoneSaving ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {t('Save changes')}
                 </button>
               </div>
-            </div>
+            ) : null}
           </div>
-
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
-            <User size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
-                {t('Full name')}
-              </dt>
-              <dd className="text-sm font-bold text-pits-ink mt-0.5">
-                {profile.full_name || '—'}
-              </dd>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-pits-surface-muted/50 border border-pits-edge">
-            <Calendar size={18} className="text-pits-ink-muted mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <dt className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
-                {t('Member since')}
-              </dt>
-              <dd className="text-sm font-bold text-pits-ink mt-0.5">
-                {profile.created_at
-                  ? format(new Date(profile.created_at), 'MMMM d, yyyy')
-                  : '—'}
-              </dd>
-            </div>
-          </div>
-        </dl>
+        </div>
       </div>
 
-      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-6">
+      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-4 sm:p-6">
         {!emailConfirmed && (
-          <p className="mb-4 text-sm font-bold text-orange-700">
+          <p className="mb-4 text-sm font-bold text-pits-warning">
             {t('Verify your email before sharing the join link.')}
           </p>
         )}
@@ -519,7 +552,7 @@ export default function ProfilePage() {
             <QrCode size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-black text-pits-ink uppercase tracking-tight">
+            <h3 className="text-lg font-bold text-pits-ink">
               {t('Athlete join QR')}
             </h3>
             <p className="text-sm text-pits-ink-muted mt-1">
@@ -551,7 +584,7 @@ export default function ProfilePage() {
 
           <div className="flex-1 w-full space-y-3">
             <div className="rounded-xl border border-pits-edge bg-pits-surface-muted/50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-wider text-pits-ink-muted">
+              <p className="text-xs font-semibold text-pits-ink-muted">
                 {t('Gym code')}
               </p>
               <p className="text-lg font-black text-pits-primary tracking-wide mt-1">
@@ -563,7 +596,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => void copyText(slug, 'slug')}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-bold uppercase tracking-widest hover:bg-pits-surface-muted transition-colors"
+                className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-semibold hover:bg-pits-surface-muted transition-colors"
               >
                 {copiedField === 'slug' ? <Check size={16} /> : <Copy size={16} />}
                 {t('Copy gym code')}
@@ -572,7 +605,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => void copyText(joinLink, 'link')}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-bold uppercase tracking-widest hover:bg-pits-surface-muted transition-colors"
+                className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-semibold hover:bg-pits-surface-muted transition-colors"
               >
                 {copiedField === 'link' ? <Check size={16} /> : <Copy size={16} />}
                 {t('Copy join link')}
@@ -582,7 +615,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => void handleDownloadJoinQr()}
                 disabled={downloadingJoinQr || !joinQrDataUrl}
-                className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg transition-all
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition-all
                   ${
                     downloadingJoinQr || !joinQrDataUrl
                       ? 'bg-gray-400 text-white cursor-not-allowed'
@@ -602,13 +635,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-6">
+      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-4 sm:p-6">
         <div className="flex items-start gap-3 mb-6">
           <div className="p-2.5 rounded-xl bg-pits-primary/15 text-pits-primary shrink-0">
             <QrCode size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-black text-pits-ink uppercase tracking-tight">
+            <h3 className="text-lg font-bold text-pits-ink">
               {t('Check-in QR')}
             </h3>
             <p className="text-sm text-pits-ink-muted mt-1">
@@ -646,7 +679,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => void handleDownloadCheckinQr()}
                 disabled={downloadingCheckinQr || !checkinQrDataUrl}
-                className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-sm shadow-lg transition-all
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition-all
                   ${
                     downloadingCheckinQr || !checkinQrDataUrl
                       ? 'bg-gray-400 text-white cursor-not-allowed'
@@ -665,10 +698,10 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  window.open(`/${slug}/dashboard/profile/checkin-print`, '_blank');
+                  window.open('/dashboard/profile/checkin-print', '_blank');
                 }}
                 disabled={!checkinLink}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-bold uppercase tracking-widest hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-lg border border-pits-edge bg-pits-surface text-pits-ink text-sm font-semibold hover:bg-pits-surface-muted transition-colors disabled:opacity-50"
               >
                 <Printer size={16} />
                 {t('Print / PDF')}
@@ -679,7 +712,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => setRotateConfirmOpen(true)}
                   disabled={rotatingCode || checkinQrGenerating}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-orange-300 bg-orange-50 text-orange-800 text-sm font-bold uppercase tracking-widest hover:bg-orange-100 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-lg border border-pits-warning-edge bg-pits-warning-soft text-pits-warning text-sm font-semibold hover:bg-pits-warning-soft transition-colors disabled:opacity-50"
                 >
                   {rotatingCode ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -716,8 +749,8 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-6">
-        <h3 className="text-lg font-black text-pits-ink uppercase tracking-tight">
+      <div className="bg-pits-surface rounded-2xl border border-pits-edge shadow-sm p-4 sm:p-6">
+        <h3 className="text-lg font-bold text-pits-ink">
           {t('Change password')}
         </h3>
         <p className="text-sm text-pits-ink-muted mt-1 mb-6">
@@ -725,68 +758,90 @@ export default function ProfilePage() {
         </p>
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
+          <button
+            type="button"
+            onClick={() => setShowPasswords((v) => !v)}
+            aria-pressed={showPasswords}
+            className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-pits-ink-muted hover:text-pits-ink"
+          >
+            {showPasswords ? <EyeOff size={15} /> : <Eye size={15} />}
+            {showPasswords ? t('Hide passwords') : t('Show passwords')}
+          </button>
           <div>
-            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
+            <label className="block text-sm font-medium text-pits-ink mb-1.5">
               {t('Current password')}
             </label>
             <input
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               autoComplete="current-password"
               required
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               disabled={passwordLoading}
-              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
+              className="w-full h-11 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
+            <label className="block text-sm font-medium text-pits-ink mb-1.5">
               {t('New password')}
             </label>
             <input
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               autoComplete="new-password"
               required
               minLength={MIN_RESET_PASSWORD_LENGTH}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               disabled={passwordLoading}
-              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
+              className="w-full h-11 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
+            <label className="block text-sm font-medium text-pits-ink mb-1.5">
               {t('Confirm password')}
             </label>
             <input
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               autoComplete="new-password"
               required
               minLength={MIN_RESET_PASSWORD_LENGTH}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={passwordLoading}
-              className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
+              className="w-full h-11 px-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
               placeholder="••••••••"
             />
           </div>
 
+          {newPassword.length > 0 ? (
+            <ul className="space-y-1 text-xs">
+              <li className={`flex items-center gap-1.5 ${pwLongEnough ? 'text-pits-positive' : 'text-pits-ink-muted'}`}>
+                {pwLongEnough ? <Check size={13} /> : <X size={13} />}
+                {t('At least {{count}} characters', { count: MIN_RESET_PASSWORD_LENGTH })}
+              </li>
+              {confirmPassword.length > 0 ? (
+                <li className={`flex items-center gap-1.5 ${pwMatch ? 'text-pits-positive' : 'text-pits-danger'}`}>
+                  {pwMatch ? <Check size={13} /> : <X size={13} />}
+                  {pwMatch ? t('Passwords match') : t('Passwords do not match.')}
+                </li>
+              ) : null}
+            </ul>
+          ) : null}
+
           {passwordError && (
-            <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg">
+            <div className="bg-pits-danger-soft text-pits-danger text-sm font-bold p-3 rounded-lg">
               {passwordError}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={passwordLoading}
-            className={`px-6 py-3 rounded-lg flex items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg transition-all
-              ${passwordLoading ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20'}
-            `}
+            disabled={passwordLoading || !pwReady}
+            className="min-h-11 w-full sm:w-auto px-6 rounded-lg flex items-center justify-center font-bold text-sm bg-pits-primary text-pits-dark-text hover:brightness-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
           >
             {passwordLoading && (
               <Loader2 size={18} className="animate-spin mr-2" />

@@ -18,12 +18,12 @@ interface ConfirmDialogProps {
 
 const VARIANT_STYLES = {
   danger: {
-    icon: 'bg-red-950/40 text-red-400',
-    button: 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/30',
+    icon: 'bg-pits-danger-soft text-pits-danger',
+    button: 'bg-pits-danger hover:bg-pits-danger/90 text-white shadow-red-900/30',
   },
   warning: {
-    icon: 'bg-orange-950/40 text-orange-400',
-    button: 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-900/30',
+    icon: 'bg-pits-warning-soft text-pits-warning',
+    button: 'bg-pits-warning hover:bg-pits-warning/90 text-white shadow-orange-900/30',
   },
   default: {
     icon: 'bg-pits-surface-muted text-pits-dim',

@@ -31,8 +31,16 @@ export type PaymentProofReadResult = {
   proofUrl: string;
 };
 
+type ReaderErrorCode =
+  | 'no_proof'
+  | 'image_unavailable'
+  | 'ai_disabled'
+  | 'quota'
+  | 'reader_unavailable';
+
 type ApiResponse = Partial<PaymentProofReadResult> & {
   error?: string;
+  code?: ReaderErrorCode;
   unavailable?: boolean;
   proofUrl?: string;
   comparison?: Comparison;
@@ -41,9 +49,9 @@ type ApiResponse = Partial<PaymentProofReadResult> & {
 const sessionCache = new Map<string, ApiResponse>();
 
 function matchBadgeClass(match: AmountMatch): string {
-  if (match === 'match') return 'bg-green-50 text-green-700 border-green-200';
-  if (match === 'mismatch') return 'bg-red-50 text-red-700 border-red-200';
-  return 'bg-amber-50 text-amber-800 border-amber-200';
+  if (match === 'match') return 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge';
+  if (match === 'mismatch') return 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge';
+  return 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge';
 }
 
 function Field({
@@ -58,12 +66,12 @@ function Field({
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">{label}</p>
+        <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">{label}</p>
         <p className="text-xs font-bold text-pits-text truncate">{value}</p>
       </div>
       {badge ? (
         <span
-          className={`shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${badge.className}`}
+          className={`shrink-0 px-1.5 py-0.5 rounded text-[11px] font-black uppercase border ${badge.className}`}
         >
           {badge.text}
         </span>
@@ -75,9 +83,11 @@ function Field({
 export default function PaymentProofReader({
   paymentId,
   proofHref,
+  showProofLink = true,
 }: {
   paymentId: string;
   proofHref?: string | null;
+  showProofLink?: boolean;
 }) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -109,7 +119,7 @@ export default function PaymentProofReader({
         if (!cancelled) setResult(data);
       } catch {
         const fallback: ApiResponse = {
-          error: 'Proof reader is unavailable.',
+          code: 'reader_unavailable',
           unavailable: true,
         };
         sessionCache.set(paymentId, fallback);
@@ -140,15 +150,15 @@ export default function PaymentProofReader({
   return (
     <div className="rounded-xl border border-pits-edge bg-pits-surface-muted/50 p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-pits-dim">
+        <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-pits-dim">
           <Sparkles size={12} className="text-pits-primary" />
           {t('Proof reader')}
         </div>
-        {proofUrl ? (
+        {proofUrl && showProofLink ? (
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-blue-500 hover:underline"
+            className="inline-flex items-center gap-1 text-[11px] font-black uppercase text-pits-info hover:underline"
           >
             {t('Check Proof')} <Eye size={10} />
           </button>
@@ -162,20 +172,26 @@ export default function PaymentProofReader({
         </div>
       ) : result?.unavailable || !extraction ? (
         <p className="text-xs text-pits-dim font-medium leading-relaxed">
-          {typeof result?.error === 'string' && result.error
-            ? result.error
-            : t('Proof reader unavailable. Review the image manually.')}
+          {result?.code === 'no_proof'
+            ? t('No proof attached to this payment.')
+            : result?.code === 'image_unavailable'
+              ? t('The proof image could not be loaded.')
+              : result?.code === 'ai_disabled'
+                ? t('Proof reader is turned off for this gym. Review the image manually.')
+                : result?.code === 'quota'
+                  ? t('Monthly AI limit reached. Review the image manually.')
+                  : t('Proof reader unavailable. Review the image manually.')}
         </p>
       ) : (
         <div className="space-y-2.5">
           {result?.duplicatePayment ? (
-            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-2">
-              <AlertTriangle size={14} className="shrink-0 text-red-600 mt-0.5" />
+            <div className="flex items-start gap-2 rounded-lg border border-pits-danger-edge bg-pits-danger-soft p-2">
+              <AlertTriangle size={14} className="shrink-0 text-pits-danger mt-0.5" />
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase text-red-800">
+                <p className="text-[11px] font-black uppercase text-pits-danger">
                   {t('Duplicate reference detected')}
                 </p>
-                <p className="text-[9px] text-red-700 mt-0.5">
+                <p className="text-[11px] text-pits-danger mt-0.5">
                   {t('This reference was already used in another payment.')}
                 </p>
               </div>
@@ -192,23 +208,23 @@ export default function PaymentProofReader({
           />
           {result?.planComparison && result.planComparison.expectedAmount > 0 ? (
             <div className="rounded-lg border border-pits-edge bg-pits-surface/50 p-2 space-y-1">
-              <p className="text-[9px] font-black uppercase tracking-widest text-pits-dim">
+              <p className="text-[11px] font-black uppercase tracking-widest text-pits-dim">
                 {t('Plan price comparison')}
               </p>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[10px] text-pits-dim font-medium">{t('Expected')}:</span>
+                <span className="text-[11px] text-pits-dim font-medium">{t('Expected')}:</span>
                 <span className="text-xs font-bold text-pits-text">
                   {result.planComparison.expectedAmount.toLocaleString()}{' '}
                   {result.planComparison.expectedCurrency}
                 </span>
               </div>
               {result.planComparison.conversionApplied && result.planComparison.conversionRate ? (
-                <p className="text-[9px] text-pits-dim italic">
+                <p className="text-[11px] text-pits-dim italic">
                   {t('BCV rate')}: {result.planComparison.conversionRate.toFixed(2)}
                 </p>
               ) : null}
               {result.planComparison.match === 'mismatch' ? (
-                <p className="text-[10px] font-bold text-amber-700">
+                <p className="text-[11px] font-bold text-pits-warning">
                   {t('Amount differs from expected plan price')}
                 </p>
               ) : null}
@@ -226,7 +242,7 @@ export default function PaymentProofReader({
             <Field label={t('Bank')} value={extraction.bank} />
           ) : null}
           {comparison ? (
-            <p className="text-[10px] text-pits-dim font-medium leading-relaxed">
+            <p className="text-[11px] text-pits-dim font-medium leading-relaxed">
               {t('Claimed')}: {comparison.claimedAmount.toLocaleString()}
               {comparison.claimedCurrency ? ` ${comparison.claimedCurrency}` : ''}
               {comparison.periodRemaining != null
@@ -235,16 +251,16 @@ export default function PaymentProofReader({
             </p>
           ) : null}
           {extraction.confidence === 'low' || amountMatch === 'mismatch' ? (
-            <p className="text-[10px] font-bold text-amber-700">
+            <p className="text-[11px] font-bold text-pits-warning">
               {t('AI assist only — confirm before approving.')}
             </p>
           ) : (
-            <p className="text-[10px] font-medium text-pits-dim">
+            <p className="text-[11px] font-medium text-pits-dim">
               {t('AI assist only — confirm before approving.')}
             </p>
           )}
           {extraction.raw_notes ? (
-            <p className="text-[10px] text-pits-dim italic">{extraction.raw_notes}</p>
+            <p className="text-[11px] text-pits-dim italic">{extraction.raw_notes}</p>
           ) : null}
         </div>
       )}

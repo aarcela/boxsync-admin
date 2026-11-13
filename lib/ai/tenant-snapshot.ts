@@ -1,12 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { parseTenantCurrencyConfig } from '@/lib/currency';
 import type { Tenant } from '@/lib/types/gym';
-import {
-  getCaracasDate,
-  getCaracasDayRange,
-  getCaracasMonthRange,
-  getCaracasTimeLabel,
-} from '@/lib/utils/date';
+import { getGymDate, getGymDayRange, getGymMonthRange, getGymTimeLabel } from '@/lib/utils/date';
+import { parseGymTimezone } from '@/lib/gym-timezone';
 
 const MAX_CLASSES = 24;
 const MAX_NAMES = 12;
@@ -66,10 +62,11 @@ export async function buildAskAiTenantSnapshot(
   client: SupabaseClient
 ): Promise<string> {
   const currencies = parseTenantCurrencyConfig(tenant.settings);
-  const today = getCaracasDate();
+  const tz = parseGymTimezone(tenant.settings);
+  const today = getGymDate(new Date(), tz);
   const yearMonth = today.slice(0, 7);
-  const { startUtc: dayStart, endUtc: dayEnd } = getCaracasDayRange(today);
-  const { startUtc: monthStart, endUtc: monthEnd, startDate, endDate } = getCaracasMonthRange(yearMonth);
+  const { startUtc: dayStart, endUtc: dayEnd } = getGymDayRange(today, tz);
+  const { startUtc: monthStart, endUtc: monthEnd, startDate, endDate } = getGymMonthRange(yearMonth, tz);
 
   const [classesRes, membersRes, pendingRes, pendingCountRes, paymentsRes, incomesRes, expensesRes] =
     await Promise.all([
@@ -143,7 +140,7 @@ export async function buildAskAiTenantSnapshot(
     const occupancy = members.booked + members.attended + guests.booked + guests.attended;
     const capacity = Number(row.max_capacity) || 0;
     return {
-      time: row.start_time ? getCaracasTimeLabel(row.start_time) : null,
+      time: row.start_time ? getGymTimeLabel(row.start_time, tz) : null,
       class_type: row.class_type,
       coach: coachName(row.coach as CoachRow),
       capacity,
@@ -236,7 +233,7 @@ export async function buildAskAiTenantSnapshot(
 
   const snapshot = {
     gym: tenant.name,
-    timezone: 'America/Caracas',
+    timezone: tz,
     today,
     month: yearMonth,
     today_attendance: {

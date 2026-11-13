@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getRawTenantTerms } from '@/lib/tenant-terms';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
-  detectSetupSteps,
   parseSetupSteps,
   SETUP_STEPS,
+  type SetupFacts,
   type SetupStepId,
 } from '@/lib/setup-progress';
 import { trackProductEvent } from '@/lib/product-events';
@@ -15,34 +14,19 @@ function isSetupStep(value: string): value is SetupStepId {
   return (SETUP_STEPS as readonly string[]).includes(value);
 }
 
-async function loadFacts(tenantId: string, settings: unknown) {
-  const [
-    { count: paymentMethodCount },
-    { count: classCount },
-    { count: memberCount },
-  ] = await Promise.all([
-    supabaseAdmin
-      .from('payment_methods')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    supabaseAdmin
-      .from('classes')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    supabaseAdmin
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('role', 'member'),
+async function loadFacts(tenantId: string): Promise<SetupFacts> {
+  const head = { count: 'exact' as const, head: true };
+  const [methods, plans, classes, members] = await Promise.all([
+    supabaseAdmin.from('payment_methods').select('id', head).eq('tenant_id', tenantId),
+    supabaseAdmin.from('membership_plans').select('id', head).eq('tenant_id', tenantId),
+    supabaseAdmin.from('classes').select('id', head).eq('tenant_id', tenantId),
+    supabaseAdmin.from('profiles').select('id', head).eq('tenant_id', tenantId).eq('role', 'member'),
   ]);
-
-  const bag = settings && typeof settings === 'object' ? (settings as Record<string, unknown>) : {};
   return {
-    paletteCustomized: typeof bag.paletteId === 'string' && bag.paletteId !== 'default',
-    termsCustomized: getRawTenantTerms(settings) != null,
-    paymentMethodCount: paymentMethodCount ?? 0,
-    classCount: classCount ?? 0,
-    memberCount: memberCount ?? 0,
+    paymentMethodCount: methods.count ?? 0,
+    planCount: plans.count ?? 0,
+    classCount: classes.count ?? 0,
+    memberCount: members.count ?? 0,
   };
 }
 
@@ -69,20 +53,19 @@ export async function GET() {
     .eq('tenant_id', tenantId)
     .maybeSingle();
 
-  if (!progress && tenant.signup_source === 'self_serve') {
-    await supabaseAdmin.from('tenant_setup_progress').insert({ tenant_id: tenantId, steps: {} });
-    progress = { steps: {}, dismissed_at: null, updated_at: new Date().toISOString() };
-  }
-
-  const facts = await loadFacts(tenantId, tenant.settings);
-  const stored = parseSetupSteps(progress?.steps);
-  const steps = detectSetupSteps(facts, stored);
-
-  if (JSON.stringify(steps) !== JSON.stringify(stored)) {
+  if (!progress) {
+    // Self-serve gyms start with the assistant open; gyms created from HQ start with it
+    // dismissed (no Home card) but can open or restart it any time from Settings.
+    const now = new Date().toISOString();
+    const dismissedAt = tenant.signup_source === 'self_serve' ? null : now;
     await supabaseAdmin
       .from('tenant_setup_progress')
-      .upsert({ tenant_id: tenantId, steps, updated_at: new Date().toISOString() });
+      .insert({ tenant_id: tenantId, steps: {}, dismissed_at: dismissedAt });
+    progress = { steps: {}, dismissed_at: dismissedAt, updated_at: now };
   }
+
+  const facts = await loadFacts(tenantId);
+  const steps = parseSetupSteps(progress?.steps);
 
   await supabaseAdmin.rpc('maybe_activate_tenant', { p_tenant_id: tenantId });
 
@@ -142,17 +125,20 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, steps, dismissedAt: new Date().toISOString() });
   }
 
-  if ((body.action === 'skip' || body.action === 'complete') && body.step && isSetupStep(body.step)) {
-    const { data: tenant } = await supabaseAdmin
-      .from('tenants')
-      .select('settings')
-      .eq('id', tenantId)
-      .single();
-    const facts = await loadFacts(tenantId, tenant?.settings);
-    const next = detectSetupSteps(facts, {
-      ...steps,
-      [body.step]: body.action === 'skip' ? 'skipped' : 'done',
+  if (body.action === 'restart') {
+    const now = new Date().toISOString();
+    await supabaseAdmin.from('tenant_setup_progress').upsert({
+      tenant_id: tenantId,
+      steps: {},
+      dismissed_at: null,
+      updated_at: now,
     });
+    await trackProductEvent('setup_restarted', {}, { tenantId, userId: auth.user.id });
+    return NextResponse.json({ ok: true, steps: parseSetupSteps({}), dismissedAt: null });
+  }
+
+  if ((body.action === 'skip' || body.action === 'complete') && body.step && isSetupStep(body.step)) {
+    const next = { ...steps, [body.step]: body.action === 'skip' ? 'skipped' : 'done' };
     await supabaseAdmin.from('tenant_setup_progress').upsert({
       tenant_id: tenantId,
       steps: next,

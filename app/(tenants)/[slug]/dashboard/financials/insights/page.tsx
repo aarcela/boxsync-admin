@@ -13,8 +13,10 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
+import { formatDate, formatDateTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 import { useToast } from '@/components/Toast';
 import type { TranslationKey } from '@/lib/translations';
 import {
@@ -25,6 +27,7 @@ import {
   RescueSignalType,
   revenueRescueService,
 } from '@/lib/services/revenueRescueService';
+import { PageLoader } from '@/components/LoadingStates';
 
 type StaffMember = {
   id: string;
@@ -77,7 +80,8 @@ const OUTCOME_LABELS: Record<string, TranslationKey> = {
 
 function interventionCopy(
   item: RescueIntervention,
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string,
+  symbol: string,
 ) {
   const evidence = item.evidence || {};
   switch (item.signal_key) {
@@ -86,7 +90,7 @@ function interventionCopy(
         title: t('Membership revenue at risk'),
         explanation: t(
           'Access is inactive and approximately ${{amount}} in monthly revenue is at risk.',
-          { amount: Number(evidence.planValue ?? item.monthly_value).toFixed(0) }
+          { amount: `${symbol}${Number(evidence.planValue ?? item.monthly_value).toFixed(0)}` }
         ),
         suggestedAction: t('Offer payment help or a temporary plan alternative.'),
       };
@@ -94,7 +98,7 @@ function interventionCopy(
       return {
         title: t('Registration fee pending'),
         explanation: t('${{amount}} registration fee remains unpaid.', {
-          amount: Number(evidence.registrationFee ?? item.monthly_value).toFixed(0),
+          amount: `${symbol}${Number(evidence.registrationFee ?? item.monthly_value).toFixed(0)}`,
         }),
         suggestedAction: t(
           'Confirm the payment method and agree on a payment date.'
@@ -178,7 +182,8 @@ const PRIORITY_TONE: Record<RescuePriority, BadgeTone> = {
 };
 
 export default function FinancialInsightsPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, currencies } = useTenant();
+  const symbol = currencySymbol(currencies.reference);
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [interventions, setInterventions] = useState<RescueIntervention[]>([]);
@@ -352,7 +357,7 @@ export default function FinancialInsightsPage() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter text-pits-text sm:text-4xl">
+            <h1 className="page-title">
               {t('Revenue Rescue')}
             </h1>
             <StatusBadge tone="info">{t('Retention')}</StatusBadge>
@@ -365,7 +370,7 @@ export default function FinancialInsightsPage() {
           type="button"
           disabled={loading}
           onClick={() => void loadData()}
-          className="inline-flex h-7 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[8px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
+          className="inline-flex h-9 w-auto shrink-0 items-center justify-center gap-1 self-start rounded-lg border border-pits-edge bg-pits-surface-muted px-2 text-[11px] font-black uppercase tracking-widest text-pits-text transition hover:border-pits-primary hover:text-pits-primary disabled:opacity-50"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           {t('Refresh signals')}
@@ -375,14 +380,14 @@ export default function FinancialInsightsPage() {
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
           label={t('Monthly revenue at risk')}
-          value={`$${summary.openRevenueAtRisk.toLocaleString()}`}
+          value={`${symbol}${summary.openRevenueAtRisk.toLocaleString()}`}
           detail={t('{{count}} open actions', { count: summary.openCount })}
           icon={AlertCircle}
           tone="danger"
         />
         <MetricCard
           label={t('Revenue recovered')}
-          value={`$${summary.recoveredRevenue.toLocaleString()}`}
+          value={`${symbol}${summary.recoveredRevenue.toLocaleString()}`}
           detail={t('{{count}} returned to class', { count: summary.returnedCount })}
           icon={DollarSign}
           tone="success"
@@ -408,7 +413,7 @@ export default function FinancialInsightsPage() {
               key={tab.key}
               type="button"
               onClick={() => setView(tab.key)}
-              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider transition ${
                 view === tab.key
                   ? 'text-pits-primary'
                   : 'text-pits-dim hover:text-pits-text'
@@ -416,7 +421,7 @@ export default function FinancialInsightsPage() {
             >
               {tab.label}
               <span
-                className={`inline-flex min-w-5 items-center justify-center px-1.5 py-0.5 text-[9px] leading-none ${
+                className={`inline-flex min-w-5 items-center justify-center px-1.5 py-0.5 text-[11px] leading-none ${
                   view === tab.key ? 'text-pits-primary' : 'text-pits-dim'
                 }`}
               >
@@ -442,11 +447,8 @@ export default function FinancialInsightsPage() {
       </section>
 
       {loading ? (
-        <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-pits-edge bg-pits-surface-elevated">
-          <RefreshCw size={30} className="mb-4 animate-spin text-pits-primary" />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pits-dim">
-            {t('Calculating revenue at risk...')}
-          </p>
+        <div className="rounded-3xl border border-pits-edge bg-pits-surface-elevated">
+          <PageLoader label={t('Calculating revenue at risk...')} className="min-h-72" />
         </div>
       ) : visible.length === 0 ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-pits-edge bg-pits-surface-elevated">
@@ -458,7 +460,7 @@ export default function FinancialInsightsPage() {
       ) : (
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {visible.map((item) => {
-            const copy = interventionCopy(item, t);
+            const copy = interventionCopy(item, t, symbol);
             const outcomeKey = item.outcome_type || '';
             const outcomeLabel = OUTCOME_LABELS[outcomeKey]
               ? t(OUTCOME_LABELS[outcomeKey])
@@ -486,9 +488,9 @@ export default function FinancialInsightsPage() {
                 </div>
                 <div className="shrink-0 sm:text-right">
                   <p className="text-xl sm:text-2xl font-black italic text-pits-text break-all leading-none">
-                    ${Number(item.monthly_value).toLocaleString()}
+                    {symbol}{Number(item.monthly_value).toLocaleString()}
                   </p>
-                  <p className="mt-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                  <p className="mt-1 text-[11px] font-black uppercase tracking-widest text-pits-dim">
                     {t('MRR at risk')}
                   </p>
                 </div>
@@ -496,7 +498,7 @@ export default function FinancialInsightsPage() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-pits-surface-muted p-3">
-                  <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                  <p className="mb-1 text-[11px] font-black uppercase tracking-widest text-pits-dim">
                     {t('Why this surfaced')}
                   </p>
                   <p className="text-xs font-semibold leading-relaxed text-pits-text">
@@ -504,7 +506,7 @@ export default function FinancialInsightsPage() {
                   </p>
                 </div>
                 <div className="rounded-xl bg-pits-primary-soft/50 p-3">
-                  <p className="mb-1 text-[8px] font-black uppercase tracking-widest text-pits-primary">
+                  <p className="mb-1 text-[11px] font-black uppercase tracking-widest text-pits-primary">
                     {t('Next best action')}
                   </p>
                   <p className="text-xs font-semibold leading-relaxed text-pits-text">
@@ -517,7 +519,7 @@ export default function FinancialInsightsPage() {
                 <>
                   <div className="mt-4 grid gap-3 sm:grid-cols-[180px_1fr]">
                     <label className="block">
-                      <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                      <span className="mb-1 block text-[11px] font-black uppercase tracking-widest text-pits-dim">
                         {t('Owner')}
                       </span>
                       <select
@@ -537,7 +539,7 @@ export default function FinancialInsightsPage() {
                       </select>
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                      <span className="mb-1 block text-[11px] font-black uppercase tracking-widest text-pits-dim">
                         {t('WhatsApp')}
                       </span>
                       <textarea
@@ -555,7 +557,7 @@ export default function FinancialInsightsPage() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-pits-edge pt-4">
-                    <div className="flex flex-wrap items-center gap-2 text-[9px] font-bold uppercase text-pits-dim">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase text-pits-dim">
                       {item.assignee?.full_name && (
                         <StatusBadge tone="neutral">{item.assignee.full_name}</StatusBadge>
                       )}
@@ -563,9 +565,7 @@ export default function FinancialInsightsPage() {
                         <StatusBadge tone="warning">
                           <Clock size={11} />
                           {t('Due')}{' '}
-                          {new Date(item.due_at).toLocaleDateString(
-                            lang === 'es' ? 'es-ES' : 'en-US'
-                          )}
+                          {formatDate(item.due_at, lang)}
                         </StatusBadge>
                       )}
                     </div>
@@ -573,7 +573,7 @@ export default function FinancialInsightsPage() {
                       <button
                         type="button"
                         onClick={() => void toggleHistory(item.id)}
-                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
+                        className="rounded-lg px-2.5 py-2 text-[11px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
                       >
                         {t('History')}
                       </button>
@@ -581,7 +581,7 @@ export default function FinancialInsightsPage() {
                         type="button"
                         disabled={busyId === item.id}
                         onClick={() => void handleSnooze(item)}
-                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
+                        className="rounded-lg px-2.5 py-2 text-[11px] font-black uppercase tracking-wider text-pits-dim hover:bg-pits-surface-muted"
                       >
                         {t('Snooze')}
                       </button>
@@ -593,7 +593,7 @@ export default function FinancialInsightsPage() {
                             revenueRescueService.escalate(item.id)
                           )
                         }
-                        className="rounded-lg px-2.5 py-2 text-[9px] font-black uppercase tracking-wider text-pits-error hover:bg-pits-error/10"
+                        className="rounded-lg px-2.5 py-2 text-[11px] font-black uppercase tracking-wider text-pits-error hover:bg-pits-error/10"
                       >
                         {t('Escalate')}
                       </button>
@@ -601,7 +601,7 @@ export default function FinancialInsightsPage() {
                         type="button"
                         disabled={busyId === item.id}
                         onClick={() => void handleResolve(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-pits-edge px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-text hover:bg-pits-surface-muted"
+                        className="inline-flex items-center gap-1 rounded-lg border border-pits-edge px-3 py-2 text-[11px] font-black uppercase tracking-wider text-pits-text hover:bg-pits-surface-muted"
                       >
                         <CheckCircle2 size={12} />
                         {t('Resolve')}
@@ -610,7 +610,7 @@ export default function FinancialInsightsPage() {
                         type="button"
                         disabled={busyId === item.id}
                         onClick={() => void handleContact(item)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-pits-primary px-3 py-2 text-[9px] font-black uppercase tracking-wider text-pits-dark-text shadow-sm hover:bg-pits-primary-dark"
+                        className="inline-flex items-center gap-1 rounded-lg bg-pits-primary px-3 py-2 text-[11px] font-black uppercase tracking-wider text-pits-dark-text shadow-sm hover:bg-pits-primary-dark"
                       >
                         <MessageCircle size={12} />
                         {t('Open WhatsApp')}
@@ -625,14 +625,12 @@ export default function FinancialInsightsPage() {
                 <>
                   <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-pits-success/20 bg-pits-success/10 p-3 text-pits-success">
                     <div>
-                      <p className="text-[8px] font-black uppercase tracking-widest">
+                      <p className="text-[11px] font-black uppercase tracking-widest">
                         {outcomeLabel}
                       </p>
                       <p className="mt-1 text-xs font-semibold">
                         {item.outcome_detected_at
-                          ? new Date(item.outcome_detected_at).toLocaleDateString(
-                              lang === 'es' ? 'es-ES' : 'en-US'
-                            )
+                          ? formatDate(item.outcome_detected_at, lang)
                           : ''}
                       </p>
                     </div>
@@ -643,7 +641,7 @@ export default function FinancialInsightsPage() {
                   <button
                     type="button"
                     onClick={() => void toggleHistory(item.id)}
-                    className="mt-2 text-[9px] font-black uppercase tracking-wider text-pits-dim"
+                    className="mt-2 text-[11px] font-black uppercase tracking-wider text-pits-dim"
                   >
                     {t('View history')}
                   </button>
@@ -652,7 +650,7 @@ export default function FinancialInsightsPage() {
 
               {openHistoryId === item.id && (
                 <div className="mt-4 rounded-xl border border-pits-edge bg-pits-surface-muted p-3">
-                  <p className="mb-3 text-[8px] font-black uppercase tracking-widest text-pits-dim">
+                  <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-pits-dim">
                     {t('Intervention history')}
                   </p>
                   {(eventHistory[item.id] || []).length === 0 ? (
@@ -674,10 +672,8 @@ export default function FinancialInsightsPage() {
                               ? ` · ${event.actor.full_name}`
                               : ''}
                           </span>
-                          <span className="shrink-0 text-[9px] text-pits-dim">
-                            {new Date(event.created_at).toLocaleString(
-                              lang === 'es' ? 'es-ES' : 'en-US'
-                            )}
+                          <span className="shrink-0 text-[11px] text-pits-dim">
+                            {formatDateTime(event.created_at, lang)}
                           </span>
                         </div>
                       ))}
@@ -711,7 +707,7 @@ function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center justify-center gap-1 shrink-0 px-2 py-1 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}
+      className={`inline-flex items-center justify-center gap-1 shrink-0 px-2 py-1 rounded-lg text-[11px] sm:text-[11px] font-black uppercase tracking-wide border leading-tight ${tones[tone]}`}
     >
       {children}
     </span>
@@ -740,7 +736,7 @@ function MetricCard({
   return (
     <div className="min-w-0 rounded-2xl border border-pits-edge bg-pits-surface-elevated p-3 sm:p-5 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <p className="min-w-0 text-[8px] sm:text-[9px] font-black uppercase tracking-[0.16em] text-pits-dim leading-tight">
+        <p className="min-w-0 text-[11px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-pits-dim leading-tight">
           {label}
         </p>
         <span className={`rounded-lg sm:rounded-xl p-1.5 sm:p-2 border shrink-0 ${iconClass}`}>
@@ -750,7 +746,7 @@ function MetricCard({
       <p className="text-lg sm:text-3xl font-black italic tracking-tight text-pits-text break-all leading-none">
         {value}
       </p>
-      <p className="mt-2 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-pits-dim truncate">
+      <p className="mt-2 text-[11px] sm:text-[11px] font-bold uppercase tracking-wider text-pits-dim truncate">
         {detail}
       </p>
     </div>

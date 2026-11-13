@@ -25,6 +25,8 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 const LANGUAGE_STORAGE_KEY = 'language';
+/** Spanish unless the person picked English on the toggle (stored in localStorage). */
+const DEFAULT_LANGUAGE: Language = 'es';
 
 let languageListeners: Array<() => void> = [];
 
@@ -47,12 +49,11 @@ function readStoredLanguage(): Language {
     return savedLang;
   }
 
-  const browserLang = navigator.language.split('-')[0];
-  return browserLang === 'es' ? 'es' : 'en';
+  return DEFAULT_LANGUAGE;
 }
 
 function getServerLanguageSnapshot(): Language {
-  return 'en';
+  return DEFAULT_LANGUAGE;
 }
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

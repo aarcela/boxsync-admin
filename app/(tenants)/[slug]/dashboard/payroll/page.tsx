@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 import { supabase } from '@/lib/supabase';
 import { payrollService } from '@/lib/services/payrollService';
 import { coachSalaryService } from '@/lib/services/coachSalaryService';
@@ -26,22 +28,26 @@ import {
 } from '@/lib/payroll/payrollReport';
 import { downloadPdf, generateFullPayrollPdf, generateCoachPayrollPdf } from '@/lib/payroll/generatePayrollPdf';
 import {
-  getCaracasDate,
-  getCaracasDayRange,
-  getCaracasWeekRange,
-  getCaracasWeekDays,
-  getCaracasMonthRange,
-  getCaracasCustomRange,
-  getCaracasDateSpan,
-  getCaracasDateFromIso,
-  getCaracasTimeLabel,
-  getCaracasMinutesSince,
+  addDaysToDateStr,
+  formatGymDay,
+  getGymDate,
+  getGymDayRange,
+  getGymWeekRange,
+  getGymWeekDays,
+  getGymMonthRange,
+  getGymCustomRange,
+  getGymDateSpan,
+  getGymDateFromIso,
+  getGymTimeLabel,
+  getGymMinutesSince,
+  weekdayIndex,
 } from '@/lib/utils/date';
+import { ListSkeleton, TableSkeleton } from '@/components/LoadingStates';
 
-const START_HOUR = 5;
-const END_HOUR = 21;
+/** Default visible range; it stretches so early or late classes are never hidden. */
+const DEFAULT_START_HOUR = 5;
+const DEFAULT_END_HOUR = 21;
 const SLOT_HEIGHT = 56;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
 const dateFieldClass =
   'relative min-w-0 w-full h-full bg-transparent border-none text-xs font-black uppercase text-pits-text outline-none cursor-pointer appearance-none [color-scheme:light] [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0 [&::-webkit-datetime-edit-text]:p-0 [&::-webkit-date-and-time-value]:min-h-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
@@ -74,17 +80,9 @@ function DateField({
   );
 }
 
-function formatCaracasDay(dateStr: string, opts: Intl.DateTimeFormatOptions) {
-  return new Date(`${dateStr}T12:00:00-04:00`).toLocaleDateString('en-US', {
-    timeZone: 'America/Caracas',
-    ...opts,
-  });
-}
-
+/** 0 = Monday … 6 = Sunday. */
 function mondayIndex(dateStr: string): number {
-  const wd = formatCaracasDay(dateStr, { weekday: 'short' });
-  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-  return map[wd] ?? 0;
+  return (weekdayIndex(dateStr) + 6) % 7;
 }
 
 function classDurationMinutes(startIso: string, endIso: string): number {
@@ -100,9 +98,9 @@ function statusStyles(status: PayrollClassStatus) {
     case 'confirmed':
       return 'bg-pits-primary-soft text-pits-success border-pits-success/30';
     case 'cancelled':
-      return 'bg-red-100 text-red-700 border-red-300';
+      return 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge';
     default:
-      return 'bg-orange-100 text-orange-700 border-orange-300';
+      return 'bg-pits-warning-soft text-pits-warning border-pits-warning-edge';
   }
 }
 
@@ -111,15 +109,22 @@ function blockStyles(status: PayrollClassStatus) {
     case 'confirmed':
       return 'bg-pits-primary-soft border-pits-success/40 text-pits-success';
     case 'cancelled':
-      return 'bg-red-100 border-red-300 text-red-800';
+      return 'bg-pits-danger-soft border-pits-danger-edge text-pits-danger';
     default:
-      return 'bg-orange-100 border-orange-300 text-orange-800';
+      return 'bg-pits-warning-soft border-pits-warning-edge text-pits-warning';
   }
 }
 
 export default function PayrollPage() {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { timezone: tz, currencies } = useTenant();
+  const symbol = currencySymbol(currencies.reference);
+  const locale = lang === 'es' ? 'es' : 'en-US';
+  const formatDay = useCallback(
+    (dateStr: string, opts: Intl.DateTimeFormatOptions) => formatGymDay(dateStr, opts, locale, tz),
+    [locale, tz],
+  );
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -129,10 +134,10 @@ export default function PayrollPage() {
   const [callerRole, setCallerRole] = useState<string | null>(null);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('week');
-  const [anchorDate, setAnchorDate] = useState(getCaracasDate());
-  const [monthValue, setMonthValue] = useState(getCaracasDate().slice(0, 7));
-  const [customStart, setCustomStart] = useState(getCaracasDate());
-  const [customEnd, setCustomEnd] = useState(getCaracasDate());
+  const [anchorDate, setAnchorDate] = useState(getGymDate(new Date(), tz));
+  const [monthValue, setMonthValue] = useState(getGymDate(new Date(), tz).slice(0, 7));
+  const [customStart, setCustomStart] = useState(getGymDate(new Date(), tz));
+  const [customEnd, setCustomEnd] = useState(getGymDate(new Date(), tz));
   const [coachFilter, setCoachFilter] = useState<string>('all');
   const [viewTab, setViewTab] = useState<ViewTab>('calendar');
   const [selectedClass, setSelectedClass] = useState<PayrollClass | null>(null);
@@ -147,33 +152,33 @@ export default function PayrollPage() {
     try {
       switch (filterMode) {
         case 'day':
-          return getCaracasDayRange(anchorDate);
+          return getGymDayRange(anchorDate, tz);
         case 'week':
-          return getCaracasWeekRange(anchorDate);
+          return getGymWeekRange(anchorDate, tz);
         case 'month':
-          return getCaracasMonthRange(monthValue);
+          return getGymMonthRange(monthValue, tz);
         case 'custom': {
           const start = customStart <= customEnd ? customStart : customEnd;
           const end = customStart <= customEnd ? customEnd : customStart;
-          return getCaracasCustomRange(start, end);
+          return getGymCustomRange(start, end, tz);
         }
       }
     } catch {
-      return getCaracasWeekRange(anchorDate);
+      return getGymWeekRange(anchorDate, tz);
     }
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, tz]);
 
   const calendarDays = useMemo(() => {
     if (filterMode === 'day') return [anchorDate];
-    if (filterMode === 'week') return getCaracasWeekDays(anchorDate);
+    if (filterMode === 'week') return getGymWeekDays(anchorDate);
     if (filterMode === 'month') {
-      const { startDate, endDate } = getCaracasMonthRange(monthValue);
-      return getCaracasDateSpan(startDate, endDate);
+      const { startDate, endDate } = getGymMonthRange(monthValue, tz);
+      return getGymDateSpan(startDate, endDate);
     }
     const start = customStart <= customEnd ? customStart : customEnd;
     const end = customStart <= customEnd ? customEnd : customStart;
-    return getCaracasDateSpan(start, end);
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
+    return getGymDateSpan(start, end);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, tz]);
 
   useEffect(() => {
     const loadContext = async () => {
@@ -291,9 +296,7 @@ export default function PayrollPage() {
   };
 
   const shiftAnchor = (days: number) => {
-    const d = new Date(`${anchorDate}T12:00:00-04:00`);
-    d.setDate(d.getDate() + days);
-    setAnchorDate(getCaracasDate(d));
+    setAnchorDate(addDaysToDateStr(anchorDate, days));
   };
 
   const shiftWeek = (weeks: number) => shiftAnchor(weeks * 7);
@@ -311,40 +314,40 @@ export default function PayrollPage() {
   }, [filterMode, anchorDate, monthValue, customStart, customEnd]);
 
   const displayPeriodLabel = useMemo(() => {
-    const fmt = (d: string) => formatCaracasDay(d, { month: 'short', day: 'numeric' });
+    const fmt = (d: string) => formatDay(d, { month: 'short', day: 'numeric' });
     switch (filterMode) {
       case 'day':
-        return formatCaracasDay(anchorDate, { weekday: 'short', month: 'short', day: 'numeric' });
+        return formatDay(anchorDate, { weekday: 'short', month: 'short', day: 'numeric' });
       case 'week': {
-        const { startDate, endDate } = getCaracasWeekRange(anchorDate);
+        const { startDate, endDate } = getGymWeekRange(anchorDate, tz);
         return `${t('Week of')} ${fmt(startDate)} – ${fmt(endDate)}`;
       }
       case 'month':
-        return formatCaracasDay(`${monthValue}-01`, { month: 'long', year: 'numeric' });
+        return formatDay(`${monthValue}-01`, { month: 'long', year: 'numeric' });
       case 'custom': {
         const start = customStart <= customEnd ? customStart : customEnd;
         const end = customStart <= customEnd ? customEnd : customStart;
         return `${fmt(start)} – ${fmt(end)}`;
       }
     }
-  }, [filterMode, anchorDate, monthValue, customStart, customEnd, t]);
+  }, [filterMode, anchorDate, monthValue, customStart, customEnd, t, formatDay, tz]);
 
   const classesByDay = useMemo(() => {
     const map = new Map<string, PayrollClass[]>();
     for (const day of calendarDays) map.set(day, []);
     for (const cls of classes) {
-      const day = getCaracasDateFromIso(cls.start_time);
+      const day = getGymDateFromIso(cls.start_time, tz);
       map.get(day)?.push(cls);
     }
     return map;
-  }, [classes, calendarDays]);
+  }, [classes, calendarDays, tz]);
 
   const weekdayHeaders = useMemo(
     () =>
-      getCaracasWeekDays(calendarDays[0] ?? anchorDate).map((day) =>
-        formatCaracasDay(day, { weekday: 'short' })
+      getGymWeekDays(calendarDays[0] ?? anchorDate).map((day) =>
+        formatDay(day, { weekday: 'short' })
       ),
-    [calendarDays, anchorDate]
+    [calendarDays, anchorDate, formatDay]
   );
 
   const monthCells = useMemo(() => {
@@ -356,12 +359,27 @@ export default function PayrollPage() {
   }, [calendarDays]);
 
   const showHourCalendar = calendarDays.length <= 7;
-  const today = getCaracasDate();
+  const today = getGymDate(new Date(), tz);
+  const { START_HOUR, END_HOUR, HOURS } = useMemo(() => {
+    let start = DEFAULT_START_HOUR;
+    let end = DEFAULT_END_HOUR;
+    for (const cls of classes) {
+      const startMin = getGymMinutesSince(cls.start_time, 0, tz);
+      const endMin = startMin + classDurationMinutes(cls.start_time, cls.end_time);
+      start = Math.min(start, Math.floor(startMin / 60));
+      end = Math.max(end, Math.min(23, Math.ceil(endMin / 60) - 1));
+    }
+    return {
+      START_HOUR: start,
+      END_HOUR: end,
+      HOURS: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+    };
+  }, [classes, tz]);
   const gridHeight = HOURS.length * SLOT_HEIGHT;
 
   const coachReports = useMemo(
-    () => buildCoachPayrollReports(classes, periodLabel),
-    [classes, periodLabel]
+    () => buildCoachPayrollReports(classes, periodLabel, currencies.reference, tz),
+    [classes, periodLabel, currencies.reference, tz]
   );
 
   const handleExportPdf = async () => {
@@ -489,11 +507,11 @@ export default function PayrollPage() {
         onClick={() => setSelectedClass(cls)}
         className="flex-1 min-w-0 text-left overflow-hidden hover:opacity-90 transition-opacity"
       >
-        <p className={`${compact ? 'text-[10px] leading-tight' : 'text-[11px] leading-snug'} font-black uppercase truncate`}>
+        <p className={`${compact ? 'text-[11px] leading-tight' : 'text-[11px] leading-snug'} font-black uppercase truncate`}>
           {cls.class_type}
         </p>
-        <p className={`${compact ? 'text-[9px] mt-0.5' : 'text-[10px] mt-1'} font-bold truncate`}>
-          {getCaracasTimeLabel(cls.start_time)}
+        <p className={`${compact ? 'text-[11px] mt-0.5' : 'text-[11px] mt-1'} font-bold truncate`}>
+          {getGymTimeLabel(cls.start_time, tz)}
           {cls.coach?.full_name ? ` · ${cls.coach.full_name}` : ''}
         </p>
       </button>
@@ -505,7 +523,7 @@ export default function PayrollPage() {
       value={cls.payrollStatus}
       onChange={(e) => handleStatusChange(cls.id, e.target.value as PayrollClassStatus)}
       disabled={isPending}
-      className={`${compact ? 'text-[9px] py-1 px-2' : 'text-[10px] py-2 px-3'} font-black uppercase bg-pits-surface-muted border border-pits-edge rounded-xl outline-none focus:ring-2 focus:ring-pits-red`}
+      className={`${compact ? 'text-[11px] py-1 px-2' : 'text-[11px] py-2 px-3'} font-black uppercase bg-pits-surface-muted border border-pits-edge rounded-xl outline-none focus:ring-2 focus:ring-pits-red`}
     >
       <option value="confirmed">{t('confirmed')}</option>
       <option value="pending">{t('pending')}</option>
@@ -518,18 +536,15 @@ export default function PayrollPage() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black text-pits-text tracking-tighter uppercase">
+            <h1 className="page-title">
               {t('Payroll')}
             </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[10px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
-              {t('Admin Only')}
-            </div>
           </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
+          <p className="page-subtitle">
             {t('Review class payroll and coach compensation')}
           </p>
           {!isAdmin && callerRole && (
-            <p className="text-[10px] font-bold text-pits-secondary uppercase mt-2">
+            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
               {t('Only admins can manage payroll.')}
             </p>
           )}
@@ -540,7 +555,7 @@ export default function PayrollPage() {
               type="button"
               onClick={handleExportPdf}
               disabled={exporting || loading}
-              className="flex items-center gap-2 px-5 py-3 bg-pits-surface-elevated border border-pits-edge rounded-2xl text-[10px] font-black uppercase shadow-sm hover:border-pits-primary/40 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-pits-surface-elevated border border-pits-edge rounded-2xl text-[11px] font-black uppercase shadow-sm hover:border-pits-primary/40 disabled:opacity-50 transition-all"
             >
               <FileDown size={16} className="text-pits-red" />
               {exporting ? t('Processing...') : t('Export PDF')}
@@ -549,7 +564,7 @@ export default function PayrollPage() {
               type="button"
               onClick={handleEmailCoaches}
               disabled={emailing || loading}
-              className="flex items-center gap-2 px-5 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all"
             >
               <Mail size={16} />
               {emailing ? t('Sending...') : t('Email Coaches')}
@@ -567,7 +582,7 @@ export default function PayrollPage() {
                 <button
                   key={mode}
                   onClick={() => setFilterMode(mode)}
-                  className={`h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                  className={`h-10 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                     filterMode === mode
                       ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                       : 'bg-pits-surface-muted text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -664,7 +679,7 @@ export default function PayrollPage() {
               <select
                 value={coachFilter}
                 onChange={(e) => setCoachFilter(e.target.value)}
-                className="h-10 sm:ml-auto px-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-[10px] font-black uppercase text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+                className="h-10 sm:ml-auto px-4 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-black uppercase text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
               >
                 <option value="all">{t('All Coaches')}</option>
                 {coaches.map((c) => (
@@ -682,7 +697,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={() => setViewTab('calendar')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                   viewTab === 'calendar'
                     ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                     : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -694,7 +709,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={() => setViewTab('list')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                   viewTab === 'list'
                     ? 'bg-pits-primary text-pits-dark-text border-pits-primary-dark'
                     : 'bg-pits-surface-elevated text-pits-dim border-pits-edge hover:border-pits-primary/40'
@@ -706,14 +721,14 @@ export default function PayrollPage() {
             </div>
             {someSelected && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-black text-pits-dim uppercase">
+                <span className="text-[11px] font-black text-pits-dim uppercase">
                   {selectedIds.size} {t('selected')}
                 </span>
                 <button
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('confirmed')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-primary-soft text-pits-success border-pits-success/30 hover:opacity-90 disabled:opacity-50"
                 >
                   {t('confirmed')}
                 </button>
@@ -721,7 +736,7 @@ export default function PayrollPage() {
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('pending')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-orange-100 text-orange-700 border-orange-300 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-warning-soft text-pits-warning border-pits-warning-edge hover:opacity-90 disabled:opacity-50"
                 >
                   {t('pending')}
                 </button>
@@ -729,14 +744,14 @@ export default function PayrollPage() {
                   type="button"
                   disabled={isPending}
                   onClick={() => handleBulkStatusChange('cancelled')}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border bg-red-100 text-red-700 border-red-300 hover:opacity-90 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase border bg-pits-danger-soft text-pits-danger border-pits-danger-edge hover:opacity-90 disabled:opacity-50"
                 >
                   {t('cancelled')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}
-                  className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black uppercase text-pits-dim border border-pits-edge hover:bg-pits-surface-muted"
                 >
                   {t('Clear selection')}
                 </button>
@@ -755,9 +770,7 @@ export default function PayrollPage() {
               </div>
 
               {loading ? (
-                <div className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse">
-                  {t('Initializing Data Stream...')}
-                </div>
+                <ListSkeleton rows={4} />
               ) : showHourCalendar ? (
                 <div className="overflow-x-auto">
                   <div className={calendarDays.length >= 5 ? 'min-w-[720px]' : 'min-w-0'}>
@@ -775,11 +788,11 @@ export default function PayrollPage() {
                             day === today ? 'bg-pits-primary-soft' : 'bg-pits-surface-muted/40'
                           }`}
                         >
-                          <p className="text-[10px] font-black text-pits-dim uppercase">
-                            {formatCaracasDay(day, { weekday: 'short' })}
+                          <p className="text-[11px] font-black text-pits-dim uppercase">
+                            {formatDay(day, { weekday: 'short' })}
                           </p>
                           <p className="text-sm font-black text-pits-text">
-                            {formatCaracasDay(day, { day: 'numeric' })}
+                            {formatDay(day, { day: 'numeric' })}
                           </p>
                         </div>
                       ))}
@@ -795,7 +808,7 @@ export default function PayrollPage() {
                         {HOURS.map((hour) => (
                           <div
                             key={hour}
-                            className="absolute left-0 right-0 pr-2 text-right text-[10px] font-bold text-pits-dim -translate-y-1/2"
+                            className="absolute left-0 right-0 pr-2 text-right text-[11px] font-bold text-pits-dim -translate-y-1/2"
                             style={{ top: (hour - START_HOUR) * SLOT_HEIGHT }}
                           >
                             {String(hour).padStart(2, '0')}:00
@@ -825,7 +838,7 @@ export default function PayrollPage() {
                             ))}
 
                             {dayClasses.map((cls) => {
-                              const minutes = getCaracasMinutesSince(cls.start_time, START_HOUR);
+                              const minutes = getGymMinutesSince(cls.start_time, START_HOUR, tz);
                               const durationMin = classDurationMinutes(cls.start_time, cls.end_time);
                               if (minutes >= (END_HOUR - START_HOUR + 1) * 60) return null;
                               if (minutes + durationMin <= 0) return null;
@@ -856,7 +869,7 @@ export default function PayrollPage() {
                           key={label}
                           className="px-2 py-3 text-center bg-pits-surface-muted/40 border-b border-r border-pits-edge last:border-r-0"
                         >
-                          <p className="text-[10px] font-black text-pits-dim uppercase">{label}</p>
+                          <p className="text-[11px] font-black text-pits-dim uppercase">{label}</p>
                         </div>
                       ))}
                       {monthCells.map((day, idx) => {
@@ -878,8 +891,8 @@ export default function PayrollPage() {
                               day === today ? 'bg-pits-primary-soft/30' : 'bg-pits-surface-muted/10'
                             }`}
                           >
-                            <p className="text-[10px] font-black text-pits-dim uppercase mb-2">
-                              {formatCaracasDay(day, { day: 'numeric' })}
+                            <p className="text-[11px] font-black text-pits-dim uppercase mb-2">
+                              {formatDay(day, { day: 'numeric' })}
                             </p>
                             <div className="space-y-1.5">
                               {dayClasses.map((cls) => (
@@ -921,36 +934,32 @@ export default function PayrollPage() {
                             aria-label={t('Select all')}
                           />
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Date & Time')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Class')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Coach')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Athletes')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Status')}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
-                          {t('Pay (USD)')}
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
+                          {t('Pay ({{currency}})', { currency: currencies.reference })}
                         </th>
-                        <th className="px-4 py-3 text-[9px] font-black text-pits-dim uppercase">
+                        <th className="px-4 py-3 text-[11px] font-black text-pits-dim uppercase">
                           {t('Actions')}
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-pits-edge">
                       {loading ? (
-                        <tr>
-                          <td colSpan={8} className="py-12 text-center text-pits-dim uppercase animate-pulse">
-                            {t('Loading...')}
-                          </td>
-                        </tr>
+                        <TableSkeleton columns={8} />
                       ) : classes.length === 0 ? (
                         <tr>
                           <td colSpan={8} className="py-12 text-center text-pits-dim uppercase">
@@ -961,7 +970,7 @@ export default function PayrollPage() {
                         classes.map((cls) => (
                           <tr
                             key={cls.id}
-                            className={`hover:bg-pits-surface-muted/40 ${selectedIds.has(cls.id) ? 'ring-1 ring-inset ring-pits-primary' : ''} ${cls.payrollStatus === 'confirmed' ? 'bg-pits-primary-soft/20' : cls.payrollStatus === 'cancelled' ? 'bg-red-50/50' : 'bg-orange-50/30'}`}
+                            className={`hover:bg-pits-surface-muted/40 ${selectedIds.has(cls.id) ? 'ring-1 ring-inset ring-pits-primary' : ''} ${cls.payrollStatus === 'confirmed' ? 'bg-pits-primary-soft/20' : cls.payrollStatus === 'cancelled' ? 'bg-pits-danger-soft' : 'bg-pits-warning-soft'}`}
                           >
                             <td className="px-4 py-3">
                               <input
@@ -973,25 +982,25 @@ export default function PayrollPage() {
                               />
                             </td>
                             <td className="px-4 py-3">
-                              <div className="text-[10px] font-bold text-pits-ink">
-                                {getCaracasDateFromIso(cls.start_time)}
+                              <div className="text-[11px] font-bold text-pits-ink">
+                                {getGymDateFromIso(cls.start_time, tz)}
                               </div>
-                              <div className="text-[9px] text-pits-dim">
-                                {getCaracasTimeLabel(cls.start_time)}
+                              <div className="text-[11px] text-pits-dim">
+                                {getGymTimeLabel(cls.start_time, tz)}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-xs font-bold uppercase">
                               {cls.class_type}
                             </td>
-                            <td className="px-4 py-3 text-[10px] font-bold">
+                            <td className="px-4 py-3 text-[11px] font-bold">
                               {cls.coach?.full_name ?? t('Unassigned')}
                             </td>
-                            <td className="px-4 py-3 text-[10px] font-bold">
+                            <td className="px-4 py-3 text-[11px] font-bold">
                               {cls.bookings[0]?.count ?? 0}
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex px-2 py-1 rounded text-[9px] font-black uppercase border ${statusStyles(cls.payrollStatus!)}`}
+                                className={`inline-flex px-2 py-1 rounded text-[11px] font-black uppercase border ${statusStyles(cls.payrollStatus!)}`}
                               >
                                 {statusLabel(cls.payrollStatus!)}
                               </span>
@@ -999,9 +1008,9 @@ export default function PayrollPage() {
                             <td className="px-4 py-3 text-xs font-black">
                               {cls.payrollStatus === 'confirmed' ? (
                                 cls.payRateUsd != null ? (
-                                  `$${cls.payRateUsd.toFixed(2)}`
+                                  `${symbol}${cls.payRateUsd.toFixed(2)}`
                                 ) : (
-                                  <span className="text-[9px] text-pits-dim uppercase">
+                                  <span className="text-[11px] text-pits-dim uppercase">
                                     {t('No rate')}
                                   </span>
                                 )
@@ -1028,13 +1037,13 @@ export default function PayrollPage() {
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                      <span className="text-[10px] font-bold text-pits-dim uppercase">
+                      <span className="text-[11px] font-bold text-pits-dim uppercase">
                         {t('Total Classes')}
                       </span>
                       <span className="text-sm font-black text-pits-ink">{summary.total}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                      <span className="text-[10px] font-bold text-pits-dim uppercase">
+                      <span className="text-[11px] font-bold text-pits-dim uppercase">
                         {t('Confirmed Classes')}
                       </span>
                       <span className="text-sm font-black text-pits-success">
@@ -1042,11 +1051,11 @@ export default function PayrollPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-pits-primary-soft rounded-2xl border border-pits-success/30">
-                      <span className="text-[10px] font-bold text-pits-success uppercase">
-                        {t('Total Payroll (USD)')}
+                      <span className="text-[11px] font-bold text-pits-success uppercase">
+                        {t('Total Payroll ({{currency}})', { currency: currencies.reference })}
                       </span>
                       <span className="text-lg font-black text-pits-success">
-                        ${summary.totalPayroll.toFixed(2)}
+                        {symbol}{summary.totalPayroll.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -1058,7 +1067,7 @@ export default function PayrollPage() {
                   <Users size={14} className="text-pits-red" /> {t('By Coach')}
                 </h3>
                 {coachReports.length === 0 ? (
-                  <p className="text-[10px] text-pits-dim uppercase font-bold">
+                  <p className="text-[11px] text-pits-dim uppercase font-bold">
                     {t('No confirmed classes yet.')}
                   </p>
                 ) : (
@@ -1068,11 +1077,11 @@ export default function PayrollPage() {
                         key={report.coachId}
                         className="flex items-center gap-2 p-2 bg-pits-surface-muted rounded-xl"
                       >
-                        <span className="text-[10px] font-bold text-pits-ink uppercase truncate flex-1 min-w-0">
+                        <span className="text-[11px] font-bold text-pits-ink uppercase truncate flex-1 min-w-0">
                           {report.coachName}
                         </span>
                         <span className="text-xs font-black text-pits-success shrink-0">
-                          ${report.totalUsd.toFixed(2)}
+                          {symbol}{report.totalUsd.toFixed(2)}
                         </span>
                         <button
                           type="button"
@@ -1096,19 +1105,19 @@ export default function PayrollPage() {
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('confirmed')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Confirmed — pay counted')}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('pending')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Pending — awaiting review')}
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${statusStyles('cancelled')}`} />
-                    <span className="text-[10px] font-bold text-pits-dim uppercase">
+                    <span className="text-[11px] font-bold text-pits-dim uppercase">
                       {t('Cancelled — no pay')}
                     </span>
                   </li>
@@ -1130,9 +1139,9 @@ export default function PayrollPage() {
                     <h2 className="text-xl font-black text-pits-ink uppercase tracking-tighter">
                       {selectedClass.class_type}
                     </h2>
-                    <p className="text-[10px] font-bold text-pits-dim uppercase mt-1">
-                      {getCaracasDateFromIso(selectedClass.start_time)} •{' '}
-                      {getCaracasTimeLabel(selectedClass.start_time)}
+                    <p className="text-[11px] font-bold text-pits-dim uppercase mt-1">
+                      {getGymDateFromIso(selectedClass.start_time, tz)} •{' '}
+                      {getGymTimeLabel(selectedClass.start_time, tz)}
                     </p>
                   </div>
                   <div className="p-2 bg-pits-primary-soft rounded-xl">
@@ -1141,13 +1150,13 @@ export default function PayrollPage() {
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span className="text-pits-dim">{t('Coach')}</span>
                     <span className="text-pits-ink">
                       {selectedClass.coach?.full_name ?? t('Unassigned')}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
                     <span className="text-pits-dim">{t('Status')}</span>
                     <span
                       className={`px-2 py-0.5 rounded border ${statusStyles(selectedClass.payrollStatus!)}`}
@@ -1155,8 +1164,8 @@ export default function PayrollPage() {
                       {statusLabel(selectedClass.payrollStatus!)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase">
-                    <span className="text-pits-dim">{t('Pay (USD)')}</span>
+                  <div className="flex justify-between text-[11px] font-bold uppercase">
+                    <span className="text-pits-dim">{t('Pay ({{currency}})', { currency: currencies.reference })}</span>
                     <span className="text-pits-success font-black">
                       {selectedClass.payrollStatus === 'confirmed'
                         ? selectedClass.payRateUsd != null
@@ -1168,7 +1177,7 @@ export default function PayrollPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-pits-dim uppercase">
+                  <label className="text-[11px] font-black text-pits-dim uppercase">
                     {t('Update Status')}
                   </label>
                   {renderStatusSelect(selectedClass)}

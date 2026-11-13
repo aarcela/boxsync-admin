@@ -4,6 +4,7 @@ import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
 import { buildMembershipActivationFields, buildPlanChangeFields } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { renewDateToIso } from '@/lib/renew-date';
+import { fetchGymTimezone } from '@/lib/gym-timezone';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -287,7 +288,8 @@ export async function PUT(
         profileUpdateData.plan_period_start = null;
       } else {
         profileUpdateData.plan_period_start = renewDateToIso(
-          String(plan_period_start).slice(0, 10)
+          String(plan_period_start).slice(0, 10),
+          await fetchGymTimezone(staffAuth.supabase, tenantId)
         );
       }
     }

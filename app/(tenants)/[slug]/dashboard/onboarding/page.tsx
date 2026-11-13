@@ -112,7 +112,7 @@ export default function OnboardingSettingsPage() {
           <ClipboardList size={20} className="text-pits-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-black text-pits-ink">{t('Onboarding')}</h1>
+          <h1 className="page-title">{t('Onboarding')}</h1>
           <p className="mt-1 text-sm font-bold text-pits-ink-muted">
             {t('Onboarding fields help')}
           </p>

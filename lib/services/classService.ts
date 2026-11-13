@@ -1,7 +1,8 @@
 import { supabase } from '../supabase';
 import { parseMemberPaymentStatus } from '../member-payment-status';
 import { ClassSession, Booking, BookingStatus, CapacityInsight, WaitlistEntry } from '../types/gym';
-import { getCaracasDayRange, getCaracasDate } from '../utils/date';
+import { getGymDayRange, getGymDate, getGymTimeLabel } from '../utils/date';
+import { DEFAULT_GYM_TIMEZONE } from '../gym-timezone';
 
 export type ClassUpdateFields = {
   coach_id?: string | null;
@@ -51,8 +52,8 @@ export const classService = {
   /**
    * Fetches classes for a specific date (YYYY-MM-DD)
    */
-  async getClassesByDate(dateStr: string): Promise<ClassSession[]> {
-    const { startUtc, endUtc } = getCaracasDayRange(dateStr);
+  async getClassesByDate(dateStr: string, tz: string = DEFAULT_GYM_TIMEZONE): Promise<ClassSession[]> {
+    const { startUtc, endUtc } = getGymDayRange(dateStr, tz);
     
     const { data, error } = await supabase
       .from('classes')
@@ -66,11 +67,10 @@ export const classService = {
   },
 
   /**
-   * Fetches upcoming classes (from start of today in Caracas onwards)
+   * Fetches upcoming classes (from the start of today in the gym's timezone onwards)
    */
-  async getUpcomingClasses(): Promise<ClassSession[]> {
-    const today = getCaracasDate();
-    const { startUtc } = getCaracasDayRange(today);
+  async getUpcomingClasses(tz: string = DEFAULT_GYM_TIMEZONE): Promise<ClassSession[]> {
+    const { startUtc } = getGymDayRange(getGymDate(new Date(), tz), tz);
     
     const { data, error } = await supabase
       .from('classes')
@@ -169,7 +169,7 @@ export const classService = {
     }));
   },
 
-  async getCapacityInsights(): Promise<CapacityInsight[]> {
+  async getCapacityInsights(tz: string = DEFAULT_GYM_TIMEZONE): Promise<CapacityInsight[]> {
     const now = new Date();
     const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const [classesResult, profilesResult, plansResult, ratesResult] =
@@ -241,11 +241,7 @@ export const classService = {
     const types = new Map<string, { noShows: number; bookings: number }>();
 
     for (const cls of data) {
-      const slot = new Date(cls.start_time).toLocaleTimeString('en-US', {
-        timeZone: 'America/Caracas',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const slot = getGymTimeLabel(cls.start_time, tz);
       const bookings = cls.bookings || [];
       const slotData = slots.get(slot) || {
         booked: 0,
@@ -297,6 +293,14 @@ export const classService = {
         title: `${value.slot} averages ${Math.round(value.rate * 100)}% occupancy`,
         detail: `Based on ${value.classes} completed classes (${value.booked}/${value.capacity} spots), estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Consider consolidating, moving, or promoting this slot.`,
         sampleSize: value.classes,
+        params: {
+          slot: value.slot,
+          rate: Math.round(value.rate * 100),
+          classes: value.classes,
+          booked: value.booked,
+          capacity: value.capacity,
+          amount: Math.round(value.contribution),
+        },
       }));
 
     const highDemand = Array.from(slots.entries())
@@ -318,6 +322,12 @@ export const classService = {
         title: `${value.slot} is running at ${Math.round(value.rate * 100)}% occupancy`,
         detail: `Across ${value.classes} classes, estimated member-value contribution after coach pay is $${value.contribution.toFixed(0)}. Test added capacity or an adjacent time slot.`,
         sampleSize: value.classes,
+        params: {
+          slot: value.slot,
+          rate: Math.round(value.rate * 100),
+          classes: value.classes,
+          amount: Math.round(value.contribution),
+        },
       }));
 
     const noShows = Array.from(types.entries())
@@ -335,6 +345,12 @@ export const classService = {
         title: `${value.classType}: ${Math.round(value.rate * 100)}% no-show rate`,
         detail: `${value.noShows} no-shows across ${value.bookings} bookings in the last 30 days. Review reminders or cancellation policy.`,
         sampleSize: value.bookings,
+        params: {
+          type: value.classType,
+          rate: Math.round(value.rate * 100),
+          noShows: value.noShows,
+          bookings: value.bookings,
+        },
       }));
 
     return [...highDemand, ...lowOccupancy, ...noShows];

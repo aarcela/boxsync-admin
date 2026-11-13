@@ -362,9 +362,11 @@ export interface WaitlistEntry {
 export interface CapacityInsight {
   id: string;
   kind: 'low_occupancy' | 'no_show' | 'high_demand';
+  /** English fallback text; the dashboard builds localized text from `params`. */
   title: string;
   detail: string;
   sampleSize: number;
+  params: Record<string, string | number>;
 }
 
 /** Legacy slug values; athletes now use membership_plans.id (UUID). */

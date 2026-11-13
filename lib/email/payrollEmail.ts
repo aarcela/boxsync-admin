@@ -9,7 +9,7 @@ function buildEmailHtml(report: CoachPayrollReport): string {
           <td style="padding:8px;border:1px solid #eee;">${line.date}</td>
           <td style="padding:8px;border:1px solid #eee;">${line.time}</td>
           <td style="padding:8px;border:1px solid #eee;">${line.classType}</td>
-          <td style="padding:8px;border:1px solid #eee;text-align:right;">$${line.rateUsd.toFixed(2)}</td>
+          <td style="padding:8px;border:1px solid #eee;text-align:right;">${line.rateUsd.toFixed(2)} ${report.currency}</td>
         </tr>`
     )
     .join('');
@@ -25,14 +25,14 @@ function buildEmailHtml(report: CoachPayrollReport): string {
             <th style="padding:8px;border:1px solid #eee;text-align:left;">Date</th>
             <th style="padding:8px;border:1px solid #eee;text-align:left;">Time</th>
             <th style="padding:8px;border:1px solid #eee;text-align:left;">Class</th>
-            <th style="padding:8px;border:1px solid #eee;text-align:right;">Pay (USD)</th>
+            <th style="padding:8px;border:1px solid #eee;text-align:right;">Pay (${report.currency})</th>
           </tr>
         </thead>
         <tbody>${rows || '<tr><td colspan="4" style="padding:8px;">No confirmed classes</td></tr>'}</tbody>
         <tfoot>
           <tr>
             <td colspan="3" style="padding:8px;border:1px solid #eee;font-weight:bold;">Total</td>
-            <td style="padding:8px;border:1px solid #eee;text-align:right;font-weight:bold;">$${report.totalUsd.toFixed(2)}</td>
+            <td style="padding:8px;border:1px solid #eee;text-align:right;font-weight:bold;">${report.totalUsd.toFixed(2)} ${report.currency}</td>
           </tr>
         </tfoot>
       </table>

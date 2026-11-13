@@ -250,6 +250,8 @@ export function validateMembersCsv(
     platformPlan: PlatformPlanId;
     memberCount: number;
     activeMemberCount: number;
+    /** Gym timezone for plan_period_start dates (defaults to Caracas). */
+    timezone?: string;
   }
 ): MembersValidationResult {
   const { parsed, blockingErrors } = csvGuard(csv, MEMBER_CSV_HEADERS);
@@ -286,6 +288,7 @@ export function validateMembersCsv(
 
   for (const record of parsed.rows) {
     const result = validateMemberRecord(record, {
+      timezone: context.timezone,
       tenantId: context.tenantId,
       plansByName,
       usersByEmail,
@@ -330,6 +333,7 @@ function validateMemberRecord(
     plansByName: Map<string, ExistingPlan>;
     usersByEmail: Map<string, ExistingAuthUser>;
     seen: Map<string, number>;
+    timezone?: string;
   }
 ): { preview: HqImportRowPreview; create?: ValidatedMemberRow } {
   const issues: string[] = [];
@@ -367,7 +371,7 @@ function validateMemberRecord(
     if (!DATE_RE.test(periodRaw)) {
       issues.push('Invalid plan_period_start');
     } else {
-      planPeriodStart = renewDateToIso(periodRaw);
+      planPeriodStart = renewDateToIso(periodRaw, ctx.timezone);
     }
   }
   if (roleRaw === 'member' && isSolvent && !planPeriodStart) {

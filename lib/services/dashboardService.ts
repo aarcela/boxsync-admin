@@ -1,11 +1,13 @@
 import { supabase } from '../supabase';
-import { getCaracasDate, getCaracasDayRange } from '../utils/date';
+import { getGymDate, getGymDayRange } from '../utils/date';
+import { DEFAULT_GYM_TIMEZONE } from '../gym-timezone';
 import { signPaymentProofUrl } from './financialService';
 
 export interface DashboardProfile {
   id: string;
   full_name: string;
   avatar_url: string | null;
+  phone?: string | null;
   plan?: string;
   is_solvent?: boolean;
   days_overdue?: number;
@@ -89,7 +91,7 @@ export const dashboardService = {
   async getTotalMembers(): Promise<DashboardProfile[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, plan, is_solvent')
+      .select('id, full_name, avatar_url, phone, plan, is_solvent')
       .eq('role', 'member')
       .order('full_name', { ascending: true });
     
@@ -120,11 +122,10 @@ export const dashboardService = {
   /**
    * Calculates occupancy and identifies low occupancy classes for today.
    */
-  async getTodayUsageData(): Promise<{ lowOccupancy: DashboardClass[], usagePercent: number }> {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const startOfDay = `${today}T00:00:00Z`;
-    const endOfDay = `${today}T23:59:59Z`;
+  async getTodayUsageData(
+    tz: string = DEFAULT_GYM_TIMEZONE,
+  ): Promise<{ lowOccupancy: DashboardClass[], usagePercent: number }> {
+    const { startUtc: startOfDay, endUtc: endOfDay } = getGymDayRange(getGymDate(new Date(), tz), tz);
 
     const { data: classes, error } = await supabase
       .from('classes')
@@ -163,10 +164,10 @@ export const dashboardService = {
   },
 
   /**
-   * Counts today's bookings by status (Caracas day, class start_time).
+   * Counts today's bookings by status (gym-local day, class start_time).
    */
-  async getTodayAttendance(): Promise<TodayAttendance> {
-    const { startUtc, endUtc } = getCaracasDayRange(getCaracasDate());
+  async getTodayAttendance(tz: string = DEFAULT_GYM_TIMEZONE): Promise<TodayAttendance> {
+    const { startUtc, endUtc } = getGymDayRange(getGymDate(new Date(), tz), tz);
     const [classesResult, bookingsResult] = await Promise.all([
       supabase
         .from('classes')
@@ -226,7 +227,10 @@ export const dashboardService = {
   /**
    * Aggregates all dashboard data.
    */
-  async getAllDashboardData(tenantId?: string): Promise<DashboardStats> {
+  async getAllDashboardData(
+    tenantId?: string,
+    tz: string = DEFAULT_GYM_TIMEZONE,
+  ): Promise<DashboardStats> {
     const [
       pendingPayments,
       allMembers,
@@ -236,19 +240,21 @@ export const dashboardService = {
     ] = await Promise.all([
       this.getPendingPayments(),
       this.getTotalMembers(),
-      this.getTodayUsageData(),
+      this.getTodayUsageData(tz),
       tenantId ? this.getOverdueMembers(tenantId) : Promise.resolve([] as DashboardProfile[]),
-      this.getTodayAttendance(),
+      this.getTodayAttendance(tz),
     ]);
 
     const inactiveAthletes = await this.getInactiveAthletes(allMembers);
+    const phoneById = new Map(allMembers.map((m) => [m.id, m.phone ?? null]));
+    const overdueWithPhone = overdueMembers.map((m) => ({ ...m, phone: phoneById.get(m.id) ?? null }));
     const unpaidMembers = allMembers.filter(m => !m.is_solvent);
 
     return {
       pendingPayments,
       inactiveAthletes,
       unpaidMembers,
-      overdueMembers,
+      overdueMembers: overdueWithPhone,
       totalMembers: allMembers,
       lowOccupancyClasses: lowOccupancy,
       dailyUsagePercent: usagePercent,
