@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
+import { formatDate } from '@/lib/utils/format-date';
 import { useToast } from '@/components/Toast';
 import {
   PilotBaseline,
@@ -35,7 +37,9 @@ const EMPTY_METRICS: PilotMetrics = {
 
 export default function PilotPage() {
   const tenant = useTenant();
+  const cur = currencySymbol(tenant.currencies.reference);
   const { lang } = useLanguage();
+  const monthlyRevenueLabel = lang === 'es' ? 'Ingreso mensual' : 'Monthly revenue';
   const { toast } = useToast();
   const [baseline, setBaseline] = useState<PilotBaseline | null>(null);
   const [metrics, setMetrics] = useState<PilotMetrics>(EMPTY_METRICS);
@@ -127,6 +131,7 @@ export default function PilotPage() {
       gymName: tenant.name,
       baseline,
       metrics,
+      currencySymbol: cur,
     });
     await navigator.clipboard.writeText(report);
     toast(
@@ -166,7 +171,7 @@ export default function PilotPage() {
               label={lang === 'es' ? 'Miembros activos' : 'Active members'}
               value={metrics.activeMembers}
             />
-            <PreviewMetric label="MRR" value={`$${metrics.currentMrr.toFixed(0)}`} />
+            <PreviewMetric label={monthlyRevenueLabel} value={`${cur}${metrics.currentMrr.toFixed(0)}`} />
             <PreviewMetric
               label={lang === 'es' ? 'Riesgos abiertos' : 'Open risks'}
               value={metrics.openAtRisk}
@@ -225,7 +230,7 @@ export default function PilotPage() {
             {lang === 'es' ? 'Resultados del Piloto' : 'Pilot Outcomes'}
           </h1>
           <p className="mt-1 text-sm font-medium text-pits-dim">
-            {baseline.start_date} → {baseline.target_end_date}
+            {formatDate(baseline.start_date, lang)} → {formatDate(baseline.target_end_date, lang)}
           </p>
         </div>
         <button
@@ -241,7 +246,7 @@ export default function PilotPage() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <OutcomeCard
           label={lang === 'es' ? 'Ingreso atribuido' : 'Attributed revenue'}
-          value={`$${metrics.recoveredRevenue.toFixed(0)}`}
+          value={`${cur}${metrics.recoveredRevenue.toFixed(0)}`}
           detail={`${metrics.interventionsResolved} ${lang === 'es' ? 'casos resueltos' : 'resolved cases'}`}
           icon={DollarSign}
         />
@@ -278,10 +283,10 @@ export default function PilotPage() {
               delta={memberDelta}
             />
             <ComparisonRow
-              label="MRR"
-              before={`$${Number(baseline.starting_mrr).toFixed(0)}`}
-              current={`$${metrics.currentMrr.toFixed(0)}`}
-              delta={`${mrrDelta >= 0 ? '+' : ''}$${mrrDelta.toFixed(0)}`}
+              label={monthlyRevenueLabel}
+              before={`${cur}${Number(baseline.starting_mrr).toFixed(0)}`}
+              current={`${cur}${metrics.currentMrr.toFixed(0)}`}
+              delta={`${mrrDelta >= 0 ? '+' : ''}${cur}${mrrDelta.toFixed(0)}`}
             />
             <ComparisonRow
               label={lang === 'es' ? 'Riesgos abiertos' : 'Open risks'}
@@ -382,7 +387,7 @@ function ComparisonRow({
   const numericDelta =
     typeof delta === 'number'
       ? delta
-      : Number(String(delta).replace(/[+$,]/g, '')) || 0;
+      : Number(String(delta).replace(/[^0-9.-]/g, '')) || 0;
   const positive = inverse ? numericDelta <= 0 : numericDelta >= 0;
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 rounded-xl bg-pits-surface-muted p-3">

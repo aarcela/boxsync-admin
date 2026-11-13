@@ -188,7 +188,6 @@ export default function AskAiPage() {
             <p className="text-xl font-black italic uppercase tracking-tight text-pits-text">
               {t('Ask AI empty')}
             </p>
-            <p className="text-sm text-pits-dim mt-2 max-w-md">{t('Ask AI subtitle')}</p>
             <div className="grid sm:grid-cols-2 gap-3 mt-6">
               {SUGGESTIONS.map((key) => (
                 <button
