@@ -9,12 +9,12 @@ import {
   Tags,
   CheckCircle2,
   XCircle,
-  Zap,
-  Info,
   Users,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
+import { useTenant } from '@/components/TenantContext';
+import { currencySymbol } from '@/lib/currency';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { supabase } from '@/lib/supabase';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
@@ -29,6 +29,7 @@ import {
 export default function MembershipPlansPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { currencies } = useTenant();
   const [isPending, startTransition] = useTransition();
 
   const [loading, setLoading] = useState(true);
@@ -243,244 +244,153 @@ export default function MembershipPlansPage() {
     return t('Unlimited');
   };
 
+  const priceLabel = (value: number) =>
+    `${currencySymbol(currencies.reference)}${Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="page-title">
-              {t('Membership Plans')}
-            </h1>
-            <div className="bg-pits-primary/50 px-2 py-0.5 rounded text-[11px] font-bold text-pits-dark-text border border-pits-primary-dark tracking-widest uppercase shadow-sm">
-              {t('System Config')}
-            </div>
-          </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Manage membership plans and pricing for your box')}
-          </p>
+          <h1 className="page-title">{t('Membership Plans')}</h1>
+          <p className="page-subtitle">{t('Manage membership plans and pricing for your box')}</p>
           {!isAdmin && callerRole && (
-            <p className="text-[11px] font-bold text-pits-secondary uppercase mt-2">
-              {t('Only admins can manage membership plans.')}
-            </p>
+            <p className="mt-1 text-xs font-semibold text-pits-warning">{t('Only admins can manage membership plans.')}</p>
           )}
         </div>
-
         {isAdmin && (
           <button
+            type="button"
             onClick={() => handleOpenForm()}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             {t('Add Plan')}
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px]">
-            <div className="px-6 py-4 border-b border-pits-edge flex flex-col md:flex-row justify-between gap-4">
-              <div className="relative flex-1">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim"
-                  size={16}
-                />
-                <input
-                  type="text"
-                  placeholder={t('Search plans...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-pits-surface-muted border border-pits-edge rounded-xl text-[11px] font-bold uppercase text-pits-ink placeholder:text-pits-dim outline-none focus:ring-2 focus:ring-pits-red transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-pits-surface-muted/60">
-                  <tr>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Plan Name')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Price (USD)')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Booking Limit')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Athletes')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest">
-                      {t('Status')}
-                    </th>
-                    {isAdmin && (
-                      <th className="px-6 py-4 text-[11px] font-black text-pits-dim uppercase tracking-widest text-right">
-                        {t('Actions')}
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-pits-edge">
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan={isAdmin ? 6 : 5}
-                        className="py-20 text-center text-pits-dim font-bold uppercase animate-pulse"
-                      >
-                        {t('Initializing Data Stream...')}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredPlans.map((plan) => (
-                      <tr
-                        key={plan.id}
-                        className="hover:bg-pits-surface-muted/40 transition-colors group"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-xl ${plan.is_active ? 'bg-pits-primary text-pits-dark-text' : 'bg-pits-surface-muted text-pits-dim'}`}
-                            >
-                              <Tags size={16} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-pits-ink uppercase tracking-tight">
-                                {plan.name}
-                              </div>
-                              <div className="text-[11px] text-pits-dim font-medium truncate max-w-[220px]">
-                                {plan.description || t('No details provided')}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs font-black text-pits-ink">
-                            ${plan.price_usd.toFixed(2)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded text-[11px] font-black uppercase border bg-pits-surface-muted text-pits-ink border-pits-edge">
-                            {formatBookingLimit(plan)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-black text-pits-dim uppercase">
-                            <Users size={12} />
-                            {plan.member_count}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {isAdmin ? (
-                            <button
-                              onClick={() => handleToggleStatus(plan)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border transition-all ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                            >
-                              {plan.is_active ? (
-                                <CheckCircle2 size={10} />
-                              ) : (
-                                <XCircle size={10} />
-                              )}
-                              {plan.is_active ? t('Active') : t('Inactive')}
-                            </button>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-black uppercase border ${plan.is_active ? 'bg-pits-primary-soft text-pits-success border-pits-success/30' : 'bg-pits-surface-muted text-pits-dim border-pits-edge'}`}
-                            >
-                              {plan.is_active ? t('Active') : t('Inactive')}
-                            </span>
-                          )}
-                        </td>
-                        {isAdmin && (
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => handleOpenForm(plan)}
-                                className="p-2 text-pits-dim hover:text-pits-ink hover:bg-pits-surface-muted rounded-lg transition-all"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              <button
-                                onClick={() => setPlanToDelete(plan)}
-                                className="p-2 text-pits-dim hover:text-pits-error hover:bg-pits-primary-soft rounded-lg transition-all"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))
-                  )}
-                  {!loading && filteredPlans.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={isAdmin ? 6 : 5}
-                        className="py-20 text-center text-pits-dim font-bold uppercase"
-                      >
-                        {t('No records found.')}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      {plans.length > 6 ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} aria-hidden />
+          <input
+            type="search"
+            placeholder={t('Search plans...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full min-h-10 pl-9 pr-3 bg-pits-surface-elevated border border-pits-edge rounded-xl text-sm text-pits-text outline-none focus:ring-2 focus:ring-pits-primary/40"
+          />
         </div>
+      ) : null}
 
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-pits-surface-muted rounded-3xl p-6 shadow-xl border border-pits-edge relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Tags size={80} className="text-pits-ink" />
-            </div>
-            <div className="relative z-10">
-              <h3 className="text-sm font-black text-pits-ink uppercase tracking-tighter mb-4 flex items-center gap-2">
-                <Zap size={18} className="text-pits-red" /> {t('Strategic Overview')}
-              </h3>
-              <p className="text-pits-ink-muted text-[11px] font-medium leading-relaxed mb-6">
-                {t('Define plan pricing, weekly class limits, and availability for athlete subscriptions.')}
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                  <span className="text-[11px] font-bold text-pits-dim uppercase">
-                    {t('Total Plans')}
-                  </span>
-                  <span className="text-sm font-black text-pits-ink">{plans.length}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-pits-surface-elevated rounded-2xl border border-pits-edge">
-                  <span className="text-[11px] font-bold text-pits-dim uppercase">
-                    {t('Active Plans')}
-                  </span>
-                  <span className="text-sm font-black text-pits-success">
-                    {plans.filter((plan) => plan.is_active).length}
-                  </span>
-                </div>
+      <div className="rounded-2xl border border-pits-edge bg-pits-surface-elevated overflow-hidden">
+        {loading ? (
+          <div className="divide-y divide-pits-edge" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
+                <div className="h-3 w-40 rounded bg-pits-surface-muted" />
+                <div className="ml-auto h-3 w-16 rounded bg-pits-surface-muted" />
               </div>
-            </div>
+            ))}
           </div>
-
-          <div className="bg-pits-surface-elevated rounded-3xl p-6 border border-pits-edge shadow-sm space-y-4">
-            <h3 className="text-xs font-black text-pits-ink uppercase flex items-center gap-2">
-              <Info size={14} className="text-pits-red" /> {t('System Tips')}
-            </h3>
-            <ul className="space-y-3">
-              <li className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
-                  {t('Choose Unlimited, Weekly, or Session pack for booking limits.')}
-                </p>
-              </li>
-              <li className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-pits-red mt-1.5 shrink-0" />
-                <p className="text-[11px] font-bold text-pits-dim uppercase tracking-tight">
-                  {t('Inactive plans stay hidden from new athlete sign-ups.')}
-                </p>
-              </li>
-            </ul>
+        ) : filteredPlans.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <p className="text-sm text-pits-dim">{t('No records found.')}</p>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => handleOpenForm()}
+                className="mt-3 text-sm font-semibold text-pits-info hover:underline"
+              >
+                {t('Add Plan')}
+              </button>
+            ) : null}
           </div>
-        </div>
+        ) : (
+          <ul className="divide-y divide-pits-edge">
+            {filteredPlans.map((plan) => (
+              <li key={plan.id} className={`flex items-center gap-3 pl-4 pr-2 py-3 ${plan.is_active ? '' : 'opacity-60'}`}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenForm(plan)}
+                  disabled={!isAdmin}
+                  className="min-w-0 flex-1 text-left disabled:cursor-default"
+                >
+                  <span className="flex items-baseline gap-2">
+                    <span className="truncate text-sm font-semibold text-pits-text">{plan.name}</span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-pits-text">{priceLabel(plan.price_usd)}</span>
+                  </span>
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-pits-dim">
+                    <span>{formatBookingLimit(plan)}</span>
+                    <span aria-hidden>·</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users size={12} aria-hidden />
+                      {t('{{count}} members', { count: plan.member_count })}
+                    </span>
+                    {plan.description ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <span className="truncate max-w-[16rem]">{plan.description}</span>
+                      </>
+                    ) : null}
+                  </span>
+                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={plan.is_active}
+                      onClick={() => handleToggleStatus(plan)}
+                      disabled={isPending}
+                      className={`inline-flex items-center gap-1.5 min-h-9 px-2.5 rounded-lg text-xs font-semibold border ${
+                        plan.is_active
+                          ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge'
+                          : 'bg-pits-surface-muted text-pits-dim border-pits-edge'
+                      }`}
+                    >
+                      {plan.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                      {plan.is_active ? t('Active') : t('Inactive')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenForm(plan)}
+                      aria-label={t('Edit Plan')}
+                      className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-text hover:bg-pits-surface-muted"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPlanToDelete(plan)}
+                      aria-label={t('Delete')}
+                      className="flex items-center justify-center w-9 h-9 rounded-lg text-pits-dim hover:text-pits-danger hover:bg-pits-danger-soft"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                      plan.is_active ? 'bg-pits-positive-soft text-pits-positive' : 'bg-pits-surface-muted text-pits-dim'
+                    }`}
+                  >
+                    {plan.is_active ? t('Active') : t('Inactive')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      <ul className="space-y-1 text-xs text-pits-dim">
+        <li>{t('Prices are in {{currency}}. Local payment methods convert them with your exchange rate.', { currency: currencies.reference })}</li>
+        <li>{t('Choose Unlimited, Weekly, or Session pack for booking limits.')}</li>
+        <li>{t('Inactive plans stay hidden from new athlete sign-ups.')}</li>
+      </ul>
 
       {isFormOpen && isAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -522,7 +432,7 @@ export default function MembershipPlansPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-pits-dim uppercase ml-1">
-                      {t('Price (USD)')}
+                      {t('Price ({{currency}})', { currency: currencies.reference })}
                     </label>
                     <input
                       type="number"

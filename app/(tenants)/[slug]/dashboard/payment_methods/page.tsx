@@ -258,26 +258,18 @@ export default function PaymentMethodsPage() {
     <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-0">
       
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-pits-edge">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="page-title">
-              {t('Payment Methods')}
-            </h1>
-            <div className="bg-pits-primary-soft px-2 py-0.5 rounded text-[11px] font-bold text-pits-red border border-pits-edge tracking-widest uppercase shadow-sm">
-              {t('System Config')}
-            </div>
-          </div>
-          <p className="text-pits-dim text-xs font-semibold mt-1 tracking-wide uppercase">
-            {t('Manage accepted payment channels and configurations')}
-          </p>
+          <h1 className="page-title">{t('Payment Methods')}</h1>
+          <p className="page-subtitle">{t('Manage accepted payment channels and configurations')}</p>
         </div>
 
-        <button 
+        <button
+          type="button"
           onClick={() => handleOpenForm()}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-pits-primary text-pits-dark-text rounded-2xl text-[11px] font-black uppercase shadow-lg shadow-pits-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold shadow-sm hover:bg-pits-primary-dark"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           {t('Add Method')}
         </button>
       </div>
@@ -293,14 +285,6 @@ export default function PaymentMethodsPage() {
               {t('Plans are priced in the reference. Local methods convert at your rate.')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSaveMoneySettings}
-            disabled={savingMoney}
-            className="px-5 py-2.5 bg-pits-primary text-pits-dark-text rounded-xl text-[11px] font-black uppercase shadow-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-          >
-            {savingMoney ? t('Processing...') : t('Save money settings')}
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -452,6 +436,17 @@ export default function PaymentMethodsPage() {
                 : t('Live rate unavailable. Switch to custom or check the pair.')}
             </p>
           )}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSaveMoneySettings}
+            disabled={savingMoney}
+            className="inline-flex items-center justify-center min-h-10 px-4 rounded-xl bg-pits-primary text-pits-dark-text text-sm font-semibold hover:bg-pits-primary-dark disabled:opacity-50"
+          >
+            {savingMoney ? t('Processing...') : t('Save money settings')}
+          </button>
         </div>
       </div>
 
