@@ -30,7 +30,6 @@ import {
   Receipt,
   Clock,
   Rocket,
-  Sparkles,
   Palette,
   ClipboardList,
   CalendarClock,
@@ -51,6 +50,9 @@ import { useTenant } from '@/components/TenantContext';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import CommandPalette, { type PaletteLink } from '@/components/CommandPalette';
+import { clearSpotterChats, SpotterProvider } from '@/components/spotter/SpotterContext';
+import SpotterLauncher from '@/components/spotter/SpotterLauncher';
+import SpotterMark from '@/components/spotter/SpotterMark';
 import { useMoneyCurrency } from '@/lib/hooks/useMoneyCurrency';
 import Tooltip from '@/components/Tooltip';
 import { financialService } from '@/lib/services/financialService';
@@ -234,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         tip: t('Nav tip Results'),
         tabs: [
           tab('Box health', '/dashboard/performance', TrendingUp, 'Nav tip Box health'),
-          tab('Ask AI', '/dashboard/ask', Sparkles, 'Nav tip Ask AI'),
+          tab('Spotter', '/dashboard/ask', SpotterMark as unknown as LucideIcon, 'Nav tip Spotter'),
           tab('Revenue Rescue', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
           tab('Founding Pilot', '/dashboard/pilot', Rocket, 'Nav tip Founding Pilot'),
         ],
@@ -354,11 +356,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [router]);
 
   const handleLogout = async () => {
+    clearSpotterChats();
     await supabase.auth.signOut();
     router.push('/');
   };
 
+  const showFounderHelp = platformPlan === 'trial';
+
   return (
+    <SpotterProvider>
     <div className="flex h-screen bg-pits-surface overflow-hidden">
       
       {/* MOBILE BACKDROP */}
@@ -706,7 +712,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="hidden sm:inline">{t('We will help you set it up')}</span>
         </a>
       )}
+
+      <SpotterLauncher raised={showFounderHelp} />
     </div>
+    </SpotterProvider>
   );
 }
 

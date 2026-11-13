@@ -56,6 +56,54 @@ function toReferenceAmount(
   return 0;
 }
 
+function previousYearMonth(yearMonth: string): string {
+  const year = Number(yearMonth.slice(0, 4));
+  const month = Number(yearMonth.slice(5, 7));
+  return month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`;
+}
+
+type MoneyRow = {
+  amount?: number | string | null;
+  currency?: string | null;
+  status?: string | null;
+  exchange_rate_at_time?: number | null;
+  reference_currency_amount?: number | null;
+};
+
+function summarizeMoney(
+  payments: MoneyRow[] | null,
+  incomes: MoneyRow[] | null,
+  expenseRows: MoneyRow[] | null,
+  reference: string
+) {
+  let memberPayments = 0;
+  for (const payment of payments ?? []) {
+    if (payment.status !== 'approved') continue;
+    memberPayments +=
+      typeof payment.reference_currency_amount === 'number' &&
+      Number.isFinite(payment.reference_currency_amount)
+        ? payment.reference_currency_amount
+        : toReferenceAmount(Number(payment.amount) || 0, payment.currency, payment.exchange_rate_at_time, reference);
+  }
+  let otherIncome = 0;
+  for (const income of incomes ?? []) {
+    if (income.status !== 'confirmed') continue;
+    otherIncome += toReferenceAmount(Number(income.amount) || 0, income.currency, income.exchange_rate_at_time, reference);
+  }
+  let expenses = 0;
+  for (const expense of expenseRows ?? []) {
+    if (expense.status === 'pending') continue;
+    expenses += toReferenceAmount(Number(expense.amount) || 0, expense.currency, expense.exchange_rate_at_time, reference);
+  }
+  return {
+    currency: reference,
+    member_payments_approved: roundMoney(memberPayments),
+    other_income_confirmed: roundMoney(otherIncome),
+    expenses: roundMoney(expenses),
+    net: roundMoney(memberPayments + otherIncome - expenses),
+  };
+}
+
 export async function buildAskAiTenantSnapshot(
   tenantId: string,
   tenant: Tenant,
@@ -67,9 +115,24 @@ export async function buildAskAiTenantSnapshot(
   const yearMonth = today.slice(0, 7);
   const { startUtc: dayStart, endUtc: dayEnd } = getGymDayRange(today, tz);
   const { startUtc: monthStart, endUtc: monthEnd, startDate, endDate } = getGymMonthRange(yearMonth, tz);
+  const prevYearMonth = previousYearMonth(yearMonth);
+  const prev = getGymMonthRange(prevYearMonth, tz);
+  const dayOfMonth = Number(today.slice(8, 10));
+  const daysInMonth = new Date(Date.UTC(Number(yearMonth.slice(0, 4)), Number(yearMonth.slice(5, 7)), 0)).getUTCDate();
+  const weekday = new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
 
-  const [classesRes, membersRes, pendingRes, pendingCountRes, paymentsRes, incomesRes, expensesRes] =
-    await Promise.all([
+  const [
+    classesRes,
+    membersRes,
+    pendingRes,
+    pendingCountRes,
+    paymentsRes,
+    incomesRes,
+    expensesRes,
+    prevPaymentsRes,
+    prevIncomesRes,
+    prevExpensesRes,
+  ] = await Promise.all([
     client
       .from('classes')
       .select(
@@ -86,7 +149,7 @@ export async function buildAskAiTenantSnapshot(
       .eq('role', 'member'),
     client
       .from('payments')
-      .select('id, profiles(full_name)')
+      .select('id, amount, currency, created_at, profiles(full_name)')
       .eq('tenant_id', tenantId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -114,6 +177,24 @@ export async function buildAskAiTenantSnapshot(
       .eq('tenant_id', tenantId)
       .gte('expense_date', startDate)
       .lte('expense_date', endDate),
+    client
+      .from('payments')
+      .select('amount, currency, status, reference_currency_amount, exchange_rate_at_time')
+      .eq('tenant_id', tenantId)
+      .gte('created_at', prev.startUtc)
+      .lte('created_at', prev.endUtc),
+    client
+      .from('incomes')
+      .select('amount, currency, status, exchange_rate_at_time')
+      .eq('tenant_id', tenantId)
+      .gte('income_date', prev.startDate)
+      .lte('income_date', prev.endDate),
+    client
+      .from('expenses')
+      .select('amount, currency, status, exchange_rate_at_time')
+      .eq('tenant_id', tenantId)
+      .gte('expense_date', prev.startDate)
+      .lte('expense_date', prev.endDate),
   ]);
 
   const failed = [
@@ -186,56 +267,33 @@ export async function buildAskAiTenantSnapshot(
     members.filter((row) => !row.is_solvent).map((row) => row.full_name)
   );
 
-  let memberPaymentsApproved = 0;
-  for (const payment of paymentsRes.data ?? []) {
-    if (payment.status !== 'approved') continue;
-    const refAmount =
-      typeof payment.reference_currency_amount === 'number' &&
-      Number.isFinite(payment.reference_currency_amount)
-        ? payment.reference_currency_amount
-        : toReferenceAmount(
-            Number(payment.amount) || 0,
-            payment.currency,
-            payment.exchange_rate_at_time,
-            currencies.reference
-          );
-    memberPaymentsApproved += refAmount;
-  }
-
-  let otherIncome = 0;
-  for (const income of incomesRes.data ?? []) {
-    if (income.status !== 'confirmed') continue;
-    otherIncome += toReferenceAmount(
-      Number(income.amount) || 0,
-      income.currency,
-      income.exchange_rate_at_time,
-      currencies.reference
-    );
-  }
-
-  let expenses = 0;
-  for (const expense of expensesRes.data ?? []) {
-    if (expense.status === 'pending') continue;
-    expenses += toReferenceAmount(
-      Number(expense.amount) || 0,
-      expense.currency,
-      expense.exchange_rate_at_time,
-      currencies.reference
-    );
-  }
-
-  const pendingNames = uniqueNames(
-    (pendingRes.data ?? []).map((row) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-      return profile?.full_name ?? null;
-    })
+  const monthMoney = summarizeMoney(paymentsRes.data, incomesRes.data, expensesRes.data, currencies.reference);
+  const lastMonthMoney = summarizeMoney(
+    prevPaymentsRes.data,
+    prevIncomesRes.data,
+    prevExpensesRes.data,
+    currencies.reference
   );
+
+  const pendingProofs = (pendingRes.data ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      member: profile?.full_name?.trim() || null,
+      amount: roundMoney(Number(row.amount) || 0),
+      currency: row.currency ?? null,
+      uploaded: row.created_at ? getGymDate(new Date(row.created_at), tz) : null,
+    };
+  });
+  const pendingCount = pendingCountRes.count ?? pendingProofs.length;
 
   const snapshot = {
     gym: tenant.name,
     timezone: tz,
     today,
+    weekday,
     month: yearMonth,
+    day_of_month: dayOfMonth,
+    days_in_month: daysInMonth,
     today_attendance: {
       classes: classes.length,
       people_attended: attendance.members_attended + attendance.guests_attended,
@@ -257,16 +315,15 @@ export async function buildAskAiTenantSnapshot(
       not_solvent_names_omitted: Math.max(0, notSolvent - notSolventNames.length),
     },
     pending_payment_proofs: {
-      count: pendingCountRes.count ?? pendingNames.length,
-      names: pendingNames,
+      count: pendingCount,
+      latest: pendingProofs,
+      latest_omitted: Math.max(0, pendingCount - pendingProofs.length),
     },
-    month_money: {
-      currency: currencies.reference,
-      member_payments_approved: roundMoney(memberPaymentsApproved),
-      other_income_confirmed: roundMoney(otherIncome),
-      expenses: roundMoney(expenses),
-      net: roundMoney(memberPaymentsApproved + otherIncome - expenses),
-    },
+    month_money: { month: yearMonth, so_far_through_day: dayOfMonth, ...monthMoney },
+    last_month_money:
+      prevPaymentsRes.error || prevIncomesRes.error || prevExpensesRes.error
+        ? null
+        : { month: prevYearMonth, ...lastMonthMoney },
   };
 
   return JSON.stringify(snapshot);
