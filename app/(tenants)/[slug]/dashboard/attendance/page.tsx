@@ -18,12 +18,21 @@ import { TranslationKey } from '@/lib/translations';
 import { classTypeService } from '@/lib/services/classTypeService';
 import { Booking, BookingStatus, ClassTypeRow, MemberPaymentStatus } from '@/lib/types/gym';
 import { classTypeBadgeStyle, classTypeColorMap } from '@/lib/utils/classTypeStyles';
+import { capitalizeFirst, formatDateLong } from '@/lib/utils/format-date';
 
 const bookingStatusKey = (status: BookingStatus): TranslationKey =>
   status as TranslationKey;
 
+/** Where a class is relative to now, so coaches can spot the one on the floor. */
+function classPhase(cls: { start_time: string; end_time: string }, now: number): 'upcoming' | 'live' | 'over' {
+  const start = new Date(cls.start_time).getTime();
+  const end = new Date(cls.end_time).getTime();
+  if (now < start) return 'upcoming';
+  return now < end ? 'live' : 'over';
+}
+
 export default function AttendancePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { tenantId, timezone } = useTenant();
   const classTime = (iso: string) => getGymTimeLabel(iso, timezone);
   const searchParams = useSearchParams();
@@ -60,6 +69,12 @@ export default function AttendancePage() {
   const [overdueConfirm, setOverdueConfirm] = useState<Booking | null>(null);
   const [classTypes, setClassTypes] = useState<ClassTypeRow[]>([]);
   const colorByName = useMemo(() => classTypeColorMap(classTypes), [classTypes]);
+  // Ticks once a minute so "Now" and "Mark remaining missed" follow the clock.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -86,6 +101,9 @@ export default function AttendancePage() {
     + guestRoster.filter(g => g.status === 'booked').length;
   const totalRosterCount = roster.length + guestRoster.length;
   const showSearch = totalRosterCount > 6;
+  // Marking people absent only makes sense once the class has begun.
+  const classStarted = selectedClass ? classPhase(selectedClass, now) !== 'upcoming' : false;
+  const dayLabel = date ? capitalizeFirst(formatDateLong(date, lang)) : '';
 
   const handleAddAthlete = async (userId: string) => {
     setAddingAthlete(true);
@@ -198,48 +216,54 @@ export default function AttendancePage() {
             </Tooltip>
           </div>
           <p className="text-pits-dim font-medium text-xs md:text-sm">
-            {t('Tap an athlete to check in.')}
+            {dayLabel}
+            {isToday ? <span className="font-semibold text-pits-positive"> · {t('Today')}</span> : null}
+            <span className="hidden sm:inline"> · {t('Tap an athlete to check in.')}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex items-center gap-2">
-            <Tooltip content={t('Previous day')}>
-              <button
-                onClick={prevDay}
-                className="p-2 bg-gray-50 border   rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            </Tooltip>
-            
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="date" 
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-gray-50 border   rounded-lg font-bold text-gray-700 focus:border-pits-red outline-none shadow-sm text-sm"
-              />
-            </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Tooltip content={t('Previous day')}>
+            <button
+              type="button"
+              onClick={prevDay}
+              aria-label={t('Previous day')}
+              className="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center bg-pits-surface-muted border border-pits-edge rounded-lg hover:bg-pits-surface-elevated text-pits-text transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          </Tooltip>
 
-            <Tooltip content={t('Next day')}>
-              <button
-                onClick={nextDay}
-                className="p-2 bg-gray-50 border   rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </Tooltip>
-
-            {!isToday && (
-              <button
-                onClick={() => setDate(getGymDate(new Date(), timezone))}
-                className="px-3 py-2 bg-pits-primary text-pits-dark-text rounded-lg text-[11px] font-black uppercase tracking-wider hover:bg-pits-primary-dark transition-all"
-              >
-                {t('Today')}
-              </button>
-            )}
+          <div className="relative flex-1 min-w-0 sm:flex-none">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-pits-dim" size={16} />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              aria-label={t('Date')}
+              className="w-full min-w-0 h-11 sm:h-9 pl-9 pr-2 bg-pits-surface-muted border border-pits-edge rounded-lg font-semibold text-pits-text focus:border-pits-primary outline-none text-sm"
+            />
           </div>
+
+          <Tooltip content={t('Next day')}>
+            <button
+              type="button"
+              onClick={nextDay}
+              aria-label={t('Next day')}
+              className="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center bg-pits-surface-muted border border-pits-edge rounded-lg hover:bg-pits-surface-elevated text-pits-text transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </Tooltip>
+
+          {!isToday && (
+            <button
+              type="button"
+              onClick={() => setDate(getGymDate(new Date(), timezone))}
+              className="shrink-0 h-11 sm:h-9 px-3 bg-pits-primary text-pits-dark-text rounded-lg text-xs font-bold hover:bg-pits-primary-dark transition-all"
+            >
+              {t('Today')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -301,16 +325,16 @@ export default function AttendancePage() {
                       </div>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-black text-gray-900 italic">
+                      <span className={`text-xl font-black italic ${classPhase(cls, now) === 'over' ? 'text-pits-dim' : 'text-pits-text'}`}>
                         {classTime(cls.start_time)}
                       </span>
+                      {classPhase(cls, now) === 'live' ? (
+                        <span className="rounded-full bg-pits-positive px-2 py-0.5 text-[11px] font-bold text-white">{t('Now')}</span>
+                      ) : null}
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center text-[11px] font-bold text-gray-600 uppercase tracking-tight">
-                        <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center mr-1.5 text-gray-700">
-                          {cls.coach?.full_name?.charAt(0) || 'S'}
-                        </div>
-                        {cls.coach?.full_name || t('Staff')}
+                      <div className={`flex items-center text-xs font-semibold ${cls.coach?.full_name ? 'text-pits-dim' : 'text-pits-warning'}`}>
+                        {cls.coach?.full_name || t('No coach assigned')}
                       </div>
                       <ChevronRight size={14} className={`transition-transform ${selectedClassId === cls.id ? 'text-pits-red translate-x-1' : 'text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1'}`} />
                     </div>
@@ -335,19 +359,24 @@ export default function AttendancePage() {
                   {classes.map(cls => {
                     const count = cls.bookings[0]?.count || 0;
                     const selected = selectedClassId === cls.id;
+                    const phase = classPhase(cls, now);
                     return (
                       <button
                         key={cls.id}
                         type="button"
                         onClick={() => setSelectedClassId(cls.id)}
-                        className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-all ${
+                        aria-pressed={selected}
+                        className={`shrink-0 min-h-11 px-3 py-2 rounded-lg border text-left transition-all ${
                           selected
                             ? 'bg-pits-primary-soft border-pits-primary ring-1 ring-pits-primary'
-                            : 'bg-gray-50 border-gray-100'
+                            : 'bg-pits-surface-muted border-pits-edge'
                         }`}
                       >
-                        <div className="text-sm font-black italic text-gray-900 leading-none">
+                        <div className={`flex items-center gap-1.5 text-sm font-black italic leading-none ${phase === 'over' ? 'text-pits-dim' : 'text-pits-text'}`}>
                           {classTime(cls.start_time)}
+                          {phase === 'live' ? (
+                            <span className="not-italic rounded-full bg-pits-positive px-1.5 py-0.5 text-[10px] font-bold text-white">{t('Now')}</span>
+                          ) : null}
                         </div>
                         <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-gray-500">
                           {cls.class_type} · {count}/{cls.max_capacity}
@@ -359,22 +388,28 @@ export default function AttendancePage() {
               )}
             </div>
 
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="font-black text-pits-text text-sm md:text-base uppercase italic tracking-tighter truncate">
                   {selectedClass
-                    ? `${selectedClass.class_type} @ ${classTime(selectedClass.start_time)}`
+                    ? `${selectedClass.class_type} · ${classTime(selectedClass.start_time)}`
                     : t('Class Roster')}
                 </h3>
                 {selectedClass && (
-                  <p className="text-[11px] font-bold text-gray-400 uppercase">
-                    {t('Coach')}: <span className="text-pits-dim">{selectedClass.coach?.full_name || t('Staff')}</span>
+                  <p className="text-xs text-pits-dim">
+                    {selectedClass.coach?.full_name
+                      ? <>{t('Coach')}: <span className="font-semibold text-pits-text">{selectedClass.coach.full_name}</span></>
+                      : <span className="font-semibold text-pits-warning">{t('No coach assigned')}</span>}
+                    {' · '}
+                    <span className={isClassFull ? 'font-semibold text-pits-danger' : ''}>
+                      {bookingCount}/{selectedClass.max_capacity}{isClassFull ? ` · ${t('Full')}` : ''}
+                    </span>
                   </p>
                 )}
               </div>
               
               {selectedClassId && (
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap sm:justify-end">
                   {showSearch && (
                     <div className="relative w-36 sm:w-48 hidden sm:block">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
@@ -387,29 +422,34 @@ export default function AttendancePage() {
                       />
                     </div>
                   )}
-                  {!isClassFull && totalRosterCount > 0 && (
+                  {totalRosterCount > 0 && (
                     <button
                       type="button"
                       onClick={() => setIsAddModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-2 bg-pits-primary text-pits-dark-text rounded-lg hover:bg-pits-primary-dark transition-all shadow-sm active:scale-95 text-xs font-semibold"
+                      disabled={isClassFull}
+                      title={isClassFull ? t('Class is at full capacity') : undefined}
+                      className="inline-flex min-h-9 items-center gap-1.5 px-2.5 bg-pits-primary text-pits-dark-text rounded-lg hover:bg-pits-primary-dark transition-all shadow-sm active:scale-95 text-xs font-semibold disabled:opacity-40 disabled:active:scale-100"
                     >
                       <UserPlus size={14} />
                       {t('Add Athlete')}
                     </button>
                   )}
-                  {!isClassFull && totalRosterCount > 0 && (
+                  {totalRosterCount > 0 && (
                     <button
                       type="button"
                       onClick={() => setIsAddGuestOpen(true)}
-                      className="px-2.5 py-2 bg-pits-surface-muted border border-pits-edge text-pits-text rounded-lg hover:bg-pits-surface-elevated transition-all shadow-sm active:scale-95 text-xs font-semibold"
+                      disabled={isClassFull}
+                      title={isClassFull ? t('Class is at full capacity') : undefined}
+                      className="min-h-9 px-2.5 bg-pits-surface-muted border border-pits-edge text-pits-text rounded-lg hover:bg-pits-surface-elevated transition-all shadow-sm active:scale-95 text-xs font-semibold disabled:opacity-40 disabled:active:scale-100"
                     >
                       {t('Add Guest')}
                     </button>
                   )}
                   {pendingCount > 0 && (
                     <button
+                      type="button"
                       onClick={() => markRemaining('attended')}
-                      className="flex items-center px-3 py-2 bg-pits-positive text-white rounded-lg text-[11px] font-black uppercase tracking-wider hover:bg-pits-positive/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                      className="hidden sm:flex min-h-9 items-center px-3 bg-pits-positive text-white rounded-lg text-xs font-bold hover:bg-pits-positive/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
                     >
                       <CheckCheck size={14} className="mr-1.5" />
                       {t('Check in {{count}} remaining', { count: pendingCount })}
@@ -436,11 +476,11 @@ export default function AttendancePage() {
                   <span className="text-pits-info">{pendingCount}</span>
                   <span className="text-gray-400">{t('pending')}</span>
                 </div>
-                {pendingCount > 0 && (
+                {pendingCount > 0 && classStarted && (
                   <button
                     type="button"
                     onClick={() => markRemaining('no_show')}
-                    className="ml-auto text-[11px] font-black uppercase tracking-wider text-gray-400 hover:text-pits-danger transition-colors"
+                    className="ml-auto min-h-9 text-xs font-semibold text-pits-dim hover:text-pits-danger transition-colors"
                   >
                     {t('Mark remaining missed')}
                   </button>
@@ -534,7 +574,8 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => toggleMissed(booking)}
-                          className={`p-2 rounded-lg transition-colors ${
+                          aria-label={missed ? t('Reset to Booked') : t('Mark as Missed')}
+                          className={`h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg transition-colors ${
                             missed ? 'bg-pits-danger text-white' : 'text-gray-300 hover:bg-pits-danger-soft hover:text-pits-danger'
                           }`}
                         >
@@ -546,7 +587,8 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => setRemoveConfirm({ id: booking.id, name: booking.profiles.full_name, kind: 'member' })}
-                          className="p-2 rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                          aria-label={t('Remove from class')}
+                          className="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                         >
                           <UserMinus size={18} />
                         </button>
@@ -597,7 +639,8 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => updateGuestStatus(guest.id, missed ? 'booked' : 'no_show')}
-                          className={`p-2 rounded-lg transition-colors ${
+                          aria-label={missed ? t('Reset to Booked') : t('Mark as Missed')}
+                          className={`h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg transition-colors ${
                             missed ? 'bg-pits-danger text-white' : 'text-gray-300 hover:bg-pits-danger-soft hover:text-pits-danger'
                           }`}
                         >
@@ -609,7 +652,8 @@ export default function AttendancePage() {
                         <button
                           type="button"
                           onClick={() => setRemoveConfirm({ id: guest.id, name: guest.full_name, kind: 'guest' })}
-                          className="p-2 rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                          aria-label={t('Remove from class')}
+                          className="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg text-gray-300 hover:bg-pits-warning-soft hover:text-pits-warning transition-colors md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                         >
                           <UserMinus size={18} />
                         </button>
@@ -623,6 +667,19 @@ export default function AttendancePage() {
         </div>
 
       </div>
+
+      {selectedClassId && pendingCount > 0 && (
+        <div className="sm:hidden sticky bottom-0 z-20 -mx-4 border-t border-pits-edge bg-pits-surface-elevated/95 px-4 py-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => markRemaining('attended')}
+            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-pits-positive text-sm font-bold text-white active:scale-[0.98]"
+          >
+            <CheckCheck size={18} />
+            {t('Check in {{count}} remaining', { count: pendingCount })}
+          </button>
+        </div>
+      )}
 
       <AddToClassModal
         isOpen={isAddModalOpen}

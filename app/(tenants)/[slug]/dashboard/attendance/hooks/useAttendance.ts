@@ -188,42 +188,55 @@ export function useAttendance(initial?: { date?: string | null; classId?: string
 
   const markRemaining = async (newStatus: Extract<BookingStatus, 'attended' | 'no_show'>) => {
     const pending = roster.filter(b => b.status === 'booked');
+    // Guests have no plan, so they are never blocked; they count in "remaining" too.
+    const pendingGuests = guestRoster.filter((g) => g.status === 'booked');
     const blocked = newStatus === 'attended'
       ? pending.filter((b) => b.payment?.checkin_blocked)
       : [];
     const toUpdate = pending.filter((b) => !blocked.some((blockedRow) => blockedRow.id === b.id));
-    if (pending.length === 0) {
+    if (pending.length === 0 && pendingGuests.length === 0) {
       toast(t('All athletes are already marked as {{status}}', { status: t(newStatus) }), 'info');
       return;
     }
-    if (toUpdate.length === 0) {
+    const done = toUpdate.length + pendingGuests.length;
+    if (done === 0) {
       toast(t('Skipped overdue check-ins', { done: 0, skipped: blocked.length }), 'info');
       return;
     }
 
     const previousRoster = [...roster];
+    const previousGuests = [...guestRoster];
     const updateIds = new Set(toUpdate.map((b) => b.id));
+    const guestIds = new Set(pendingGuests.map((g) => g.id));
     setRoster((prev: Booking[]) => prev.map((b: Booking) =>
       updateIds.has(b.id) ? { ...b, status: newStatus } : b
     ));
+    setGuestRoster((prev) => prev.map((g) => (guestIds.has(g.id) ? { ...g, status: newStatus } : g)));
+    // Missed guests stop taking a spot.
+    if (selectedClassId && newStatus === 'no_show' && pendingGuests.length > 0) {
+      updateClassBookingCount(selectedClassId, -pendingGuests.length);
+    }
 
     try {
-      await classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus);
+      await Promise.all([
+        toUpdate.length > 0 ? classService.bulkUpdateStatus(toUpdate.map(b => b.id), newStatus) : Promise.resolve(),
+        ...pendingGuests.map((g) => guestService.updateStatus(g.id, newStatus)),
+      ]);
       if (blocked.length > 0) {
-        toast(t('Skipped overdue check-ins', {
-          done: toUpdate.length,
-          skipped: blocked.length,
-        }), 'success');
+        toast(t('Skipped overdue check-ins', { done, skipped: blocked.length }), 'success');
       } else {
-        toast(t('{{count}} athletes marked as {{status}}', {
-          count: toUpdate.length,
-          status: t(newStatus),
-        }), 'success');
+        toast(t('{{count}} athletes marked as {{status}}', { count: done, status: t(newStatus) }), 'success');
       }
     } catch (error) {
       console.error(error);
       setRoster(previousRoster); // Rollback
+      setGuestRoster(previousGuests);
+      if (selectedClassId && newStatus === 'no_show' && pendingGuests.length > 0) {
+        updateClassBookingCount(selectedClassId, pendingGuests.length);
+      }
       toast(t('Some updates may have failed'), 'error');
+      // Partial success is possible; reload the real state.
+      if (selectedClassId) void fetchRoster(selectedClassId);
     }
   };
 
