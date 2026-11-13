@@ -9,6 +9,8 @@ import {
   CalendarX2,
   CreditCard,
   Loader2,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
@@ -130,8 +132,8 @@ function CloseWindowEditor({
           <Icon size={16} className="text-pits-primary" />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-pits-ink">{title}</h2>
-          <p className="mt-0.5 text-xs font-bold text-pits-ink-muted leading-relaxed">{help}</p>
+          <h2 className="text-sm font-bold text-pits-ink">{title}</h2>
+          <p className="mt-0.5 text-xs text-pits-ink-muted leading-relaxed">{help}</p>
         </div>
       </div>
 
@@ -147,7 +149,7 @@ function CloseWindowEditor({
                 onCustomActiveChange(false);
                 onChange(m);
               }}
-              className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+              className={`rounded-full px-3 min-h-9 text-xs font-semibold transition-colors disabled:opacity-50 ${
                 active
                   ? 'bg-pits-primary text-pits-dark-text'
                   : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -161,7 +163,7 @@ function CloseWindowEditor({
           type="button"
           disabled={disabled}
           onClick={() => onCustomActiveChange(true)}
-          className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+          className={`rounded-full px-3 min-h-9 text-xs font-semibold transition-colors disabled:opacity-50 ${
             customActive
               ? 'bg-pits-primary text-pits-dark-text'
               : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -175,7 +177,7 @@ function CloseWindowEditor({
         <div className="rounded-xl border border-pits-edge bg-pits-surface px-3 py-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-xs font-semibold text-pits-ink-muted">
                 {t('Booking custom hours')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -189,13 +191,13 @@ function CloseWindowEditor({
                   onChange={(e) =>
                     onChange(partsToMinutes(Number(e.target.value), parts.minutes))
                   }
-                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink tabular-nums"
                 />
                 <span className="text-xs font-bold text-pits-ink-muted">h</span>
               </div>
             </label>
             <label className="space-y-1">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-xs font-semibold text-pits-ink-muted">
                 {t('Booking custom minutes')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -209,7 +211,7 @@ function CloseWindowEditor({
                   onChange={(e) =>
                     onChange(partsToMinutes(parts.hours, Number(e.target.value)))
                   }
-                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink tabular-nums"
                 />
                 <span className="text-xs font-bold text-pits-ink-muted">m</span>
               </div>
@@ -257,8 +259,8 @@ function ReminderEditor({
           <Bell size={16} className="text-pits-primary" />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-pits-ink">{t('Class reminder')}</h2>
-          <p className="mt-0.5 text-xs font-bold text-pits-ink-muted leading-relaxed">
+          <h2 className="text-sm font-bold text-pits-ink">{t('Class reminder')}</h2>
+          <p className="mt-0.5 text-xs text-pits-ink-muted leading-relaxed">
             {t('Class reminder help')}
           </p>
         </div>
@@ -276,7 +278,7 @@ function ReminderEditor({
                 onCustomActiveChange(false);
                 onChange(m);
               }}
-              className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+              className={`rounded-full px-3 min-h-9 text-xs font-semibold transition-colors disabled:opacity-50 ${
                 active
                   ? 'bg-pits-primary text-pits-dark-text'
                   : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -290,7 +292,7 @@ function ReminderEditor({
           type="button"
           disabled={disabled}
           onClick={() => onCustomActiveChange(true)}
-          className={`rounded-full px-3 min-h-9 text-xs font-black tracking-wide transition-colors disabled:opacity-50 ${
+          className={`rounded-full px-3 min-h-9 text-xs font-semibold transition-colors disabled:opacity-50 ${
             customActive
               ? 'bg-pits-primary text-pits-dark-text'
               : 'bg-pits-surface border border-pits-edge text-pits-ink hover:border-pits-primary/50'
@@ -304,7 +306,7 @@ function ReminderEditor({
         <div className="rounded-xl border border-pits-edge bg-pits-surface px-3 py-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-xs font-semibold text-pits-ink-muted">
                 {t('Booking custom hours')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -318,13 +320,13 @@ function ReminderEditor({
                   onChange={(e) =>
                     onChange(reminderPartsToMinutes(Number(e.target.value), parts.minutes))
                   }
-                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink tabular-nums"
                 />
                 <span className="text-xs font-bold text-pits-ink-muted">h</span>
               </div>
             </label>
             <label className="space-y-1">
-              <span className="block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
+              <span className="block text-xs font-semibold text-pits-ink-muted">
                 {t('Booking custom minutes')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -338,7 +340,7 @@ function ReminderEditor({
                   onChange={(e) =>
                     onChange(reminderPartsToMinutes(parts.hours, Number(e.target.value)))
                   }
-                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
+                  className="w-20 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink tabular-nums"
                 />
                 <span className="text-xs font-bold text-pits-ink-muted">m</span>
               </div>
@@ -371,7 +373,6 @@ export default function BookingSettingsPage() {
   const [cancelCustom, setCancelCustom] = useState(false);
   const [reminderCustom, setReminderCustom] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [overduePending, startOverdueTransition] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
@@ -404,68 +405,120 @@ export default function BookingSettingsPage() {
   }, [tenantId, t, toast]);
 
   const windowsValid = isBookingWindowsValid(draft);
-  const dirty = useMemo(
+  const bookingDirty = useMemo(
     () =>
       draft.bookClosesMinutesBefore !== saved.bookClosesMinutesBefore ||
       draft.cancelClosesMinutesBefore !== saved.cancelClosesMinutesBefore ||
       draft.reminderMinutesBefore !== saved.reminderMinutesBefore,
     [draft, saved]
   );
+  const overdueDirty =
+    overdueDraft.graceDays !== overdueSaved.graceDays ||
+    overdueDraft.checkinMode !== overdueSaved.checkinMode ||
+    overdueDraft.bookingMode !== overdueSaved.bookingMode;
+  const dirty = bookingDirty || overdueDirty;
+
+  // Leaving the page with unsaved rules would silently drop them.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
 
   const handleDiscard = () => {
     setDraft(saved);
     setBookCustom(!isPresetMinutes(saved.bookClosesMinutesBefore));
     setCancelCustom(!isPresetMinutes(saved.cancelClosesMinutesBefore));
     setReminderCustom(!isReminderPresetMinutes(saved.reminderMinutesBefore));
-  };
-
-  const overdueDirty =
-    overdueDraft.graceDays !== overdueSaved.graceDays ||
-    overdueDraft.checkinMode !== overdueSaved.checkinMode ||
-    overdueDraft.bookingMode !== overdueSaved.bookingMode;
-
-  const overdueModeLabel = (mode: OverdueMode) => {
-    if (mode === 'allow') return t('Overdue mode allow');
-    if (mode === 'block') return t('Overdue mode block');
-    return t('Overdue mode warn');
-  };
-
-  const handleSaveOverdue = () => {
-    startOverdueTransition(async () => {
-      try {
-        const next = await saveOverdueSettingsAction(overdueDraft);
-        setOverdueSaved(next);
-        setOverdueDraft(next);
-        toast(t('Overdue settings saved'), 'success');
-      } catch {
-        toast(t('Failed to save overdue settings'), 'error');
-      }
-    });
+    setOverdueDraft(overdueSaved);
   };
 
   const handleSave = () => {
-    if (!isBookingWindowsValid(draft)) {
+    if (bookingDirty && !isBookingWindowsValid(draft)) {
       toast(t('Booking windows overlap error'), 'error');
       return;
     }
     startTransition(async () => {
-      try {
-        const next = await saveBookingSettingsAction(draft);
+      const [bookingResult, overdueResult] = await Promise.allSettled([
+        bookingDirty ? saveBookingSettingsAction(draft) : Promise.resolve(null),
+        overdueDirty ? saveOverdueSettingsAction(overdueDraft) : Promise.resolve(null),
+      ]);
+
+      if (bookingResult.status === 'fulfilled' && bookingResult.value) {
+        const next = bookingResult.value;
         setSaved(next);
         setDraft(next);
         setBookCustom(!isPresetMinutes(next.bookClosesMinutesBefore));
         setCancelCustom(!isPresetMinutes(next.cancelClosesMinutesBefore));
         setReminderCustom(!isReminderPresetMinutes(next.reminderMinutesBefore));
-        toast(t('Booking settings saved'), 'success');
-      } catch (err) {
-        const message =
+      }
+      if (overdueResult.status === 'fulfilled' && overdueResult.value) {
+        setOverdueSaved(overdueResult.value);
+        setOverdueDraft(overdueResult.value);
+      }
+
+      if (bookingResult.status === 'rejected') {
+        const err = bookingResult.reason;
+        toast(
           err instanceof Error && err.message === 'BOOKING_WINDOWS_OVERLAP'
             ? t('Booking windows overlap error')
-            : t('Failed to save booking settings');
-        toast(message, 'error');
+            : t('Failed to save booking settings'),
+          'error'
+        );
+      } else if (overdueResult.status === 'rejected') {
+        toast(t('Failed to save overdue settings'), 'error');
+      } else {
+        toast(t('Booking settings saved'), 'success');
       }
     });
   };
+
+  const modeShort = (mode: OverdueMode) =>
+    mode === 'allow' ? t('Overdue short allow') : mode === 'block' ? t('Overdue short block') : t('Overdue short warn');
+  const modeDesc = (mode: OverdueMode) =>
+    mode === 'allow' ? t('Overdue desc allow') : mode === 'block' ? t('Overdue desc block') : t('Overdue desc warn');
+
+  const setGrace = (days: number) =>
+    setOverdueDraft((prev) => ({
+      ...prev,
+      graceDays: Math.min(OVERDUE_GRACE_MAX, Math.max(OVERDUE_GRACE_MIN, Math.floor(days) || 0)),
+    }));
+
+  const renderModePicker = (label: string, value: OverdueMode, onChange: (m: OverdueMode) => void) => (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-pits-ink-muted">{label}</p>
+      <div role="radiogroup" aria-label={label} className="grid grid-cols-3 gap-1 rounded-xl border border-pits-edge bg-pits-surface p-1">
+        {OVERDUE_MODES.map((mode) => {
+          const active = value === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              disabled={isPending}
+              onClick={() => onChange(mode)}
+              className={`min-h-10 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+                active
+                  ? mode === 'block'
+                    ? 'bg-pits-danger text-white'
+                    : mode === 'warn'
+                      ? 'bg-pits-warning text-white'
+                      : 'bg-pits-primary text-pits-dark-text'
+                  : 'text-pits-ink hover:bg-pits-card'
+              }`}
+            >
+              {modeShort(mode)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-pits-ink-muted">{modeDesc(value)}</p>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -475,9 +528,7 @@ export default function BookingSettingsPage() {
         </div>
         <div>
           <h1 className="page-title">{t('Booking')}</h1>
-          <p className="mt-1 text-sm font-bold text-pits-ink-muted">
-            {t('Booking settings help')}
-          </p>
+          <p className="mt-1 text-sm text-pits-ink-muted">{t('Booking settings help')}</p>
         </div>
       </div>
 
@@ -488,222 +539,158 @@ export default function BookingSettingsPage() {
           <Loader2 size={20} className="animate-spin text-pits-primary" />
         </div>
       ) : (
-        <div className="rounded-2xl bg-pits-card border border-pits-edge overflow-hidden">
-          {!windowsValid ? (
-            <div className="flex items-start gap-2 border-b border-pits-warning-edge bg-pits-warning-soft px-5 py-3">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-pits-warning" />
-              <p className="text-sm font-bold text-pits-warning">
-                {t('Booking windows overlap warning')}
-              </p>
-            </div>
-          ) : null}
-
-          <div className="p-5 sm:p-6 space-y-6">
-            <CloseWindowEditor
-              icon={CalendarPlus}
-              title={t('Book closes before class')}
-              help={t('Book closes before class help')}
-              value={draft.bookClosesMinutesBefore}
-              disabled={isPending}
-              customActive={bookCustom}
-              onCustomActiveChange={setBookCustom}
-              onChange={(minutes) =>
-                setDraft((prev) => ({ ...prev, bookClosesMinutesBefore: minutes }))
-              }
-              t={t}
-            />
-
-            <div className="border-t border-pits-edge" />
-
-            <CloseWindowEditor
-              icon={CalendarX2}
-              title={t('Cancel closes before class')}
-              help={t('Cancel closes before class help')}
-              value={draft.cancelClosesMinutesBefore}
-              disabled={isPending}
-              customActive={cancelCustom}
-              onCustomActiveChange={setCancelCustom}
-              onChange={(minutes) =>
-                setDraft((prev) => ({ ...prev, cancelClosesMinutesBefore: minutes }))
-              }
-              t={t}
-            />
-
-            <div className="border-t border-pits-edge" />
-
-            <ReminderEditor
-              value={draft.reminderMinutesBefore}
-              disabled={isPending}
-              customActive={reminderCustom}
-              onCustomActiveChange={setReminderCustom}
-              onChange={(minutes) =>
-                setDraft((prev) => ({ ...prev, reminderMinutesBefore: minutes }))
-              }
-              t={t}
-            />
-          </div>
-
-          <div className="border-t border-pits-edge bg-pits-surface/70 px-5 py-4 sm:px-6 space-y-3">
-            <p className="text-xs font-bold text-pits-ink-muted">
-              {t('Booking pair summary', {
-                book: fullWindowLabel(draft.bookClosesMinutesBefore, t),
-                cancel: fullWindowLabel(draft.cancelClosesMinutesBefore, t),
-                reminder: reminderFullLabel(draft.reminderMinutesBefore, t),
-              })}
-            </p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-pits-ink-muted">
-                {dirty ? t('Booking unsaved changes') : t('Booking all saved')}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={isPending || !dirty}
-                  onClick={handleDiscard}
-                  className="rounded-xl border border-pits-edge bg-pits-card px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-ink disabled:opacity-40"
-                >
-                  {t('Discard changes')}
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending || !dirty || !windowsValid}
-                  onClick={handleSave}
-                  className="rounded-xl bg-pits-primary px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2 min-w-28"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      {t('Saving...')}
-                    </>
-                  ) : (
-                    t('Save booking settings')
-                  )}
-                </button>
+        <>
+          <div className="rounded-2xl bg-pits-card border border-pits-edge overflow-hidden">
+            {!windowsValid ? (
+              <div className="flex items-start gap-2 border-b border-pits-warning-edge bg-pits-warning-soft px-5 py-3">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-pits-warning" />
+                <p className="text-sm font-semibold text-pits-warning">{t('Booking windows overlap warning')}</p>
               </div>
+            ) : null}
+
+            <div className="p-5 sm:p-6 space-y-6">
+              <CloseWindowEditor
+                icon={CalendarPlus}
+                title={t('Book closes before class')}
+                help={t('Book closes before class help')}
+                value={draft.bookClosesMinutesBefore}
+                disabled={isPending}
+                customActive={bookCustom}
+                onCustomActiveChange={setBookCustom}
+                onChange={(minutes) => setDraft((prev) => ({ ...prev, bookClosesMinutesBefore: minutes }))}
+                t={t}
+              />
+
+              <div className="border-t border-pits-edge" />
+
+              <CloseWindowEditor
+                icon={CalendarX2}
+                title={t('Cancel closes before class')}
+                help={t('Cancel closes before class help')}
+                value={draft.cancelClosesMinutesBefore}
+                disabled={isPending}
+                customActive={cancelCustom}
+                onCustomActiveChange={setCancelCustom}
+                onChange={(minutes) => setDraft((prev) => ({ ...prev, cancelClosesMinutesBefore: minutes }))}
+                t={t}
+              />
+
+              <div className="border-t border-pits-edge" />
+
+              <ReminderEditor
+                value={draft.reminderMinutesBefore}
+                disabled={isPending}
+                customActive={reminderCustom}
+                onCustomActiveChange={setReminderCustom}
+                onChange={(minutes) => setDraft((prev) => ({ ...prev, reminderMinutesBefore: minutes }))}
+                t={t}
+              />
+            </div>
+
+            <div className="border-t border-pits-edge bg-pits-surface/70 px-5 py-3 sm:px-6">
+              <p className="text-xs text-pits-ink-muted">
+                {t('Booking pair summary', {
+                  book: fullWindowLabel(draft.bookClosesMinutesBefore, t),
+                  cancel: fullWindowLabel(draft.cancelClosesMinutesBefore, t),
+                  reminder: reminderFullLabel(draft.reminderMinutesBefore, t),
+                })}
+              </p>
             </div>
           </div>
-        </div>
-      )}
 
-      {loading ? null : (
-        <div className="rounded-2xl bg-pits-card border border-pits-edge overflow-hidden">
-          <div className="p-5 sm:p-6 space-y-6">
+          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 sm:p-6 space-y-6">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 rounded-lg bg-pits-surface p-2 border border-pits-edge">
                 <CreditCard size={16} className="text-pits-primary" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-pits-ink">{t('Payments and access')}</h2>
-                <p className="mt-0.5 text-xs font-bold text-pits-ink-muted leading-relaxed">
-                  {t('Payments and access help')}
-                </p>
+                <h2 className="text-sm font-bold text-pits-ink">{t('Payments and access')}</h2>
+                <p className="mt-0.5 text-xs text-pits-ink-muted leading-relaxed">{t('Payments and access help')}</p>
               </div>
             </div>
 
-            <label className="block space-y-2">
-              <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                {t('Grace days')}
-              </span>
-              <input
-                type="number"
-                min={OVERDUE_GRACE_MIN}
-                max={OVERDUE_GRACE_MAX}
-                step={1}
-                disabled={overduePending}
-                value={overdueDraft.graceDays}
-                onChange={(e) =>
-                  setOverdueDraft((prev) => ({
-                    ...prev,
-                    graceDays: Math.min(
-                      OVERDUE_GRACE_MAX,
-                      Math.max(OVERDUE_GRACE_MIN, Number(e.target.value) || 0)
-                    ),
-                  }))
-                }
-                className="w-24 rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-black text-pits-ink tabular-nums"
-              />
-              <p className="text-xs font-bold text-pits-ink-muted">{t('Grace days help')}</p>
-            </label>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-pits-ink-muted">{t('Grace days')}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isPending || overdueDraft.graceDays <= OVERDUE_GRACE_MIN}
+                  onClick={() => setGrace(overdueDraft.graceDays - 1)}
+                  aria-label={t('Fewer days')}
+                  className="h-11 w-11 sm:h-10 sm:w-10 inline-flex items-center justify-center rounded-lg border border-pits-edge bg-pits-surface text-pits-ink disabled:opacity-40"
+                >
+                  <Minus size={16} />
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={OVERDUE_GRACE_MIN}
+                  max={OVERDUE_GRACE_MAX}
+                  step={1}
+                  disabled={isPending}
+                  value={overdueDraft.graceDays}
+                  onChange={(e) => setGrace(Number(e.target.value))}
+                  aria-label={t('Grace days')}
+                  className="h-11 sm:h-10 w-16 rounded-lg border border-pits-edge bg-pits-card px-2 text-center text-sm font-bold text-pits-ink tabular-nums"
+                />
+                <button
+                  type="button"
+                  disabled={isPending || overdueDraft.graceDays >= OVERDUE_GRACE_MAX}
+                  onClick={() => setGrace(overdueDraft.graceDays + 1)}
+                  aria-label={t('More days')}
+                  className="h-11 w-11 sm:h-10 sm:w-10 inline-flex items-center justify-center rounded-lg border border-pits-edge bg-pits-surface text-pits-ink disabled:opacity-40"
+                >
+                  <Plus size={16} />
+                </button>
+                <span className="text-sm text-pits-ink-muted">{t('days unit')}</span>
+              </div>
+              <p className="text-xs text-pits-ink-muted">{t('Grace days help')}</p>
+            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                  {t('Check-in when overdue')}
-                </span>
-                <select
-                  disabled={overduePending}
-                  value={overdueDraft.checkinMode}
-                  onChange={(e) =>
-                    setOverdueDraft((prev) => ({
-                      ...prev,
-                      checkinMode: e.target.value as OverdueMode,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink"
-                >
-                  {OVERDUE_MODES.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {overdueModeLabel(mode)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-2">
-                <span className="text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                  {t('Booking when overdue')}
-                </span>
-                <select
-                  disabled={overduePending}
-                  value={overdueDraft.bookingMode}
-                  onChange={(e) =>
-                    setOverdueDraft((prev) => ({
-                      ...prev,
-                      bookingMode: e.target.value as OverdueMode,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-pits-edge bg-pits-card px-3 py-2 text-sm font-bold text-pits-ink"
-                >
-                  {OVERDUE_MODES.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {overdueModeLabel(mode)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {renderModePicker(t('Check-in when overdue'), overdueDraft.checkinMode, (m) =>
+                setOverdueDraft((prev) => ({ ...prev, checkinMode: m }))
+              )}
+              {renderModePicker(t('Booking when overdue'), overdueDraft.bookingMode, (m) =>
+                setOverdueDraft((prev) => ({ ...prev, bookingMode: m }))
+              )}
             </div>
           </div>
-          <div className="border-t border-pits-edge bg-pits-surface/70 px-5 py-4 sm:px-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-pits-ink-muted">
-              {overdueDirty ? t('Booking unsaved changes') : t('Booking all saved')}
-            </p>
+        </>
+      )}
+
+      {dirty ? (
+        <div className="sticky bottom-0 z-30 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-pits-edge bg-pits-card/95 px-4 py-3 shadow-xl backdrop-blur">
+            <p className="text-sm font-semibold text-pits-ink">{t('Booking unsaved changes')}</p>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={overduePending || !overdueDirty}
-                onClick={() => setOverdueDraft(overdueSaved)}
-                className="rounded-xl border border-pits-edge bg-pits-card px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-ink disabled:opacity-40"
+                disabled={isPending}
+                onClick={handleDiscard}
+                className="min-h-11 rounded-xl border border-pits-edge bg-pits-card px-4 text-sm font-semibold text-pits-ink disabled:opacity-40"
               >
                 {t('Discard changes')}
               </button>
               <button
                 type="button"
-                disabled={overduePending || !overdueDirty}
-                onClick={handleSaveOverdue}
-                className="rounded-xl bg-pits-primary px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2 min-w-28"
+                disabled={isPending || (bookingDirty && !windowsValid)}
+                onClick={handleSave}
+                className="min-h-11 min-w-28 rounded-xl bg-pits-primary px-4 text-sm font-bold text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2"
               >
-                {overduePending ? (
+                {isPending ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
                     {t('Saving...')}
                   </>
                 ) : (
-                  t('Save booking settings')
+                  t('Save changes')
                 )}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
