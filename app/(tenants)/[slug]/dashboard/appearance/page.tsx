@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Palette as PaletteIcon, Trophy, Type, Wallet, Award } from 'lucide-react';
+import { Check, ClipboardCheck, Dumbbell, Loader2, MessagesSquare, Trophy, Wallet } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
-import { useTenantTerms } from '@/components/useTenantTerms';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
 import {
@@ -76,12 +75,13 @@ const MODULE_COPY: {
 function AppPreview({
   colors,
   features,
+  workoutTerm,
 }: {
   colors: PaletteColors;
   features: TenantFeatures;
+  workoutTerm: string;
 }) {
   const { t } = useLanguage();
-  const terms = useTenantTerms();
   const showWod = features.wod;
   const showPr = features.personalRecords;
   const showCommunity = features.community;
@@ -128,7 +128,7 @@ function AppPreview({
               <p className="text-[11px] font-bold" style={{ color: colors.textSub }}>
                 {t('Schedule')}
               </p>
-              <p className="mt-1 text-xs font-black">18:00 — {terms.workout}</p>
+              <p className="mt-1 text-xs font-black">18:00 — {workoutTerm}</p>
               <button
                 type="button"
                 className="mt-3 w-full rounded-xl py-2 text-[11px] font-black uppercase"
@@ -203,16 +203,18 @@ export default function AppearancePage() {
   const [isPending, startTransition] = useTransition();
   const [isFeaturePending, startFeatureTransition] = useTransition();
   const [isMilestonePending, startMilestoneTransition] = useTransition();
-  const [isTermsPending, startTermsTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [savedId, setSavedId] = useState<PaletteId>('default');
   const [selectedId, setSelectedId] = useState<PaletteId>('default');
   const [milestoneSettings, setMilestoneSettings] = useState<MilestoneSettings>(DEFAULT_MILESTONE_SETTINGS);
-  const [termsDraft, setTermsDraft] = useState<TenantTerms>(() => parseTenantTerms(settings, lang));
-
-  useEffect(() => {
-    setTermsDraft(parseTenantTerms(settings, lang));
-  }, [settings, lang]);
+  const savedTerms = useMemo(() => parseTenantTerms(settings, lang), [settings, lang]);
+  const [termsDraft, setTermsDraft] = useState<TenantTerms>(savedTerms);
+  // Reset the draft when the saved words change (after a save or a language switch).
+  const [draftBase, setDraftBase] = useState(savedTerms);
+  if (draftBase !== savedTerms) {
+    setDraftBase(savedTerms);
+    setTermsDraft(savedTerms);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +256,18 @@ export default function AppearancePage() {
   }, [tenantId]);
 
   const selected = PALETTES[selectedId] ?? PALETTES[DEFAULT_PALETTE_ID];
-  const dirty = selectedId !== savedId;
+  const paletteDirty = selectedId !== savedId;
+  const termsDirty = JSON.stringify(termsDraft) !== JSON.stringify(savedTerms);
+  const dirty = paletteDirty || termsDirty;
+  const termValues = [termsDraft.member.singular, termsDraft.member.plural, ...TERM_FIELDS.map((f) => termsDraft[f.key])];
+  const termsValid = termValues.every((v) => v.trim().length > 0);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
 
   const swatches = useMemo(
     () =>
@@ -266,16 +279,46 @@ export default function AppearancePage() {
   );
 
   const handleSave = () => {
+    if (termsDirty && !termsValid) {
+      toast(t('Fill in every word before saving.'), 'error');
+      return;
+    }
+    const trimmed: TenantTerms = {
+      ...termsDraft,
+      member: { singular: termsDraft.member.singular.trim(), plural: termsDraft.member.plural.trim() },
+      venue: termsDraft.venue.trim(),
+      session: termsDraft.session.trim(),
+      coach: termsDraft.coach.trim(),
+      workout: termsDraft.workout.trim(),
+    };
     startTransition(async () => {
-      try {
-        const saved = await saveTenantPaletteAction(selectedId);
-        setSavedId(saved);
-        setSelectedId(saved);
-        toast(t('Palette saved'), 'success');
-      } catch {
+      const [paletteResult, termsResult] = await Promise.allSettled([
+        paletteDirty ? saveTenantPaletteAction(selectedId) : Promise.resolve(null),
+        termsDirty ? saveTenantTermsAction(trimmed) : Promise.resolve(null),
+      ]);
+      let failed = false;
+      if (paletteResult.status === 'fulfilled') {
+        if (paletteResult.value) {
+          setSavedId(paletteResult.value);
+          setSelectedId(paletteResult.value);
+        }
+      } else {
+        failed = true;
         toast(t('Failed to save palette'), 'error');
       }
+      if (termsResult.status === 'fulfilled') {
+        if (termsDirty) setSettings(patchTenantTermsSettings(settings, trimmed));
+      } else {
+        failed = true;
+        toast(t('Failed to save terminology'), 'error');
+      }
+      if (!failed) toast(t('Appearance saved'), 'success');
     });
+  };
+
+  const handleDiscard = () => {
+    setSelectedId(savedId);
+    setTermsDraft(savedTerms);
   };
 
   const handleFeatureToggle = (id: TenantFeatureId, enabled: boolean) => {
@@ -294,30 +337,9 @@ export default function AppearancePage() {
     });
   };
 
-  const persistTerms = (patch: Partial<TenantTerms>, nextDraft: TenantTerms) => {
-    const previousSettings = settings;
-    const previousDraft = termsDraft;
-    setTermsDraft(nextDraft);
-    setSettings(patchTenantTermsSettings(settings, patch));
-    startTermsTransition(async () => {
-      try {
-        await saveTenantTermsAction(patch);
-        toast(t('Terminology saved'), 'success');
-      } catch {
-        setTermsDraft(previousDraft);
-        setSettings(previousSettings);
-        toast(t('Failed to save terminology'), 'error');
-      }
-    });
-  };
-
+  const presetLang = lang === 'en' ? 'en' : 'es';
   const handlePreset = (id: TenantMemberPresetId) => {
-    const member = MEMBER_TERM_PRESETS[id][lang === 'en' ? 'en' : 'es'];
-    persistTerms({ member }, { ...termsDraft, member });
-  };
-
-  const handleSaveTerms = () => {
-    persistTerms(termsDraft, termsDraft);
+    setTermsDraft({ ...termsDraft, member: { ...MEMBER_TERM_PRESETS[id][presetLang] } });
   };
 
   const handleMilestoneToggle = (field: keyof MilestoneSettings, value: boolean) => {
@@ -336,332 +358,275 @@ export default function AppearancePage() {
     });
   };
 
+  const renderSwitch = (on: boolean) => (
+    <span
+      aria-hidden
+      className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors ${on ? 'bg-pits-primary' : 'bg-pits-edge'}`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`}
+      />
+    </span>
+  );
+
+  const renderToggleRow = (opts: {
+    on: boolean;
+    disabled: boolean;
+    onToggle: () => void;
+    icon: typeof Dumbbell;
+    label: string;
+    desc: string;
+    indent?: boolean;
+  }) => {
+    const Icon = opts.icon;
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={opts.on}
+        disabled={opts.disabled}
+        onClick={opts.onToggle}
+        className={`w-full text-left rounded-xl border p-3 sm:p-4 bg-pits-surface transition-colors hover:border-pits-primary/50 disabled:opacity-60 disabled:hover:border-pits-edge ${
+          opts.on ? 'border-pits-primary/60' : 'border-pits-edge'
+        } ${opts.indent ? 'sm:ml-8 sm:w-[calc(100%-2rem)]' : ''}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <Icon size={18} className={`mt-0.5 shrink-0 ${opts.on ? 'text-pits-primary' : 'text-pits-ink-muted'}`} />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-pits-ink">{opts.label}</p>
+              <p className="mt-0.5 text-xs text-pits-ink-muted">{opts.desc}</p>
+            </div>
+          </div>
+          {renderSwitch(opts.on)}
+        </div>
+      </button>
+    );
+  };
+
+  const inputClass =
+    'w-full h-11 rounded-lg border border-pits-edge bg-pits-surface px-3 text-sm text-pits-ink outline-none focus:border-pits-primary focus:ring-2 focus:ring-pits-primary/30 disabled:opacity-60';
+  const fieldLabel = 'mb-1.5 block text-sm font-medium text-pits-ink';
+  const cardClass = 'rounded-2xl bg-pits-card border border-pits-edge p-4 sm:p-5 space-y-4';
+  const sectionTitle = 'text-base font-bold text-pits-ink';
+  const sectionHelp = 'mt-0.5 text-sm text-pits-ink-muted';
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start gap-3">
-        <div className="mt-1 rounded-xl bg-pits-card p-2 border border-pits-edge">
-          <PaletteIcon size={20} className="text-pits-primary" />
-        </div>
-        <div>
-          <h1 className="page-title">{t('Appearance')}</h1>
-          <p className="mt-1 text-sm font-bold text-pits-ink-muted">
-            {t('App color palette help')}
-          </p>
-        </div>
+      <div>
+        <h1 className="page-title">{t('Appearance')}</h1>
+        <p className="mt-1 text-sm text-pits-ink-muted">{t('How the app looks and what it shows your {members}.')}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
         <div className="space-y-6">
-          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
+          <section className={cardClass}>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
-                {t('App modules')}
-              </h2>
-              <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                {t('App modules help')}
-              </p>
+              <h2 className={sectionTitle}>{t('App color palette')}</h2>
+              <p className={sectionHelp}>{t('App color palette help')}</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {MODULE_COPY.map((mod) => {
-                const on = features[mod.id];
-                const Icon = mod.icon;
+            <div role="radiogroup" aria-label={t('App color palette')} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {swatches.map(({ id, palette }) => {
+                const active = selectedId === id;
+                const isSaved = savedId === id;
                 return (
                   <button
-                    key={mod.id}
+                    key={id}
                     type="button"
-                    role="switch"
-                    aria-checked={on}
-                    disabled={isFeaturePending}
-                    onClick={() => handleFeatureToggle(mod.id, !on)}
-                    className={`text-left rounded-2xl border-2 p-4 bg-pits-surface transition-colors disabled:opacity-60 ${
-                      on ? 'border-pits-primary' : 'border-pits-edge'
+                    role="radio"
+                    aria-checked={active}
+                    disabled={loading || isPending}
+                    onClick={() => setSelectedId(id)}
+                    title={t(paletteDescKey(id))}
+                    className={`relative text-left rounded-xl border-2 p-2.5 transition-colors disabled:opacity-60 ${
+                      active ? 'border-pits-primary' : 'border-pits-edge hover:border-pits-primary/40'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
-                          <Icon size={16} className={on ? 'text-pits-primary' : 'text-pits-ink-muted'} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-black text-pits-ink">{t(mod.label)}</p>
-                          <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                            {t(mod.desc)}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${
-                          on ? 'bg-pits-primary' : 'bg-pits-edge'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                            on ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </span>
+                    <div
+                      className="flex h-12 items-end gap-1 rounded-lg p-1.5"
+                      style={{ backgroundColor: palette.colors.background, border: `1px solid ${palette.colors.border}` }}
+                    >
+                      <span className="h-full flex-1 rounded" style={{ backgroundColor: palette.colors.card }} />
+                      <span className="h-3 flex-1 rounded" style={{ backgroundColor: palette.colors.primary }} />
+                      <span className="h-1.5 w-4 rounded" style={{ backgroundColor: palette.colors.textMain }} />
                     </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                      <p className="truncate text-sm font-semibold text-pits-ink">{t(paletteNameKey(id))}</p>
+                      {active ? <Check size={14} className="shrink-0 text-pits-primary" aria-hidden /> : null}
+                    </div>
+                    {isSaved ? <p className="text-[11px] text-pits-ink-muted">{t('In use')}</p> : null}
                   </button>
                 );
               })}
             </div>
-          </div>
+            <p className="text-xs text-pits-ink-muted">{t(paletteDescKey(selectedId))}</p>
+            {!loading ? (
+              <div className="lg:hidden pt-2">
+                <AppPreview colors={selected.colors} features={features} workoutTerm={termsDraft.workout || savedTerms.workout} />
+              </div>
+            ) : null}
+          </section>
 
-          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
-                <Type size={16} className="text-pits-primary" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
-                  {t('Terminology')}
-                </h2>
-                <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                  {t('Terminology help')}
-                </p>
-              </div>
+          <section className={cardClass}>
+            <div>
+              <h2 className={sectionTitle}>{t('App modules')}</h2>
+              <p className={sectionHelp}>{t('App modules help')}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COPY.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  disabled={isTermsPending}
-                  onClick={() => handlePreset(preset.id)}
-                  className="rounded-full border-2 border-pits-edge bg-pits-surface px-3 py-1.5 text-xs font-black uppercase tracking-wide text-pits-ink hover:border-pits-primary disabled:opacity-60"
-                >
-                  {t(preset.label)}
-                </button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {MODULE_COPY.map((mod) => (
+                <div key={mod.id}>
+                  {renderToggleRow({
+                    on: features[mod.id],
+                    disabled: isFeaturePending,
+                    onToggle: () => handleFeatureToggle(mod.id, !features[mod.id]),
+                    icon: mod.icon,
+                    label: t(mod.label),
+                    desc: t(mod.desc),
+                  })}
+                </div>
               ))}
+            </div>
+          </section>
+
+          <section className={cardClass}>
+            <div>
+              <h2 className={sectionTitle}>{t('Terminology')}</h2>
+              <p className={sectionHelp}>{t('Terminology help')}</p>
+            </div>
+            <div>
+              <p className={fieldLabel}>{t('Quick pick')}</p>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_COPY.map((preset) => {
+                  const words = MEMBER_TERM_PRESETS[preset.id][presetLang];
+                  const on =
+                    termsDraft.member.singular === words.singular && termsDraft.member.plural === words.plural;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-pressed={on}
+                      disabled={isPending}
+                      onClick={() => handlePreset(preset.id)}
+                      className={`min-h-9 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                        on
+                          ? 'border-pits-primary bg-pits-primary/15 text-pits-ink'
+                          : 'border-pits-edge bg-pits-surface text-pits-ink-muted hover:text-pits-ink hover:border-pits-primary/50'
+                      }`}
+                    >
+                      {t(preset.label)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                  {t('Term member singular')}
-                </span>
+                <span className={fieldLabel}>{t('Term member singular')}</span>
                 <input
                   type="text"
                   value={termsDraft.member.singular}
-                  disabled={isTermsPending}
+                  disabled={isPending}
                   onChange={(e) =>
-                    setTermsDraft({
-                      ...termsDraft,
-                      member: { ...termsDraft.member, singular: e.target.value },
-                    })
+                    setTermsDraft({ ...termsDraft, member: { ...termsDraft.member, singular: e.target.value } })
                   }
-                  className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                  aria-invalid={!termsDraft.member.singular.trim()}
+                  className={inputClass}
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                  {t('Term member plural')}
-                </span>
+                <span className={fieldLabel}>{t('Term member plural')}</span>
                 <input
                   type="text"
                   value={termsDraft.member.plural}
-                  disabled={isTermsPending}
+                  disabled={isPending}
                   onChange={(e) =>
-                    setTermsDraft({
-                      ...termsDraft,
-                      member: { ...termsDraft.member, plural: e.target.value },
-                    })
+                    setTermsDraft({ ...termsDraft, member: { ...termsDraft.member, plural: e.target.value } })
                   }
-                  className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                  aria-invalid={!termsDraft.member.plural.trim()}
+                  className={inputClass}
                 />
               </label>
               {TERM_FIELDS.map((field) => (
                 <label key={field.key} className="block">
-                  <span className="mb-1.5 block text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-                    {t(field.label)}
-                  </span>
+                  <span className={fieldLabel}>{t(field.label)}</span>
                   <input
                     type="text"
                     value={termsDraft[field.key]}
-                    disabled={isTermsPending}
-                    onChange={(e) =>
-                      setTermsDraft({ ...termsDraft, [field.key]: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-pits-edge bg-pits-surface px-3 py-2 text-sm font-bold text-pits-ink outline-none focus:border-pits-primary disabled:opacity-60"
+                    disabled={isPending}
+                    onChange={(e) => setTermsDraft({ ...termsDraft, [field.key]: e.target.value })}
+                    aria-invalid={!termsDraft[field.key].trim()}
+                    className={inputClass}
                   />
                 </label>
               ))}
             </div>
-            <button
-              type="button"
-              disabled={isTermsPending}
-              onClick={handleSaveTerms}
-              className="rounded-xl bg-pits-primary px-4 py-2.5 text-xs font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2"
-            >
-              {isTermsPending ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  {t('Processing...')}
-                </>
-              ) : (
-                t('Save terminology')
-              )}
-            </button>
-          </div>
+            {!termsValid ? <p className="text-xs text-pits-warning">{t('Fill in every word before saving.')}</p> : null}
+          </section>
 
-          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
+          <section className={cardClass}>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
-                {t('Milestones')}
-              </h2>
-              <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                {t('Milestone settings help')}
-              </p>
+              <h2 className={sectionTitle}>{t('Milestones')}</h2>
+              <p className={sectionHelp}>{t('Milestone settings help')}</p>
             </div>
-            <div className="space-y-3">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={milestoneSettings.enabled}
-                disabled={isMilestonePending}
-                onClick={() => handleMilestoneToggle('enabled', !milestoneSettings.enabled)}
-                className={`w-full text-left rounded-2xl border-2 p-4 bg-pits-surface transition-colors disabled:opacity-60 ${
-                  milestoneSettings.enabled ? 'border-pits-primary' : 'border-pits-edge'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
-                      <Award size={16} className={milestoneSettings.enabled ? 'text-pits-primary' : 'text-pits-ink-muted'} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-black text-pits-ink">{t('Enable milestones')}</p>
-                      <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                        {t('Milestone enabled desc')}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
-                      milestoneSettings.enabled
-                        ? 'border-pits-primary bg-pits-primary'
-                        : 'border-pits-edge bg-pits-surface'
-                    }`}
-                  >
-                    {milestoneSettings.enabled && <Check size={12} className="text-pits-black" strokeWidth={3} />}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={milestoneSettings.pushEnabled}
-                disabled={isMilestonePending || !milestoneSettings.enabled}
-                onClick={() => handleMilestoneToggle('pushEnabled', !milestoneSettings.pushEnabled)}
-                className={`w-full text-left rounded-2xl border-2 p-4 bg-pits-surface transition-colors disabled:opacity-60 ${
-                  milestoneSettings.pushEnabled && milestoneSettings.enabled ? 'border-pits-primary' : 'border-pits-edge'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="mt-0.5 rounded-lg bg-pits-card p-2 border border-pits-edge">
-                      <ClipboardCheck size={16} className={milestoneSettings.pushEnabled && milestoneSettings.enabled ? 'text-pits-primary' : 'text-pits-ink-muted'} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-black text-pits-ink">{t('Milestone push notifications')}</p>
-                      <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                        {t('Milestone push desc')}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors ${
-                      milestoneSettings.pushEnabled && milestoneSettings.enabled
-                        ? 'border-pits-primary bg-pits-primary'
-                        : 'border-pits-edge bg-pits-surface'
-                    }`}
-                  >
-                    {milestoneSettings.pushEnabled && milestoneSettings.enabled && <Check size={12} className="text-pits-black" strokeWidth={3} />}
-                  </span>
-                </div>
-              </button>
+            <div className="space-y-2">
+              {renderToggleRow({
+                on: !!milestoneSettings.enabled,
+                disabled: isMilestonePending,
+                onToggle: () => handleMilestoneToggle('enabled', !milestoneSettings.enabled),
+                icon: Trophy,
+                label: t('Enable milestones'),
+                desc: t('Milestone enabled desc'),
+              })}
+              {renderToggleRow({
+                on: !!(milestoneSettings.pushEnabled && milestoneSettings.enabled),
+                disabled: isMilestonePending || !milestoneSettings.enabled,
+                onToggle: () => handleMilestoneToggle('pushEnabled', !milestoneSettings.pushEnabled),
+                icon: ClipboardCheck,
+                label: t('Milestone push notifications'),
+                desc: t('Milestone push desc'),
+                indent: true,
+              })}
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-pits-card border border-pits-edge p-5 space-y-4">
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-tight text-pits-ink">
-                {t('App color palette')}
-              </h2>
-              <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                {t('App color palette help')}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-            {swatches.map(({ id, palette }) => {
-              const active = selectedId === id;
-              const isSaved = savedId === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  disabled={loading || isPending}
-                  onClick={() => setSelectedId(id)}
-                  className={`text-left rounded-2xl border-2 p-4 bg-pits-card transition-colors ${
-                    active ? 'border-pits-primary' : 'border-pits-edge hover:border-pits-primary/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-black text-pits-ink">{t(paletteNameKey(id))}</p>
-                    {isSaved && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wide text-pits-primary">
-                        <Check size={12} />
-                        {t('Currently saved')}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs font-bold text-pits-ink-muted">
-                    {t(paletteDescKey(id))}
-                  </p>
-                  <div className="mt-3 flex gap-1.5">
-                    {[palette.colors.background, palette.colors.card, palette.colors.primary, palette.colors.textMain].map(
-                      (hex, i) => (
-                        <span
-                          key={`${id}-${i}`}
-                          className="h-7 w-7 rounded-full border border-pits-edge"
-                          style={{ backgroundColor: hex }}
-                        />
-                      )
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          </div>
+          </section>
         </div>
 
-        <div className="lg:sticky lg:top-6 rounded-2xl bg-pits-card border border-pits-edge p-4">
-          <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-pits-ink-muted">
-            {t('App color palette')}
-          </p>
+        <aside className="hidden lg:block lg:sticky lg:top-6 rounded-2xl bg-pits-card border border-pits-edge p-4">
+          <p className="mb-4 text-sm font-semibold text-pits-ink">{t('App preview')}</p>
           {loading ? (
             <div className="h-[360px] rounded-[2rem] bg-pits-surface animate-pulse" />
           ) : (
-            <AppPreview colors={selected.colors} features={features} />
+            <AppPreview colors={selected.colors} features={features} workoutTerm={termsDraft.workout || savedTerms.workout} />
           )}
-          <button
-            type="button"
-            disabled={loading || isPending || !dirty}
-            onClick={handleSave}
-            className="mt-4 w-full rounded-xl bg-pits-primary py-3 text-sm font-black uppercase tracking-wide text-pits-dark-text disabled:opacity-40 inline-flex items-center justify-center gap-2"
-          >
-            {isPending ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                {t('Processing...')}
-              </>
-            ) : (
-              t('Save palette')
-            )}
-          </button>
-        </div>
+          <p className="mt-3 text-center text-xs text-pits-ink-muted">{t('Updates as you change things.')}</p>
+        </aside>
       </div>
+
+      {dirty ? (
+        <div className="sticky bottom-0 z-30 -mx-1 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-pits-edge bg-pits-card/95 p-3 shadow-xl backdrop-blur">
+            <p className="text-sm font-semibold text-pits-ink">{t('Booking unsaved changes')}</p>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={handleDiscard}
+                disabled={isPending}
+                className="min-h-11 sm:min-h-9 rounded-lg px-3 text-sm font-semibold text-pits-ink-muted hover:text-pits-ink hover:bg-pits-surface disabled:opacity-50"
+              >
+                {t('Discard changes')}
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isPending || (termsDirty && !termsValid)}
+                className="min-h-11 sm:min-h-9 inline-flex items-center gap-2 rounded-lg bg-pits-primary px-4 text-sm font-bold text-pits-dark-text disabled:opacity-50"
+              >
+                {isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+                {t('Save changes')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
