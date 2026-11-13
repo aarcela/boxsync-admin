@@ -3,11 +3,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Profile } from '@/lib/types/gym';
+import { fetchGymTimezone } from '@/lib/gym-timezone';
+import { addDaysToDateStr, getGymDate, getGymDayRange } from '@/lib/utils/date';
+
+/** Members whose renew date falls within this many days (today included). */
+const EXPIRING_WINDOW_DAYS = 7;
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
+type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date' | 'plan_period_start';
 type SortDir = 'asc' | 'desc';
 
 const DB_SORT_COLUMNS: Record<Exclude<SortKey, 'last_payment_date'>, string> = {
@@ -15,10 +20,17 @@ const DB_SORT_COLUMNS: Record<Exclude<SortKey, 'last_payment_date'>, string> = {
   is_solvent: 'is_solvent',
   created_at: 'created_at',
   plan: 'plan',
+  plan_period_start: 'plan_period_start',
 };
 
 function parseSortKey(value: string | null): SortKey {
-  if (value === 'is_solvent' || value === 'created_at' || value === 'plan' || value === 'last_payment_date') {
+  if (
+    value === 'is_solvent' ||
+    value === 'created_at' ||
+    value === 'plan' ||
+    value === 'last_payment_date' ||
+    value === 'plan_period_start'
+  ) {
     return value;
   }
   return 'full_name';
@@ -72,16 +84,18 @@ async function enrichWithEmails(ids: string[]) {
   return { emails, invitePending };
 }
 
-type SolvencyFilter = 'all' | 'solvent' | 'unpaid';
+type SolvencyFilter = 'all' | 'solvent' | 'unpaid' | 'expiring';
 
 /** Shallow filter surface — documents the methods this helper uses on Supabase builders. */
 type ProfileFilterQuery = {
   eq(col: string, val: unknown): ProfileFilterQuery;
+  gte(col: string, val: unknown): ProfileFilterQuery;
+  lt(col: string, val: unknown): ProfileFilterQuery;
   ilike(col: string, val: string): ProfileFilterQuery;
 };
 
 function parseSolvencyFilter(value: string | null): SolvencyFilter {
-  if (value === 'solvent' || value === 'unpaid') return value;
+  if (value === 'solvent' || value === 'unpaid' || value === 'expiring') return value;
   return 'all';
 }
 
@@ -94,12 +108,15 @@ function applyProfileFilters(
     role,
     solvency,
     plan,
+    expiringRange,
   }: {
     tenantId: string | null;
     search: string;
     role: string;
     solvency: SolvencyFilter;
     plan: string;
+    /** UTC bounds [from, to) of the "expiring soon" window; required when solvency is 'expiring'. */
+    expiringRange?: { fromUtc: string; toUtc: string };
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
@@ -117,6 +134,12 @@ function applyProfileFilters(
     filtered = filtered.eq('is_solvent', true);
   } else if (solvency === 'unpaid') {
     filtered = filtered.eq('is_solvent', false);
+  } else if (solvency === 'expiring' && expiringRange) {
+    filtered = filtered
+      .eq('role', 'member')
+      .eq('is_solvent', true)
+      .gte('plan_period_start', expiringRange.fromUtc)
+      .lt('plan_period_start', expiringRange.toUtc);
   }
 
   if (plan !== 'all') {
@@ -149,6 +172,13 @@ export async function GET(request: NextRequest) {
     const sortDir = parseSortDir(searchParams.get('sortDir'));
     const tenantId = (staffAuth.profile.tenant_id as string | null) ?? null;
 
+    const tz = await fetchGymTimezone(staffAuth.supabase, tenantId);
+    const today = getGymDate(new Date(), tz);
+    const expiringRange = {
+      fromUtc: getGymDayRange(today, tz).startUtc,
+      toUtc: getGymDayRange(addDaysToDateStr(today, EXPIRING_WINDOW_DAYS + 1), tz).startUtc,
+    };
+
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -159,13 +189,20 @@ export async function GET(request: NextRequest) {
 
     if (unpaidError) throw unpaidError;
 
+    const { count: expiringCount, error: expiringError } = await applyProfileFilters(
+      staffAuth.supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      { tenantId, search: '', role: 'all', solvency: 'expiring', plan: 'all', expiringRange }
+    );
+
+    if (expiringError) throw expiringError;
+
     let profiles: Profile[] = [];
     let totalCount = 0;
 
     if (sortKey === 'last_payment_date') {
       const { data: idRows, error: idError, count } = await applyProfileFilters(
         staffAuth.supabase.from('profiles').select('id', { count: 'exact' }),
-        { tenantId, search, role, solvency, plan }
+        { tenantId, search, role, solvency, plan, expiringRange }
       );
 
       if (idError) throw idError;
@@ -202,9 +239,9 @@ export async function GET(request: NextRequest) {
         staffAuth.supabase
           .from('profiles')
           .select('*, bookings!left(status, created_at)', { count: 'exact' }),
-        { tenantId, search, role, solvency, plan }
+        { tenantId, search, role, solvency, plan, expiringRange }
       )
-        .order(sortColumn, { ascending: sortDir === 'asc' })
+        .order(sortColumn, { ascending: sortDir === 'asc', nullsFirst: false })
         .range(from, to);
 
       if (error) throw error;
@@ -231,6 +268,7 @@ export async function GET(request: NextRequest) {
       profiles: enrichedProfiles,
       totalCount,
       unpaidCount: unpaidCount ?? 0,
+      expiringCount: expiringCount ?? 0,
       page,
       pageSize,
     });

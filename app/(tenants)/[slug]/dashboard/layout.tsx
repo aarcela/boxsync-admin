@@ -28,7 +28,7 @@ import {
   CreditCard,
   Banknote,
   Receipt,
-  Clock,
+  Lock,
   Rocket,
   Palette,
   ClipboardList,
@@ -182,8 +182,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
     const groups: NavGroup[] = [
       { id: 'home', name: t('Home'), icon: LayoutDashboard, tip: t('Nav tip Home'), tabs: [tab('Home', '/dashboard', LayoutDashboard, 'Nav tip Home')] },
-      { id: 'checkin', name: t('Nav Check-in'), icon: ClipboardCheck, tip: t('Nav tip Check-in'), tabs: [tab('Nav Check-in', '/dashboard/attendance', ClipboardCheck, 'Nav tip Check-in')] },
-      { id: 'users', name: t('Users'), icon: Users, tip: t('Nav tip Users'), tabs: [tab('Users', '/dashboard/athletes', Users, 'Nav tip Users')] },
+      {
+        id: 'checkin',
+        name: t('Nav Check-in'),
+        icon: ClipboardCheck,
+        tip: t('Nav tip Check-in'),
+        tabs: [
+          tab('Nav Check-in', '/dashboard/attendance', ClipboardCheck, 'Nav tip Check-in'),
+          // Front-desk tool: athletes scan it to join, so it lives next to Check-in.
+          ...(emailConfirmed ? [tab('Join QR', '/dashboard/profile', QrCode, 'Nav tip Athlete join QR')] : []),
+        ],
+      },
+      { id: 'users', name: t('Athletes'), icon: Users, tip: t('Nav tip Users'), tabs: [tab('Athletes', '/dashboard/athletes', Users, 'Nav tip Users')] },
       {
         id: 'classes',
         name: t('Classes'),
@@ -237,7 +247,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         tabs: [
           tab('Box health', '/dashboard/performance', TrendingUp, 'Nav tip Box health'),
           tab('Spotter', '/dashboard/ask', SpotterMark as unknown as LucideIcon, 'Nav tip Spotter'),
-          tab('Revenue Rescue', '/dashboard/financials/insights', BarChart3, 'Nav tip Reports'),
+          tab('Revenue Rescue', '/dashboard/financials/insights', BarChart3, 'Nav tip Members at risk'),
           tab('Founding Pilot', '/dashboard/pilot', Rocket, 'Nav tip Founding Pilot'),
         ],
       },
@@ -256,7 +266,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 tab('Appearance', '/dashboard/appearance', Palette, 'Nav tip Appearance'),
               ]
             : []),
-          ...(emailConfirmed ? [tab('Join QR', '/dashboard/profile', QrCode, 'Nav tip Athlete join QR')] : []),
           ...(userRole === 'admin' || signupSource === 'self_serve'
             ? [{ name: t('Setup assistant'), href: '/dashboard/setup', icon: ListChecks, tip: t('Configure your gym') }]
             : []),
@@ -519,9 +528,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   disabled={runningExpiry}
                   className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors border disabled:opacity-50 bg-pits-warning-soft hover:bg-pits-warning-edge text-pits-warning border-pits-warning-edge"
                 >
-                  <Clock size={16} className={runningExpiry ? 'animate-spin' : ''} />
+                  <Lock size={16} className={runningExpiry ? 'animate-pulse' : ''} />
                   <span className="hidden sm:inline text-xs font-semibold">
-                    {t('{{count}} memberships due', { count: dueCount })}
+                    {t('Lock {{count}} expired', { count: dueCount })}
                   </span>
                   <span className="sm:hidden text-xs font-bold">{dueCount > 99 ? '99+' : dueCount}</span>
                 </button>

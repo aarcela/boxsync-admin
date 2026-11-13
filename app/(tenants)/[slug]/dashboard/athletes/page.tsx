@@ -5,8 +5,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePaletteCommand } from '@/components/CommandPalette';
-import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound, MoreVertical, Clock } from 'lucide-react';
+import { Search, UserPlus, Filter, Edit2, Trash2, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MessageCircle, Calendar, Mail, Loader2, KeyRound, MoreVertical, Clock, Banknote } from 'lucide-react';
 import AddAthleteModal from '@/components/AddAthleteModal';
+import RegisterPaymentModal from '@/components/RegisterPaymentModal';
 import EditAthleteModal from '@/components/EditAthleteModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatDate, formatRelative } from '@/lib/utils/format-date';
@@ -33,6 +34,7 @@ export default function AthletesPage() {
   const { timezone } = useTenant();
   const router = useRouter();
   const { t, lang } = useLanguage();
+  const searchParams = useSearchParams();
   const {
     profiles,
     loading,
@@ -52,6 +54,7 @@ export default function AthletesPage() {
     totalCount,
     totalPages,
     unpaidCount,
+    expiringCount,
     toggleSolvency,
     changePlan,
     updateRenewDate,
@@ -70,7 +73,9 @@ export default function AthletesPage() {
     bulkSendPasswordResets,
     bulkSendExpiryReminders,
     refresh
-  } = useAthletes();
+  } = useAthletes({
+    initialSolvency: searchParams.get('filter') === 'expiring' ? 'expiring' : 'all',
+  });
 
   const [callerRole, setCallerRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -110,7 +115,6 @@ export default function AthletesPage() {
     loadContext();
   }, []);
 
-  const searchParams = useSearchParams();
   const [isAddModalOpen, setIsAddModalOpen] = useState(() => searchParams.get('new') === '1');
   usePaletteCommand('new-athlete', () => setIsAddModalOpen(true));
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -145,6 +149,7 @@ export default function AthletesPage() {
   }>({ isOpen: false, profile: null });
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [paymentAthlete, setPaymentAthlete] = useState<{ id: string; full_name: string | null } | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -156,7 +161,7 @@ export default function AthletesPage() {
   const getActionMenuItemCount = useCallback((profile: Profile) => {
     let count = 1;
     if (profile.role === 'member') {
-      count += 1;
+      count += 2;
       if (profile.invite_pending || profile.email) count += 1;
     }
     if (isAdmin && profile.id !== currentUserId) count += 1;
@@ -394,7 +399,7 @@ export default function AthletesPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
           <h1 className="page-title">
-            {t('Users')}
+            {t('Athletes')}
           </h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-pits-dim">
             <span>
@@ -445,6 +450,7 @@ export default function AthletesPage() {
               { value: 'all', label: t('All') },
               { value: 'solvent', label: t('Up to date') },
               { value: 'unpaid', label: unpaidCount > 0 ? `${t('With debt')} · ${unpaidCount}` : t('With debt') },
+              { value: 'expiring', label: expiringCount > 0 ? `${t('Expires in 7 days')} · ${expiringCount}` : t('Expires in 7 days') },
             ] as const).map((chip) => (
               <button
                 key={chip.value}
@@ -730,7 +736,16 @@ export default function AthletesPage() {
                       <SortIcon column="is_solvent" sortKey={sortKey} sortDir={sortDir} />
                     </button>
                   </th>
-                  <th className="px-4 sm:px-5 py-3 whitespace-nowrap">{t('Renew date')}</th>
+                  <th className="px-4 sm:px-5 py-3 whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('plan_period_start')}
+                      className="inline-flex items-center hover:text-pits-text transition-colors"
+                    >
+                      {t('Renew date')}
+                      <SortIcon column="plan_period_start" sortKey={sortKey} sortDir={sortDir} />
+                    </button>
+                  </th>
                   <th className="px-4 sm:px-5 py-3 whitespace-nowrap">{t('Activity')}</th>
                   <th className="px-4 sm:px-5 py-3 text-right">{t('Actions')}</th>
                 </tr>
@@ -1154,12 +1169,34 @@ export default function AthletesPage() {
         );
       })()}
 
+      {paymentAthlete ? (
+        <RegisterPaymentModal
+          key={paymentAthlete.id}
+          isOpen
+          athlete={paymentAthlete}
+          onClose={() => setPaymentAthlete(null)}
+          onSaved={() => void refresh()}
+        />
+      ) : null}
+
       {openMenuProfile && menuPosition && typeof document !== 'undefined' && createPortal(
         <div
           ref={menuRef}
           style={{ top: menuPosition.top, left: menuPosition.left, width: ACTION_MENU_WIDTH }}
           className="fixed z-200 rounded-xl border border-pits-edge bg-pits-surface-elevated shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-150"
         >
+          {openMenuProfile.role === 'member' && (
+            <button
+              onClick={() => {
+                closeMenu();
+                setPaymentAthlete({ id: openMenuProfile.id, full_name: openMenuProfile.full_name });
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-pits-text hover:bg-pits-surface-muted transition-colors"
+            >
+              <Banknote size={14} className="shrink-0 text-pits-dim" />
+              {t('Register payment')}
+            </button>
+          )}
           {openMenuProfile.role === 'member' && openMenuProfile.invite_pending && (
             <button
               onClick={() => {

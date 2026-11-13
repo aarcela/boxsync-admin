@@ -6,12 +6,14 @@ import { useToast } from '@/components/Toast';
 import { useLanguage } from '@/components/LanguageContext';
 import { renewDateToIso } from '@/lib/renew-date';
 
-export type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date';
+export type SortKey = 'full_name' | 'is_solvent' | 'created_at' | 'plan' | 'last_payment_date' | 'plan_period_start';
 export type SortDir = 'asc' | 'desc';
 
 const ITEMS_PER_PAGE = 20;
 
-export function useAthletes() {
+export type SolvencyFilter = 'all' | 'solvent' | 'unpaid' | 'expiring';
+
+export function useAthletes(options?: { initialSolvency?: SolvencyFilter }) {
   const { timezone } = useTenant();
   const { toast } = useToast();
   const { t, lang } = useLanguage();
@@ -19,6 +21,7 @@ export function useAthletes() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [unpaidCount, setUnpaidCount] = useState(0);
+  const [expiringCount, setExpiringCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
   const [sendingResetId, setSendingResetId] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export function useAthletes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [solvencyFilter, setSolvencyFilter] = useState<'all' | 'solvent' | 'unpaid'>('all');
+  const [solvencyFilter, setSolvencyFilter] = useState<SolvencyFilter>(options?.initialSolvency ?? 'all');
   const [planFilter, setPlanFilter] = useState<string>('all');
 
   const [sortKey, setSortKey] = useState<SortKey>('full_name');
@@ -69,6 +72,7 @@ export function useAthletes() {
       setProfiles(data.profiles);
       setTotalCount(data.totalCount);
       setUnpaidCount(data.unpaidCount);
+      setExpiringCount(data.expiringCount ?? 0);
     } catch (error) {
       console.error('Error fetching athletes:', error);
       toast('Failed to load athlete data', 'error');
@@ -574,6 +578,7 @@ export function useAthletes() {
     totalCount,
     totalPages,
     unpaidCount,
+    expiringCount,
     toggleSolvency,
     changePlan,
     updateRenewDate,

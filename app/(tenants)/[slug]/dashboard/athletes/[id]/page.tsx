@@ -27,6 +27,7 @@ import {
   KeyRound,
   Trash2,
   MoreHorizontal,
+  Banknote,
 } from 'lucide-react';
 import { athleteService, PlanSessionUsage } from '@/lib/services/athleteService';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
@@ -41,6 +42,7 @@ import { useLanguage } from '@/components/LanguageContext';
 import { getRenewDateInputValue, renewDateToIso } from '@/lib/renew-date';
 import { supabase } from '@/lib/supabase';
 import EditAthleteModal from '@/components/EditAthleteModal';
+import RegisterPaymentModal from '@/components/RegisterPaymentModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ProfileAvatar from '@/components/ProfileAvatar';
 import { PageLoader } from '@/components/LoadingStates';
@@ -115,6 +117,8 @@ export default function AthleteDetailPage() {
       cancelled = true;
     };
   }, [athleteId, tenantId, statusVersion]);
+
+  const [registerPaymentOpen, setRegisterPaymentOpen] = useState(false);
 
   const refreshPlanUsage = useCallback(async () => {
     if (!athleteId) return;
@@ -580,7 +584,7 @@ export default function AthleteDetailPage() {
         className="group inline-flex items-center text-sm font-semibold text-pits-dim hover:text-pits-text min-h-10"
       >
         <ArrowLeft size={16} className="mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
-        {t('Users')}
+        {t('Athletes')}
       </button>
 
       {/* Summary: who, status, what to do */}
@@ -646,15 +650,14 @@ export default function AthleteDetailPage() {
             <button type="button" onClick={() => setReviewId(pendingPayments[0].id)} className={btnPrimary}>
               <CreditCard size={16} aria-hidden /> {t('Review proof')}
             </button>
-          ) : isMember && status !== 'ok' ? (
+          ) : null}
+          {isMember ? (
             <button
               type="button"
-              onClick={() => setConfirmKind('markPaid')}
-              disabled={actionLoading === 'markPaid' || !profile.plan}
-              className={btnPrimary}
+              onClick={() => setRegisterPaymentOpen(true)}
+              className={pendingPayments.length === 0 && status !== 'ok' ? btnPrimary : btnSecondary}
             >
-              {actionLoading === 'markPaid' ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} aria-hidden />}
-              {t('Mark as paid')}
+              <Banknote size={16} aria-hidden /> {t('Register payment')}
             </button>
           ) : null}
           {phoneDigits ? (
@@ -705,6 +708,17 @@ export default function AthleteDetailPage() {
                   {isMember && !profile.invite_pending && profile.email ? (
                     <button role="menuitem" type="button" className={menuItem} onClick={() => { setMoreOpen(false); setConfirmKind('reset'); }}>
                       <KeyRound size={16} className="text-pits-dim" /> {t('Send password reset')}
+                    </button>
+                  ) : null}
+                  {isMember && status !== 'ok' && profile.plan ? (
+                    <button
+                      role="menuitem"
+                      type="button"
+                      disabled={actionLoading === 'markPaid'}
+                      className={menuItem}
+                      onClick={() => { setMoreOpen(false); setConfirmKind('markPaid'); }}
+                    >
+                      <CheckCircle2 size={16} className="text-pits-dim" /> {t('Mark as paid (no payment)')}
                     </button>
                   ) : null}
                   {isMember && profile.is_solvent ? (
@@ -1033,6 +1047,18 @@ export default function AthleteDetailPage() {
         onSuccess={() => void refreshAthlete()}
         userId={profile.id}
       />
+
+      {registerPaymentOpen ? (
+        <RegisterPaymentModal
+          isOpen
+          onClose={() => setRegisterPaymentOpen(false)}
+          athlete={{ id: profile.id, full_name: profile.full_name }}
+          onSaved={() => {
+            void refreshAthlete();
+            bumpStatus();
+          }}
+        />
+      ) : null}
 
       <ConfirmDialog
         isOpen={confirmKind === 'markPaid'}

@@ -12,11 +12,13 @@ export function useDashboardData() {
     pendingPayments: [],
     inactiveAthletes: [],
     unpaidMembers: [],
+    expiringMembers: [],
     overdueMembers: [],
     totalMembers: [],
     lowOccupancyClasses: [],
     dailyUsagePercent: 0,
     todayAttendance: EMPTY_TODAY_ATTENDANCE,
+    todayWodPublished: true,
   });
   const [loading, setLoading] = useState(true);
   /** True once real data has arrived; until then the UI must not imply "all clear". */

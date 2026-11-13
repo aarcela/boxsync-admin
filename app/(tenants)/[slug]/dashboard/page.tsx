@@ -7,7 +7,8 @@ import {
   CheckCircle, RefreshCw,
   AlertTriangle, ShieldAlert,
   TrendingUp, Zap, ChevronRight,
-  Calendar, Clock, Sparkles
+  Calendar, Clock, Sparkles,
+  UserPlus, ClipboardCheck, Dumbbell
 } from 'lucide-react';
 import DashboardDetailModal from './components/DashboardDetailModal';
 import type { DashboardProfile, DashboardClass, DashboardPayment } from '@/lib/services/dashboardService';
@@ -42,7 +43,7 @@ export default function DashboardPage() {
     active(count) ? CHIP[tone] : 'bg-pits-surface-muted text-pits-dim border-pits-edge';
   const { toast } = useToast();
   const { t, lang } = useLanguage();
-  const { currencies } = useTenant();
+  const { currencies, features } = useTenant();
   const [setupCard, setSetupCard] = useState<{ show: boolean } | null>(null);
 
   useEffect(() => {
@@ -181,6 +182,34 @@ export default function DashboardPage() {
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
+      </div>
+
+      {/* QUICK ACTIONS — the daily jobs, one click each */}
+      <div className="flex flex-wrap gap-2">
+        {features.wod && loaded && !stats.todayWodPublished ? (
+          <Link
+            href="/dashboard/wods"
+            className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-pits-warning-soft text-pits-warning border border-pits-warning-edge text-sm font-semibold hover:shadow-sm"
+          >
+            <Dumbbell size={16} aria-hidden />
+            {t("Today's workout is not published")}
+            <ChevronRight size={14} aria-hidden />
+          </Link>
+        ) : null}
+        <Link
+          href="/dashboard/attendance"
+          className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-pits-text text-white text-sm font-semibold hover:bg-black"
+        >
+          <ClipboardCheck size={16} aria-hidden />
+          {t('Nav Check-in')}
+        </Link>
+        <Link
+          href="/dashboard/athletes?new=1"
+          className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-pits-surface-elevated border border-pits-edge text-pits-text text-sm font-semibold hover:shadow-sm"
+        >
+          <UserPlus size={16} aria-hidden />
+          {t('Add Athlete')}
+        </Link>
       </div>
 
       {setupCard?.show && (
@@ -347,25 +376,25 @@ export default function DashboardPage() {
           </div>
         </button>
 
-        {/* Signal 5: Active Roster */}
-        <button 
-           onClick={() => openModal(t('Active Roster'), 'athletes', stats.totalMembers.filter(m => m.is_solvent))}
-           className="bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 border-b-pits-edge group transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] col-span-2 lg:col-span-1"
+        {/* Signal 5: Memberships expiring in the next 7 days → filtered athletes list (bulk reminders live there) */}
+        <Link
+          href="/dashboard/athletes?filter=expiring"
+          className={`group bg-pits-surface-elevated p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-between border-b-4 transition-all hover:shadow-lg hover:-translate-y-0.5 text-left min-h-[108px] sm:min-h-[132px] col-span-2 lg:col-span-1 ${stripe(stats.expiringMembers.length, 'warning')}`}
         >
           <div className="flex justify-between items-start mb-2 sm:mb-3">
-            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Roster')}</p>
-            <div className="p-1.5 sm:p-2 rounded-xl border bg-pits-surface-muted text-pits-dim border-pits-edge">
-              <CheckCircle size={16} />
+            <p className="text-pits-dim font-black text-[11px] sm:text-[11px] uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded">{t('Expiring')}</p>
+            <div className={`p-1.5 sm:p-2 rounded-xl border transition-colors ${chip(stats.expiringMembers.length, 'warning')}`}>
+              <Calendar size={16} />
             </div>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.totalMembers.filter(m => m.is_solvent).length)}</p>
-            <p className="text-[11px] sm:text-[11px] text-pits-dim font-black uppercase tracking-widest mt-1.5 flex items-center justify-between group-hover:text-pits-text transition-colors">
-              <span className="line-clamp-2 pr-1">{t('Active Athletes')}</span>
-              <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
-            </p>
+            <p className="text-2xl sm:text-3xl font-black text-pits-text leading-none">{show(stats.expiringMembers.length)}</p>
+            <div className="flex items-center justify-between mt-1.5 text-[11px] sm:text-[11px] font-black uppercase tracking-wider text-pits-dim group-hover:text-pits-text">
+              <span className="line-clamp-2 pr-1">{t('Expires in 7 days')}</span>
+              <ChevronRight size={12} className="shrink-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all" />
+            </div>
           </div>
-        </button>
+        </Link>
       </div>
 
       {/* PRIORITY ACTION QUEUE */}

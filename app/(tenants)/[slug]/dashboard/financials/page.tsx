@@ -363,7 +363,43 @@ export default function FinancialsPage() {
 
           {/* THE LEDGER TABLE */}
           <div className="bg-pits-surface-elevated rounded-3xl border border-pits-edge shadow-sm overflow-hidden min-h-[400px] min-w-0">
-             <div className="overflow-x-auto">
+             {/* Phone: one card per payment, primary action full width */}
+             <ul className="md:hidden divide-y divide-pits-edge">
+               {loading ? (
+                 <li className="p-6 text-center text-sm text-pits-dim">{t('Loading...')}</li>
+               ) : filteredPayments.length === 0 ? (
+                 <li className="py-16 text-center text-sm font-medium text-pits-dim">{t('No payments in this period.')}</li>
+               ) : paginatedPayments.map(p => (
+                 <li key={p.id} className="p-4 flex items-center gap-3">
+                   <div className="flex-1 min-w-0">
+                     <p className="text-sm font-semibold text-pits-text truncate">{p.profiles?.full_name || t('Unknown Athlete')}</p>
+                     <p className="text-xs text-pits-dim mt-0.5 truncate">
+                       {formatDate(p.created_at, lang)} · {p.method || t('Unknown')}
+                     </p>
+                   </div>
+                   <div className="flex flex-col items-end gap-1.5 shrink-0">
+                     <span className="text-base font-bold text-pits-text">
+                       {currencySymbol(activeCurrency)}{p.amount.toLocaleString()}
+                     </span>
+                     {p.status === 'pending' ? (
+                       <button
+                         type="button"
+                         onClick={() => setReviewId(p.id)}
+                         className="inline-flex items-center bg-pits-primary text-pits-dark-text px-4 min-h-10 rounded-lg text-sm font-semibold shadow-sm active:scale-95 transition-all"
+                       >
+                         {t('Review')}
+                       </button>
+                     ) : (
+                       <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${p.status === 'approved' ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge' : 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge'}`}>
+                         {t(p.status === 'approved' ? 'Approved' : 'Rejected')}
+                       </span>
+                     )}
+                   </div>
+                 </li>
+               ))}
+             </ul>
+
+             <div className="hidden md:block overflow-x-auto">
              <table className="w-full min-w-[720px] text-left border-collapse">
                 <thead className="bg-pits-surface-elevated border-b border-pits-edge">
                   <tr>
@@ -384,7 +420,7 @@ export default function FinancialsPage() {
                         <div className="text-[11px] text-pits-dim font-bold">{formatTime(p.created_at, lang)}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-xs font-black text-pits-text uppercase">{p.profiles?.full_name || t('Unknown Athlete')}</div>
+                        <div className="text-sm font-semibold text-pits-text">{p.profiles?.full_name || t('Unknown Athlete')}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5">
@@ -413,8 +449,8 @@ export default function FinancialsPage() {
                                 </button>
                               </>
                             ) : (
-                              <div className={`px-2 py-0.5 rounded text-[11px] font-black uppercase border ${p.status === 'approved' ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge' : 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge'}`}>
-                                {p.status}
+                              <div className={`px-2 py-0.5 rounded text-xs font-semibold border ${p.status === 'approved' ? 'bg-pits-positive-soft text-pits-positive border-pits-positive-edge' : 'bg-pits-danger-soft text-pits-danger border-pits-danger-edge'}`}>
+                                {t(p.status === 'approved' ? 'Approved' : 'Rejected')}
                               </div>
                             )}
                          </div>

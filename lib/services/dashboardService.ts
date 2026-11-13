@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { getGymDate, getGymDayRange } from '../utils/date';
+import { addDaysToDateStr, getGymDate, getGymDateFromIso, getGymDayRange } from '../utils/date';
 import { DEFAULT_GYM_TIMEZONE } from '../gym-timezone';
 import { signPaymentProofUrl } from './financialService';
 
@@ -10,6 +10,7 @@ export interface DashboardProfile {
   phone?: string | null;
   plan?: string;
   is_solvent?: boolean;
+  plan_period_start?: string | null;
   days_overdue?: number;
   has_booking_today?: boolean;
   payment_status?: string;
@@ -55,11 +56,15 @@ export interface DashboardStats {
   pendingPayments: DashboardPayment[];
   inactiveAthletes: DashboardProfile[];
   unpaidMembers: DashboardProfile[];
+  /** Active members whose renew date is today or within the next 7 days. */
+  expiringMembers: DashboardProfile[];
   overdueMembers: DashboardProfile[];
   totalMembers: DashboardProfile[];
   lowOccupancyClasses: DashboardClass[];
   dailyUsagePercent: number;
   todayAttendance: TodayAttendance;
+  /** A workout row exists for today's gym date (that is what "published" means in the app). */
+  todayWodPublished: boolean;
 }
 
 export const dashboardService = {
@@ -91,7 +96,7 @@ export const dashboardService = {
   async getTotalMembers(): Promise<DashboardProfile[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, phone, plan, is_solvent')
+      .select('id, full_name, avatar_url, phone, plan, is_solvent, plan_period_start')
       .eq('role', 'member')
       .order('full_name', { ascending: true });
     
@@ -194,6 +199,19 @@ export const dashboardService = {
     return counts;
   },
 
+  async isTodayWodPublished(tenantId: string, tz: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('wods')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('date', getGymDate(new Date(), tz));
+    if (error) {
+      console.error('isTodayWodPublished', error);
+      return true; // unknown → don't nag
+    }
+    return (count ?? 0) > 0;
+  },
+
   async getOverdueMembers(tenantId: string): Promise<DashboardProfile[]> {
     const { data, error } = await supabase.rpc('overdue_members_today', {
       p_tenant: tenantId,
@@ -237,28 +255,41 @@ export const dashboardService = {
       { lowOccupancy, usagePercent },
       overdueMembers,
       todayAttendance,
+      todayWodPublished,
     ] = await Promise.all([
       this.getPendingPayments(),
       this.getTotalMembers(),
       this.getTodayUsageData(tz),
       tenantId ? this.getOverdueMembers(tenantId) : Promise.resolve([] as DashboardProfile[]),
       this.getTodayAttendance(tz),
+      tenantId ? this.isTodayWodPublished(tenantId, tz) : Promise.resolve(true),
     ]);
 
     const inactiveAthletes = await this.getInactiveAthletes(allMembers);
     const phoneById = new Map(allMembers.map((m) => [m.id, m.phone ?? null]));
     const overdueWithPhone = overdueMembers.map((m) => ({ ...m, phone: phoneById.get(m.id) ?? null }));
     const unpaidMembers = allMembers.filter(m => !m.is_solvent);
+    const today = getGymDate(new Date(), tz);
+    const windowEnd = addDaysToDateStr(today, 7);
+    const expiringMembers = allMembers
+      .filter((m) => {
+        if (!m.is_solvent || !m.plan_period_start) return false;
+        const renew = getGymDateFromIso(m.plan_period_start, tz);
+        return renew >= today && renew <= windowEnd;
+      })
+      .sort((a, b) => (a.plan_period_start ?? '').localeCompare(b.plan_period_start ?? ''));
 
     return {
       pendingPayments,
       inactiveAthletes,
       unpaidMembers,
+      expiringMembers,
       overdueMembers: overdueWithPhone,
       totalMembers: allMembers,
       lowOccupancyClasses: lowOccupancy,
       dailyUsagePercent: usagePercent,
       todayAttendance,
+      todayWodPublished,
     };
   }
 };
