@@ -53,10 +53,11 @@ export const athleteService = {
   /**
    * Fetches all user profiles, including limited booking history and payment info.
    */
-  async getBookableMembers(): Promise<Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'is_solvent'>[]> {
+  async getBookableMembers(tenantId: string): Promise<Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'is_solvent'>[]> {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, avatar_url, is_solvent')
+      .eq('tenant_id', tenantId)
       .eq('role', 'member')
       .order('full_name', { ascending: true });
 
