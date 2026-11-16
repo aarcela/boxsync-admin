@@ -2,7 +2,7 @@ import { APP_STORE_URL, GOOGLE_PLAY_URL } from './constants/app-links';
 import { PLATFORM_PLANS } from './platform-plans';
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
-const PAID_PLAN_IDS = ['starter', 'growth', 'pro'] as const;
+const PAID_PLAN_IDS = ['growth'] as const;
 
 /** Public marketing payload for getwodus.com (landing). Keep in sync with app/app.json. */
 export function getPublicProductPayload() {
