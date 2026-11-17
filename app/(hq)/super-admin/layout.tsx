@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Landmark, LayoutGrid, LogOut } from 'lucide-react';
+import { Clapperboard, Landmark, LayoutGrid, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
 
@@ -24,6 +24,8 @@ export default function SuperAdminLayout({
   };
 
   const onFinancials = pathname.startsWith('/super-admin/financials');
+  const onDemos = pathname.startsWith('/super-admin/demos');
+  const onTenants = !onFinancials && !onDemos;
 
   return (
     <div className="min-h-screen bg-pits-surface">
@@ -53,7 +55,7 @@ export default function SuperAdminLayout({
               <Link
                 href="/super-admin"
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${
-                  !onFinancials
+                  onTenants
                     ? 'bg-pits-primary text-pits-dark-text shadow-sm'
                     : 'text-pits-ink-muted hover:text-pits-ink'
                 }`}
@@ -71,6 +73,17 @@ export default function SuperAdminLayout({
               >
                 <Landmark size={12} />
                 {t('Financial Center')}
+              </Link>
+              <Link
+                href="/super-admin/demos"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                  onDemos
+                    ? 'bg-pits-primary text-pits-dark-text shadow-sm'
+                    : 'text-pits-ink-muted hover:text-pits-ink'
+                }`}
+              >
+                <Clapperboard size={12} />
+                {t('Demos')}
               </Link>
             </nav>
           </div>
@@ -114,7 +127,7 @@ export default function SuperAdminLayout({
           <Link
             href="/super-admin"
             className={`flex-1 text-center px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${
-              !onFinancials
+              onTenants
                 ? 'bg-pits-primary text-pits-dark-text border-pits-primary'
                 : 'bg-pits-surface-muted text-pits-ink-muted border-pits-edge'
             }`}
@@ -130,6 +143,16 @@ export default function SuperAdminLayout({
             }`}
           >
             {t('Financial Center')}
+          </Link>
+          <Link
+            href="/super-admin/demos"
+            className={`flex-1 text-center px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${
+              onDemos
+                ? 'bg-pits-primary text-pits-dark-text border-pits-primary'
+                : 'bg-pits-surface-muted text-pits-ink-muted border-pits-edge'
+            }`}
+          >
+            {t('Demos')}
           </Link>
         </nav>
       </header>

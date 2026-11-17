@@ -39,7 +39,8 @@ async function runTrialLifecycle() {
     .from('tenants')
     .select(
       'id, slug, name, platform_plan, trial_ends_at, activated_at, last_staff_login_at, inactive_flagged_at, created_at, owner_user_id'
-    );
+    )
+    .eq('is_demo', false);
   if (error) throw error;
 
   for (const tenant of tenants ?? []) {
@@ -50,7 +51,8 @@ async function runTrialLifecycle() {
     .from('tenants')
     .select(
       'id, slug, name, platform_plan, trial_ends_at, activated_at, last_staff_login_at, inactive_flagged_at, created_at'
-    );
+    )
+    .eq('is_demo', false);
 
   const { data: signups } = await supabaseAdmin
     .from('tenant_signups')

@@ -18,6 +18,10 @@ export type ProvisionTenantInput = {
   platform_plan?: PlatformPlanId;
   signup_source?: SignupSource;
   owner_user_id?: string;
+  /** Only the HQ demo factory sets this (to use the reserved `demo-` prefix). */
+  allowReserved?: boolean;
+  /** HQ demo tenant fields, written in the same insert so the row is never a non-demo trial. */
+  demo?: { expiresAt: string; label: string; source: string | null };
 };
 
 export class ProvisionTenantError extends Error {
@@ -43,7 +47,7 @@ export async function provisionTenant(
   if (!slug || !name) {
     throw new ProvisionTenantError('validation', 'slug and name are required.', 400);
   }
-  if (!isValidSlugFormat(slug)) {
+  if (!isValidSlugFormat(slug, { allowReserved: input.allowReserved })) {
     throw new ProvisionTenantError(
       'invalid_slug',
       'Invalid slug. Use lowercase letters, numbers, and hyphens (e.g. madrid, pits-madrid).',
@@ -70,6 +74,7 @@ export async function provisionTenant(
       ...(input.platform_plan ? { platform_plan: input.platform_plan } : {}),
       signup_source: input.signup_source ?? 'hq',
       owner_user_id: input.owner_user_id,
+      demo: input.demo,
     },
     client
   );

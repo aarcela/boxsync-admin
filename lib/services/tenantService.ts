@@ -9,7 +9,7 @@ import {
 } from '../platform-plans';
 
 export const TENANT_COLUMNS =
-  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason, ai_monthly_question_limit, signup_source, owner_user_id, activated_at, last_staff_login_at, inactive_flagged_at, trial_extended_days';
+  'id, slug, name, created_at, settings, platform_plan, platform_plan_started_at, trial_ends_at, is_active, deactivated_at, deactivation_reason, ai_monthly_question_limit, signup_source, owner_user_id, activated_at, last_staff_login_at, inactive_flagged_at, trial_extended_days, is_demo, demo_expires_at, demo_label, demo_source';
 
 function normalizeTenant(row: Tenant): Tenant {
   return {
@@ -55,6 +55,7 @@ export const tenantService = {
       platform_plan?: PlatformPlanId;
       signup_source?: 'hq' | 'self_serve';
       owner_user_id?: string;
+      demo?: { expiresAt: string; label: string; source: string | null };
     },
     client: SupabaseClient
   ): Promise<Tenant> {
@@ -63,7 +64,7 @@ export const tenantService = {
     const platform_plan = parsePlatformPlanId(input.platform_plan ?? DEFAULT_PLATFORM_PLAN);
     const now = new Date();
 
-    const row: Record<string, string> = {
+    const row: Record<string, string | boolean | null> = {
       slug,
       name,
       platform_plan,
@@ -79,6 +80,14 @@ export const tenantService = {
     if (platform_plan === 'trial') {
       row.trial_ends_at = trialEndsAtIso(now);
     }
+    if (input.demo) {
+      row.is_demo = true;
+      row.demo_expires_at = input.demo.expiresAt;
+      row.demo_label = input.demo.label;
+      row.demo_source = input.demo.source;
+      // Staff read-only and member booking block kick in on their own at expiry.
+      row.trial_ends_at = input.demo.expiresAt;
+    }
 
     const { data, error } = await client
       .from('tenants')
@@ -90,11 +99,18 @@ export const tenantService = {
     return normalizeTenant(data as Tenant);
   },
 
-  async listTenants(client: SupabaseClient = supabase): Promise<Tenant[]> {
-    const { data, error } = await client
+  /** Real tenants by default; demos only with `includeDemo: 'only'`, both with `true`. */
+  async listTenants(
+    client: SupabaseClient = supabase,
+    opts: { includeDemo?: boolean | 'only' } = {}
+  ): Promise<Tenant[]> {
+    let query = client
       .from('tenants')
       .select(TENANT_COLUMNS)
       .order('created_at', { ascending: false });
+    if (opts.includeDemo === 'only') query = query.eq('is_demo', true);
+    else if (!opts.includeDemo) query = query.eq('is_demo', false);
+    const { data, error } = await query;
 
     if (error) throw error;
     return ((data ?? []) as Tenant[]).map(normalizeTenant);

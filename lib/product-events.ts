@@ -24,6 +24,15 @@ export async function trackProductEvent(
   opts?: { tenantId?: string | null; userId?: string | null; client?: SupabaseClient }
 ): Promise<void> {
   const client = opts?.client ?? supabaseAdmin;
+  if (opts?.tenantId) {
+    // Demo tenants (HQ outreach) never write product events.
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('is_demo')
+      .eq('id', opts.tenantId)
+      .maybeSingle();
+    if (tenant?.is_demo) return;
+  }
   const { error } = await client.from('product_events').insert({
     name,
     props,

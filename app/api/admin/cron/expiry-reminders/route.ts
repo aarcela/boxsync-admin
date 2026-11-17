@@ -41,13 +41,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { data: profiles, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, plan, plan_period_start, created_at, last_expiry_reminder_sent_at')
-      .eq('role', 'member')
-      .eq('is_solvent', true);
+    const [{ data: allProfiles, error }, { data: demoTenants, error: demoError }] =
+      await Promise.all([
+        supabaseAdmin
+          .from('profiles')
+          .select('id, tenant_id, plan, plan_period_start, created_at, last_expiry_reminder_sent_at')
+          .eq('role', 'member')
+          .eq('is_solvent', true),
+        supabaseAdmin.from('tenants').select('id').eq('is_demo', true),
+      ]);
 
     if (error) throw error;
+    if (demoError) throw demoError;
+
+    const demoTenantIds = new Set((demoTenants ?? []).map((t) => t.id as string));
+    const profiles = (allProfiles ?? []).filter(
+      (profile) => !profile.tenant_id || !demoTenantIds.has(profile.tenant_id)
+    );
 
     const today = new Date();
     let sent = 0;

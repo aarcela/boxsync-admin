@@ -117,7 +117,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [accountMenuOpen]);
   const { lang, setLanguage, t } = useLanguage();
-  const { name: boxName, features, platformPlan, trialEndsAt, signupSource } = useTenant();
+  const { name: boxName, features, platformPlan, trialEndsAt, signupSource, isDemo } = useTenant();
+  // Demo tenants (HQ outreach) never show trial UI: it would end up in the sales video.
+  const showTrial = platformPlan === 'trial' && !isDemo;
   const { toast } = useToast();
   const moneyCurrency = useMoneyCurrency();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -370,7 +372,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/');
   };
 
-  const showFounderHelp = platformPlan === 'trial';
+  const showFounderHelp = showTrial;
 
   return (
     <SpotterProvider>
@@ -487,15 +489,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
                 <span
                   className={`text-[11px] font-black uppercase tracking-wider truncate ${
-                    platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt)
+                    showTrial && isTrialExpired(platformPlan, trialEndsAt)
                       ? 'text-red-400'
-                      : platformPlan === 'trial' && isTrialEndingSoon(platformPlan, trialEndsAt)
+                      : showTrial && isTrialEndingSoon(platformPlan, trialEndsAt)
                         ? 'text-orange-300'
                         : 'text-pits-shell-ink-muted'
                   }`}
                 >
-                  {t(getPlatformPlan(platformPlan).nameKey)}
-                  {platformPlan === 'trial' && trialEndsAt
+                  {isDemo ? '' : t(getPlatformPlan(platformPlan).nameKey)}
+                  {showTrial && trialEndsAt
                     ? ` · ${
                         isTrialExpired(platformPlan, trialEndsAt)
                           ? t('Trial ended')
@@ -609,12 +611,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {t('Check your email to activate your account.')}
           </div>
         )}
-        {platformPlan === 'trial' && isTrialExpired(platformPlan, trialEndsAt) && (
+        {showTrial && isTrialExpired(platformPlan, trialEndsAt) && (
           <div className="px-4 py-2 bg-pits-danger-soft text-pits-danger text-xs font-bold uppercase tracking-wider">
             {t('Your trial has ended. The dashboard is read-only.')}
           </div>
         )}
-        {platformPlan === 'trial' &&
+        {showTrial &&
           !isTrialExpired(platformPlan, trialEndsAt) &&
           isTrialEndingSoon(platformPlan, trialEndsAt) && (
             <TrialFounderBanner
@@ -710,7 +712,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onCancel={() => setConfirmExpiryOpen(false)}
       />
 
-      {platformPlan === 'trial' && (
+      {showTrial && (
         <a
           href={founderWhatsAppUrl(setupHelpWhatsAppText(boxName || slugFromPath(pathname)))}
           target="_blank"

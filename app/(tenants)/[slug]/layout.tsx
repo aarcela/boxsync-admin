@@ -29,6 +29,7 @@ export default async function TenantLayout({
         platformPlan: parsePlatformPlanId(tenant.platform_plan),
         trialEndsAt: tenant.trial_ends_at ?? null,
         signupSource: tenant.signup_source === 'self_serve' ? 'self_serve' : 'hq',
+        isDemo: tenant.is_demo === true,
         currencies: parseTenantCurrencyConfig(tenant.settings),
         features: parseTenantFeatures(tenant.settings),
         settings: tenant.settings,

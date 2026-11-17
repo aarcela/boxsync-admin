@@ -14,7 +14,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:demo": "node --import ./scripts/ts-alias-register.mjs --test scripts/test-demo-parse.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.0.0",

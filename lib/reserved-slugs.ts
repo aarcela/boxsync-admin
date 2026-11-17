@@ -35,17 +35,25 @@ export const RESERVED_SLUGS = new Set([
   'account',
 ]);
 
+/** Prefix reserved for HQ demo tenants (lib/demo-factory). Self-serve can never take it. */
+export const DEMO_SLUG_PREFIX = 'demo-';
+
 export function isReservedSlug(slug: string): boolean {
-  return RESERVED_SLUGS.has(slug.trim().toLowerCase());
+  const normalized = slug.trim().toLowerCase();
+  return RESERVED_SLUGS.has(normalized) || normalized.startsWith(DEMO_SLUG_PREFIX);
 }
 
-export function isValidSlugFormat(slug: string): boolean {
+/** `allowReserved` skips only the reserved-name check (demo factory); format and length still apply. */
+export function isValidSlugFormat(
+  slug: string,
+  opts: { allowReserved?: boolean } = {}
+): boolean {
   const normalized = slug.trim().toLowerCase();
   return (
     SLUG_RE.test(normalized) &&
     normalized.length >= 2 &&
     normalized.length <= 48 &&
-    !isReservedSlug(normalized)
+    (opts.allowReserved === true || !isReservedSlug(normalized))
   );
 }
 
@@ -66,5 +74,5 @@ export function suggestSlug(base: string, city?: string): string[] {
   if (citySlug) suggestions.push(`${root}-${citySlug}`.slice(0, 48));
   suggestions.push(`${root}-2`);
   suggestions.push(`${root}-3`);
-  return [...new Set(suggestions.filter(isValidSlugFormat))];
+  return [...new Set(suggestions.filter((s) => isValidSlugFormat(s)))];
 }

@@ -26,6 +26,8 @@ export type TenantContextValue = {
   trialEndsAt: string | null;
   staffReadOnly: boolean;
   signupSource: SignupSource;
+  /** HQ demo tenant (sales outreach): hide trial/founder UI. */
+  isDemo: boolean;
   currencies: TenantCurrencyConfig;
   setCurrencies: (next: TenantCurrencyConfig) => void;
   refreshCurrencies: () => Promise<TenantCurrencyConfig>;
@@ -51,7 +53,9 @@ export function TenantProvider({
     | 'setSettings'
     | 'staffReadOnly'
     | 'timezone'
+    | 'isDemo'
   > & {
+    isDemo?: boolean;
     currencies?: TenantCurrencyConfig;
     features?: TenantFeatures;
     platformPlan?: PlatformPlanId;
@@ -98,6 +102,7 @@ export function TenantProvider({
           value.trialEndsAt ?? null
         ),
         signupSource: value.signupSource === 'self_serve' ? 'self_serve' : 'hq',
+        isDemo: value.isDemo === true,
         currencies,
         setCurrencies,
         refreshCurrencies,

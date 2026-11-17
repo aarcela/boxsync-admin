@@ -26,6 +26,10 @@ export interface Tenant {
   last_staff_login_at?: string | null;
   inactive_flagged_at?: string | null;
   trial_extended_days?: number | null;
+  is_demo?: boolean;
+  demo_expires_at?: string | null;
+  demo_label?: string | null;
+  demo_source?: string | null;
 }
 
 export interface TenantHqStats {
