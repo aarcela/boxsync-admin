@@ -112,7 +112,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: error.status });
     }
     console.error('demo create failed', error);
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    // Supabase errors are plain objects, not Error instances: keep their message.
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof (error as { message?: unknown })?.message === 'string'
+          ? (error as { message: string }).message
+          : 'Internal Server Error';
     return NextResponse.json({ error: 'create_failed', message }, { status: 500 });
   }
 }

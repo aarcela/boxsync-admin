@@ -293,7 +293,7 @@ export async function createDemoTenant(
           currency: DEFAULT_TENANT_CURRENCIES.local,
           method_type: 'pago_movil',
           fields: { banco: 'Banco de Venezuela', telefono: '0412-0000000', cedula: 'J-00000000-0' },
-          details: null,
+          details: '',
           is_active: true,
         },
         {
@@ -302,7 +302,7 @@ export async function createDemoTenant(
           currency: DEFAULT_TENANT_CURRENCIES.reference,
           method_type: 'zelle',
           fields: { correo: 'pagos@demo.invalid', nombre_completo: input.name },
-          details: null,
+          details: '',
           is_active: true,
         },
       ])
@@ -378,34 +378,29 @@ export async function createDemoTenant(
     });
     members.push({ id: testMemberId, kind: 'ok', plan: mainPlan, ...testFields });
 
-    for (let i = 0; i < names.length; i += 6) {
-      const batch = names.slice(i, i + 6);
-      const created = await Promise.all(
-        batch.map(async (fullName, j) => {
-          const index = i + j;
-          const kind = kinds[index];
-          // Pending proofs use the main plan so the receipt amount matches one price.
-          const plan = kind === 'no_plan' ? null : kind === 'pending' ? mainPlan : plans[index % plans.length] ?? null;
-          const id = await createDemoUser(
-            client,
-            { email: demoEmail(`m${index + 1}`, slug), password: randomPassword(), fullName, tenantId: tenant.id },
-            createdUserIds
-          );
-          const fields = membershipFields(kind, plan, ctx);
-          await updateProfile(client, id, {
-            full_name: fullName,
-            role: 'member',
-            tenant_id: tenant.id,
-            inscription_plan: 'standard',
-            inscription_paid: kind !== 'no_plan',
-            inscription_cost: 0,
-            ...affidavitFields(nowIso),
-            ...fields.profile,
-          });
-          return { id, kind, plan, ...fields };
-        })
+    // Sequential on purpose: concurrent auth.admin.createUser calls fail in the
+    // handle_new_user trigger ("Database error creating new user").
+    for (const [index, fullName] of names.entries()) {
+      const kind = kinds[index];
+      // Pending proofs use the main plan so the receipt amount matches one price.
+      const plan = kind === 'no_plan' ? null : kind === 'pending' ? mainPlan : plans[index % plans.length] ?? null;
+      const id = await createDemoUser(
+        client,
+        { email: demoEmail(`m${index + 1}`, slug), password: randomPassword(), fullName, tenantId: tenant.id },
+        createdUserIds
       );
-      members.push(...created);
+      const fields = membershipFields(kind, plan, ctx);
+      await updateProfile(client, id, {
+        full_name: fullName,
+        role: 'member',
+        tenant_id: tenant.id,
+        inscription_plan: 'standard',
+        inscription_paid: kind !== 'no_plan',
+        inscription_cost: 0,
+        ...affidavitFields(nowIso),
+        ...fields.profile,
+      });
+      members.push({ id, kind, plan, ...fields });
     }
 
     // Classes: Monday of this week (gym-local) → min(expiry, today + 21 days).

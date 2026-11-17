@@ -72,7 +72,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'action must be extend or roll_week.' }, { status: 400 });
   } catch (error: unknown) {
     if (error instanceof DemoNotFoundError) return notFound();
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof (error as { message?: unknown })?.message === 'string'
+          ? (error as { message: string }).message
+          : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -87,7 +92,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if (!result) return notFound();
     return NextResponse.json({ ok: true, ...result });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof (error as { message?: unknown })?.message === 'string'
+          ? (error as { message: string }).message
+          : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
