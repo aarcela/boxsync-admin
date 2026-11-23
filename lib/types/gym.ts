@@ -273,7 +273,7 @@ export type MembershipPlanInput = Omit<MembershipPlan, 'id' | 'created_at' | 'te
 /** Default unlimited plan seeded when a new box (tenant) is provisioned. */
 export const DEFAULT_UNLIMITED_MEMBERSHIP_PLAN: MembershipPlanInput = {
   name: 'Unlimited',
-  price_usd: 80,
+  price_usd: 0,
   description: null,
   is_active: true,
   weekly_limit: null,

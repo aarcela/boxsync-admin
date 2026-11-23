@@ -314,7 +314,11 @@ export default function MembershipPlansPage() {
                 >
                   <span className="flex items-baseline gap-2">
                     <span className="truncate text-sm font-semibold text-pits-text">{plan.name}</span>
-                    <span className="shrink-0 text-sm font-bold tabular-nums text-pits-text">{priceLabel(plan.price_usd)}</span>
+                    {Number(plan.price_usd) > 0 ? (
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-pits-text">{priceLabel(plan.price_usd)}</span>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-pits-warning-soft px-2 py-0.5 text-xs font-semibold text-pits-warning">{t('Set a price')}</span>
+                    )}
                   </span>
                   <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-pits-dim">
                     <span>{formatBookingLimit(plan)}</span>

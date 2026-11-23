@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'validation' }, { status: 400 });
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json({ error: 'validation' }, { status: 400 });
     }
 
