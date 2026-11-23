@@ -1,4 +1,4 @@
-export type MilestoneType = 'class_count' | 'birthday' | 'anniversary' | 'streak' | 'first_month';
+export type MilestoneType = 'class_count' | 'birthday' | 'anniversary' | 'streak' | 'month_streak' | 'first_month';
 
 export interface MilestoneAchieved {
   id: string;

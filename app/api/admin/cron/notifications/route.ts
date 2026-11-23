@@ -7,6 +7,7 @@ import {
   sendMilestoneAnniversaryPush,
   sendMilestoneStreakPush,
   sendMilestoneFirstMonthPush,
+  sendMilestoneMonthStreakPush,
   sendStreakAtRiskPush,
   sendClassReminderPush,
   type ClassReminderPayload,
@@ -77,6 +78,10 @@ async function drain(request: Request) {
       } else if (row.kind === 'milestone_streak') {
         const weeks = (row.payload as { weeks?: number })?.weeks || 0;
         await sendMilestoneStreakPush(row.user_id, weeks);
+        sent++;
+      } else if (row.kind === 'milestone_month_streak') {
+        const months = (row.payload as { months?: number })?.months || 0;
+        await sendMilestoneMonthStreakPush(row.user_id, months);
         sent++;
       } else if (row.kind === 'milestone_first_month') {
         const classes = (row.payload as { classes?: number })?.classes || 0;

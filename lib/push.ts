@@ -29,6 +29,9 @@ const COPY = {
     milestoneStreakTitle: (weeks: number) => `${weeks}-week streak!`,
     milestoneStreakBody: (weeks: number) =>
       `You've hit your weekly goal ${weeks} weeks in a row. Keep it going!`,
+    milestoneMonthStreakTitle: (months: number) => `${months}-month streak!`,
+    milestoneMonthStreakBody: (months: number) =>
+      `${months} months in a row hitting your monthly goal. Amazing consistency!`,
     milestoneFirstMonthTitle: 'First month done!',
     milestoneFirstMonthBody: (classes: number) =>
       `${classes} classes in your first 30 days. Great start!`,
@@ -62,6 +65,9 @@ const COPY = {
     milestoneStreakTitle: (weeks: number) => `¡Racha de ${weeks} semanas!`,
     milestoneStreakBody: (weeks: number) =>
       `Cumpliste tu meta semanal ${weeks} semanas seguidas. ¡Sigue así!`,
+    milestoneMonthStreakTitle: (months: number) => `¡Racha de ${months} meses!`,
+    milestoneMonthStreakBody: (months: number) =>
+      `${months} meses seguidos cumpliendo tu meta mensual. ¡Qué constancia!`,
     milestoneFirstMonthTitle: '¡Primer mes completado!',
     milestoneFirstMonthBody: (classes: number) =>
       `${classes} clases en tus primeros 30 días. ¡Gran comienzo!`,
@@ -360,6 +366,16 @@ export async function sendMilestoneStreakPush(userId: string, weeks: number): Pr
     copy.milestoneStreakTitle(weeks),
     copy.milestoneStreakBody(weeks),
     { type: 'milestone_streak', weeks, screen: 'achievements' }
+  );
+}
+
+export async function sendMilestoneMonthStreakPush(userId: string, months: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneMonthStreakTitle(months),
+    copy.milestoneMonthStreakBody(months),
+    { type: 'milestone_month_streak', months, screen: 'achievements' }
   );
 }
 
