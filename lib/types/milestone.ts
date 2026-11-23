@@ -1,4 +1,4 @@
-export type MilestoneType = 'class_count' | 'birthday' | 'anniversary';
+export type MilestoneType = 'class_count' | 'birthday' | 'anniversary' | 'streak' | 'first_month';
 
 export interface MilestoneAchieved {
   id: string;
@@ -15,13 +15,30 @@ export interface MilestoneSettings {
   enabled?: boolean;
   pushEnabled?: boolean;
   classCountThresholds?: number[];
+  streakEnabled?: boolean;
+  streakNudgeEnabled?: boolean;
+  defaultWeeklyTarget?: number;
+  firstMonthTarget?: number;
 }
 
 export const DEFAULT_MILESTONE_SETTINGS: MilestoneSettings = {
   enabled: true,
   pushEnabled: true,
   classCountThresholds: [1, 10, 25, 50, 100, 200],
+  streakEnabled: true,
+  streakNudgeEnabled: true,
+  defaultWeeklyTarget: 3,
+  firstMonthTarget: 8,
 };
+
+function readBool(value: unknown, fallback: boolean | undefined): boolean | undefined {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function readInt(value: unknown, fallback: number | undefined, min: number, max: number): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(value)));
+}
 
 export function parseMilestoneSettings(settings: unknown): MilestoneSettings {
   if (!settings || typeof settings !== 'object') return DEFAULT_MILESTONE_SETTINGS;
@@ -54,6 +71,10 @@ export function parseMilestoneSettings(settings: unknown): MilestoneSettings {
     enabled,
     pushEnabled,
     classCountThresholds,
+    streakEnabled: readBool(milestones.streakEnabled, DEFAULT_MILESTONE_SETTINGS.streakEnabled),
+    streakNudgeEnabled: readBool(milestones.streakNudgeEnabled, DEFAULT_MILESTONE_SETTINGS.streakNudgeEnabled),
+    defaultWeeklyTarget: readInt(milestones.defaultWeeklyTarget, DEFAULT_MILESTONE_SETTINGS.defaultWeeklyTarget, 1, 7),
+    firstMonthTarget: readInt(milestones.firstMonthTarget, DEFAULT_MILESTONE_SETTINGS.firstMonthTarget, 1, 60),
   };
 }
 
@@ -72,6 +93,10 @@ export function patchMilestoneSettings(
     classCountThresholds: Array.isArray(patch.classCountThresholds)
       ? patch.classCountThresholds.filter((v) => typeof v === 'number' && v > 0).sort((a, b) => a - b)
       : current.classCountThresholds,
+    streakEnabled: readBool(patch.streakEnabled, current.streakEnabled),
+    streakNudgeEnabled: readBool(patch.streakNudgeEnabled, current.streakNudgeEnabled),
+    defaultWeeklyTarget: readInt(patch.defaultWeeklyTarget, current.defaultWeeklyTarget, 1, 7),
+    firstMonthTarget: readInt(patch.firstMonthTarget, current.firstMonthTarget, 1, 60),
   };
   
   return {

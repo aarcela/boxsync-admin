@@ -26,6 +26,15 @@ const COPY = {
     milestoneAnniversaryTitle: 'Anniversary!',
     milestoneAnniversaryBody: (years: number) =>
       `Congratulations! Today marks ${years} ${years === 1 ? 'year' : 'years'} training with us. Thanks for your commitment!`,
+    milestoneStreakTitle: (weeks: number) => `${weeks}-week streak!`,
+    milestoneStreakBody: (weeks: number) =>
+      `You've hit your weekly goal ${weeks} weeks in a row. Keep it going!`,
+    milestoneFirstMonthTitle: 'First month done!',
+    milestoneFirstMonthBody: (classes: number) =>
+      `${classes} classes in your first 30 days. Great start!`,
+    streakAtRiskTitle: 'Keep your streak alive',
+    streakAtRiskBody: (streak: number, needs: number) =>
+      `You're on a ${streak}-week streak. ${needs} more ${needs === 1 ? 'class' : 'classes'} this week keeps it going.`,
     classReminderTitle: 'Class starting soon',
     classReminderBody: (classType: string, time: string) =>
       `Your ${classType} starts at ${time}.`,
@@ -50,6 +59,15 @@ const COPY = {
     milestoneAnniversaryTitle: '¡Aniversario!',
     milestoneAnniversaryBody: (years: number) =>
       `¡Felicidades! Hoy cumples ${years} ${years === 1 ? 'año' : 'años'} entrenando con nosotros. ¡Gracias por tu compromiso!`,
+    milestoneStreakTitle: (weeks: number) => `¡Racha de ${weeks} semanas!`,
+    milestoneStreakBody: (weeks: number) =>
+      `Cumpliste tu meta semanal ${weeks} semanas seguidas. ¡Sigue así!`,
+    milestoneFirstMonthTitle: '¡Primer mes completado!',
+    milestoneFirstMonthBody: (classes: number) =>
+      `${classes} clases en tus primeros 30 días. ¡Gran comienzo!`,
+    streakAtRiskTitle: 'Mantén tu racha',
+    streakAtRiskBody: (streak: number, needs: number) =>
+      `Llevas ${streak} semanas seguidas. ${needs} ${needs === 1 ? 'clase más' : 'clases más'} esta semana y la mantienes.`,
     classReminderTitle: 'Tu clase empieza pronto',
     classReminderBody: (classType: string, time: string) =>
       `Tu ${classType} empieza a las ${time}.`,
@@ -332,6 +350,36 @@ export async function sendMilestoneAnniversaryPush(userId: string, years: number
     copy.milestoneAnniversaryTitle,
     copy.milestoneAnniversaryBody(years),
     { type: 'milestone_anniversary', years, screen: 'achievements' }
+  );
+}
+
+export async function sendMilestoneStreakPush(userId: string, weeks: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneStreakTitle(weeks),
+    copy.milestoneStreakBody(weeks),
+    { type: 'milestone_streak', weeks, screen: 'achievements' }
+  );
+}
+
+export async function sendMilestoneFirstMonthPush(userId: string, classes: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.milestoneFirstMonthTitle,
+    copy.milestoneFirstMonthBody(classes),
+    { type: 'milestone_first_month', classes, screen: 'achievements' }
+  );
+}
+
+export async function sendStreakAtRiskPush(userId: string, streak: number, needs: number): Promise<void> {
+  const copy = COPY[await getUserPushLanguage(userId)];
+  await sendExpoPush(
+    userId,
+    copy.streakAtRiskTitle,
+    copy.streakAtRiskBody(streak, needs),
+    { type: 'streak_at_risk', streak, needs, screen: 'book' }
   );
 }
 

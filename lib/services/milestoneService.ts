@@ -1,7 +1,7 @@
 import { supabase } from '../supabase';
 import { supabaseAdmin } from '../supabase-admin';
 import type { MilestoneAchieved, MilestoneSettings } from '../types/milestone';
-import { parseMilestoneSettings } from '../types/milestone';
+import { parseMilestoneSettings, patchMilestoneSettings } from '../types/milestone';
 
 export const milestoneService = {
   /**
@@ -48,21 +48,7 @@ export const milestoneService = {
 
     if (fetchError) throw fetchError;
 
-    const currentSettings = (current?.settings || {}) as Record<string, unknown>;
-    const currentMilestones = parseMilestoneSettings(currentSettings);
-
-    const updatedMilestones = {
-      enabled: typeof patch.enabled === 'boolean' ? patch.enabled : currentMilestones.enabled,
-      pushEnabled: typeof patch.pushEnabled === 'boolean' ? patch.pushEnabled : currentMilestones.pushEnabled,
-      classCountThresholds: Array.isArray(patch.classCountThresholds)
-        ? patch.classCountThresholds.filter((v) => typeof v === 'number' && v > 0).sort((a, b) => a - b)
-        : currentMilestones.classCountThresholds,
-    };
-
-    const newSettings = {
-      ...currentSettings,
-      milestones: updatedMilestones,
-    };
+    const newSettings = patchMilestoneSettings(current?.settings, patch);
 
     const { error: updateError } = await supabaseAdmin
       .from('tenants')

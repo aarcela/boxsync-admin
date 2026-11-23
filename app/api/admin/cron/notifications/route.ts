@@ -5,6 +5,9 @@ import {
   sendMilestoneClassCountPush,
   sendMilestoneBirthdayPush,
   sendMilestoneAnniversaryPush,
+  sendMilestoneStreakPush,
+  sendMilestoneFirstMonthPush,
+  sendStreakAtRiskPush,
   sendClassReminderPush,
   type ClassReminderPayload,
 } from '@/lib/push';
@@ -70,6 +73,18 @@ async function drain(request: Request) {
       } else if (row.kind === 'milestone_anniversary') {
         const years = (row.payload as { years?: number })?.years || 1;
         await sendMilestoneAnniversaryPush(row.user_id, years);
+        sent++;
+      } else if (row.kind === 'milestone_streak') {
+        const weeks = (row.payload as { weeks?: number })?.weeks || 0;
+        await sendMilestoneStreakPush(row.user_id, weeks);
+        sent++;
+      } else if (row.kind === 'milestone_first_month') {
+        const classes = (row.payload as { classes?: number })?.classes || 0;
+        await sendMilestoneFirstMonthPush(row.user_id, classes);
+        sent++;
+      } else if (row.kind === 'streak_at_risk') {
+        const payload = (row.payload || {}) as { streak?: number; needs?: number };
+        await sendStreakAtRiskPush(row.user_id, payload.streak || 0, payload.needs || 1);
         sent++;
       } else if (row.kind === 'class_reminder') {
         const sentOk = await sendClassReminderPush(
