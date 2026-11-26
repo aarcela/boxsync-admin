@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { ADMIN_ROLE_ASSIGN_FORBIDDEN, canAssignProfileRole } from '@/lib/auth';
+import { isPlausibleE164, normalizeToE164 } from '@/lib/phone';
 import { buildMembershipActivationFields, buildPlanChangeFields } from '@/lib/plan-period';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { renewDateToIso } from '@/lib/renew-date';
 import { fetchGymTimezone } from '@/lib/gym-timezone';
+import { findUserIdByPhone, syncAuthPhone } from '@/lib/sync-auth-phone';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -183,6 +185,29 @@ export async function PUT(
       );
     }
 
+    let phoneE164: string | null | undefined = undefined;
+    if (phone !== undefined) {
+      const trimmed = typeof phone === 'string' ? phone.trim() : '';
+      if (!trimmed) {
+        phoneE164 = null;
+      } else {
+        phoneE164 = normalizeToE164(trimmed);
+        if (!phoneE164 || !isPlausibleE164(phoneE164)) {
+          return NextResponse.json(
+            { error: 'Invalid phone number. Use country code (e.g. +58…).' },
+            { status: 400 }
+          );
+        }
+        const taken = await findUserIdByPhone(phoneE164, id);
+        if (taken) {
+          return NextResponse.json(
+            { error: 'That phone number is already used by another account.' },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     // 2. Update auth user (email and password if provided)
     interface UpdateAuthData {
       email: string;
@@ -210,7 +235,7 @@ export async function PUT(
     // 3. Update profile
     interface ProfileUpdateData {
       full_name: string;
-      phone?: string;
+      phone?: string | null;
       role: string;
       plan?: string;
       plan_period_start?: string | null;
@@ -222,9 +247,12 @@ export async function PUT(
     
     const profileUpdateData: ProfileUpdateData = {
       full_name,
-      phone,
       role: role || 'member'
     };
+
+    if (phoneE164 !== undefined) {
+      profileUpdateData.phone = phoneE164;
+    }
 
     const tenantId = existingProfile.tenant_id as string | null;
 
@@ -305,13 +333,17 @@ export async function PUT(
 
     if (profileError) throw profileError;
 
+    if (phoneE164 !== undefined) {
+      await syncAuthPhone(id, phoneE164);
+    }
+
     return NextResponse.json({ 
       success: true, 
       user: {
         id,
         full_name,
         email,
-        phone,
+        phone: phoneE164 === undefined ? phone : phoneE164,
         role,
         plan: profileUpdateData.plan,
         inscription_plan,

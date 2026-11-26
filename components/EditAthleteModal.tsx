@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PhoneInput } from '@/components/PhoneInput';
 import { useTenant } from '@/components/TenantContext';
 import { X, Loader2, Save } from 'lucide-react';
 import { useToast } from './Toast';
@@ -244,18 +245,13 @@ export default function EditAthleteModal({ isOpen, onClose, onSuccess, userId }:
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={e => setFormData({...formData, phone: e.target.value})}
-                className={inputClass}
-                placeholder="+1 234 567 8900"
-              />
-            </div>
+            <PhoneInput
+              label={t('Phone')}
+              value={formData.phone}
+              onChange={(phone) => setFormData({ ...formData, phone })}
+              inputClassName={inputClass}
+              hint={t('Athletes can log in with this number and their password.')}
+            />
 
             <div>
               <label className="block text-xs font-bold text-pits-dim uppercase tracking-wider mb-2">

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { isPlausibleE164, normalizeToE164 } from '@/lib/phone';
 import { buildPlanChangeFields } from '@/lib/plan-period';
 import { enforceAuthPostRateLimit } from '@/lib/rate-limit';
 import { tenantService } from '@/lib/services/tenantService';
+import { findUserIdByPhone, syncAuthPhone } from '@/lib/sync-auth-phone';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
 
@@ -119,6 +121,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'validation' }, { status: 400 });
     }
 
+    let phoneE164: string | null = null;
+    if (phone) {
+      phoneE164 = normalizeToE164(phone);
+      if (!phoneE164 || !isPlausibleE164(phoneE164)) {
+        return NextResponse.json({ error: 'invalid_phone' }, { status: 400 });
+      }
+      const taken = await findUserIdByPhone(phoneE164);
+      if (taken) {
+        return NextResponse.json({ error: 'phone_exists' }, { status: 409 });
+      }
+    }
+
     const tenant = await tenantService.getTenantBySlug(
       tenantSlug,
       supabaseAdmin
@@ -185,8 +199,8 @@ export async function POST(request: Request) {
       is_solvent: false,
     };
 
-    if (phone) {
-      profileUpdate.phone = phone;
+    if (phoneE164) {
+      profileUpdate.phone = phoneE164;
     }
 
     if (planId) {
@@ -211,6 +225,10 @@ export async function POST(request: Request) {
     if (profileError) throw profileError;
     if (profile.tenant_id !== tenant.id) {
       throw new Error('Profile tenant_id was not set correctly.');
+    }
+
+    if (phoneE164) {
+      await syncAuthPhone(user.id, phoneE164);
     }
 
     return NextResponse.json(

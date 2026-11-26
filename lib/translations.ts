@@ -262,6 +262,8 @@ export const translations = {
       'An invite email will be sent so they can set their password.',
     'Include country code for a welcome WhatsApp when provided.':
       'Include country code for a welcome WhatsApp when provided.',
+    'Athletes can log in with this number and their password.':
+      'Athletes can log in with this number and their password.',
     'User {{name}} created successfully! Invite email sent.':
       'User {{name}} created successfully! Invite email sent.',
     'User {{name}} created successfully!': 'User {{name}} created successfully!',
@@ -2534,6 +2536,8 @@ export const translations = {
       'Se enviará un correo de invitación para que establezcan su contraseña.',
     'Include country code for a welcome WhatsApp when provided.':
       'Incluye el código de país para enviar también un WhatsApp de bienvenida.',
+    'Athletes can log in with this number and their password.':
+      'Los atletas pueden iniciar sesión con este número y su contraseña.',
     'User {{name}} created successfully! Invite email sent.':
       '¡Usuario {{name}} creado! Correo de invitación enviado.',
     'User {{name}} created successfully!': '¡Usuario {{name}} creado con éxito!',

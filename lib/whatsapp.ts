@@ -24,7 +24,7 @@ export function buildWelcomeMessage(params: {
       `📱 Android: ${GOOGLE_PLAY_URL}`,
       `🍎 iPhone: ${APP_STORE_URL}`,
       '',
-      `Inicia sesión con tu correo: ${params.email}`,
+      `Inicia sesión con tu correo (${params.email}) o con tu número de teléfono y la misma contraseña.`,
       '',
       '¡Nos vemos en el box! 💪',
     ].join('\n');
@@ -39,7 +39,7 @@ export function buildWelcomeMessage(params: {
     `📱 Android: ${GOOGLE_PLAY_URL}`,
     `🍎 iPhone: ${APP_STORE_URL}`,
     '',
-    `Log in with your email: ${params.email}`,
+    `Log in with your email (${params.email}) or your phone number and the same password.`,
     '',
     'See you at the box! 💪',
   ].join('\n');

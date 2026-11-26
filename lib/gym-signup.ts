@@ -1,4 +1,7 @@
+import { normalizeWhatsAppVe } from '@/lib/phone';
 import { isValidSlugFormat, slugifyName } from '@/lib/reserved-slugs';
+
+export { normalizeWhatsAppVe } from '@/lib/phone';
 
 const URL_RE = /https?:\/\/|www\./i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,15 +40,6 @@ export type GymSignupFieldError = {
 function trim(value: unknown, max: number): string {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, max);
-}
-
-export function normalizeWhatsAppVe(raw: string): string | null {
-  const digits = raw.replace(/[^\d]/g, '');
-  if (/^04\d{9}$/.test(digits)) return `+58${digits.slice(1)}`;
-  if (/^4\d{9}$/.test(digits)) return `+58${digits}`;
-  if (/^584\d{9}$/.test(digits)) return `+${digits}`;
-  if (/^58\d{10}$/.test(digits)) return `+${digits}`;
-  return null;
 }
 
 export function normalizeInstagram(raw: string): string | null {

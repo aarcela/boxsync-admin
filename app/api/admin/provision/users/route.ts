@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { PROFILE_ROLES } from '@/lib/auth';
+import { isPlausibleE164, normalizeToE164 } from '@/lib/phone';
 import { tenantService } from '@/lib/services/tenantService';
+import { findUserIdByPhone, syncAuthPhone } from '@/lib/sync-auth-phone';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
@@ -179,8 +181,23 @@ export async function POST(request: Request) {
       profileUpdate.discount = discount === '' ? null : parseFloat(discount);
     }
 
+    let phoneE164: string | null = null;
     if (phone?.trim()) {
-      profileUpdate.phone = phone.trim();
+      phoneE164 = normalizeToE164(phone.trim());
+      if (!phoneE164 || !isPlausibleE164(phoneE164)) {
+        return NextResponse.json(
+          { error: 'Invalid phone number. Use country code (e.g. +58…).' },
+          { status: 400 }
+        );
+      }
+      const taken = await findUserIdByPhone(phoneE164);
+      if (taken) {
+        return NextResponse.json(
+          { error: 'That phone number is already used by another account.' },
+          { status: 409 }
+        );
+      }
+      profileUpdate.phone = phoneE164;
     }
 
     profileUpdate.plan = planId;
@@ -198,10 +215,11 @@ export async function POST(request: Request) {
     }
 
     let whatsappWarning: string | undefined;
-    if (phone?.trim()) {
+    if (phoneE164) {
+      await syncAuthPhone(user.user.id, phoneE164);
       try {
         await sendWelcomeWhatsApp({
-          phone: phone.trim(),
+          phone: phoneE164,
           fullName: full_name,
           email,
           language: messageLanguage,

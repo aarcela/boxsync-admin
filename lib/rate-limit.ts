@@ -7,6 +7,7 @@ import { getUpstashRedis } from '@/lib/upstash-redis';
 export type RateLimitKind =
   | 'register'
   | 'forgot-password'
+  | 'login-phone'
   | 'public-get'
   | 'gym-signup';
 
@@ -19,6 +20,8 @@ const LIMITERS: Record<
   register: { requests: 5, window: '1 h', prefix: 'rl:register' },
   // Password reset emails / user lookup
   'forgot-password': { requests: 5, window: '1 h', prefix: 'rl:forgot' },
+  // Phone + password login (never reveals email)
+  'login-phone': { requests: 5, window: '1 h', prefix: 'rl:login-phone' },
   // Public tenant/product GETs (slug scraping / scrape bots)
   'public-get': { requests: 60, window: '1 m', prefix: 'rl:public-get' },
   // Self-serve gym owner signup
@@ -138,18 +141,22 @@ export async function enforcePublicGetRateLimit(
  * Both must pass when email is provided.
  */
 export async function enforceAuthPostRateLimit(
-  kind: 'register' | 'forgot-password' | 'gym-signup',
+  kind: 'register' | 'forgot-password' | 'gym-signup' | 'login-phone',
   request: Request,
-  email?: string
+  emailOrPhone?: string
 ): Promise<NextResponse | null> {
   const ipHash = hashIdentifier(getClientIp(request));
   const ipResult = await enforceRateLimit(kind, `ip:${ipHash}`);
   if (!ipResult.success) return rateLimitExceededResponse(ipResult);
 
-  if (email && email.includes('@')) {
-    const emailHash = hashIdentifier(email);
+  if (emailOrPhone && emailOrPhone.includes('@')) {
+    const emailHash = hashIdentifier(emailOrPhone);
     const emailResult = await enforceRateLimit(kind, `email:${emailHash}`);
     if (!emailResult.success) return rateLimitExceededResponse(emailResult);
+  } else if (emailOrPhone && kind === 'login-phone') {
+    const phoneHash = hashIdentifier(emailOrPhone);
+    const phoneResult = await enforceRateLimit(kind, `phone:${phoneHash}`);
+    if (!phoneResult.success) return rateLimitExceededResponse(phoneResult);
   }
 
   return null;

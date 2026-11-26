@@ -212,6 +212,9 @@ export async function POST(request: Request) {
       throw new Error('Profile was not set as tenant admin correctly.');
     }
 
+    const { syncAuthPhone } = await import('@/lib/sync-auth-phone');
+    await syncAuthPhone(userId, input.phoneE164);
+
     await supabaseAdmin
       .from('tenants')
       .update({ owner_user_id: userId })

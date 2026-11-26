@@ -5,10 +5,12 @@ import {
   getMemberInviteRedirectUrl,
 } from '@/lib/auth';
 import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
+import { isPlausibleE164, normalizeToE164 } from '@/lib/phone';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildPlanChangeFields } from '@/lib/plan-period';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
+import { findUserIdByPhone, syncAuthPhone } from '@/lib/sync-auth-phone';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
 
@@ -128,6 +130,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'email_unverified' }, { status: 403 });
     }
 
+    let phoneE164: string | null = null;
+    if (typeof phone === 'string' && phone.trim()) {
+      phoneE164 = normalizeToE164(phone.trim());
+      if (!phoneE164 || !isPlausibleE164(phoneE164)) {
+        return NextResponse.json(
+          { error: 'Invalid phone number. Use country code (e.g. +58…).' },
+          { status: 400 }
+        );
+      }
+      const taken = await findUserIdByPhone(phoneE164);
+      if (taken) {
+        return NextResponse.json(
+          { error: 'That phone number is already used by another account.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // 2. Create Auth User
     let authUserId: string;
     let memberInviteLink: string | undefined;
@@ -200,8 +220,8 @@ export async function POST(request: Request) {
       profileUpdate.discount = discount === '' ? null : parseFloat(discount);
     }
 
-    if (phone?.trim()) {
-      profileUpdate.phone = phone.trim();
+    if (phoneE164) {
+      profileUpdate.phone = phoneE164;
     }
 
     const planId = await resolvePlanIdForTenant(
@@ -254,10 +274,11 @@ export async function POST(request: Request) {
       }
     }
 
-    if (phone?.trim()) {
+    if (phoneE164) {
+      await syncAuthPhone(authUserId, phoneE164);
       try {
         await sendWelcomeWhatsApp({
-          phone: phone.trim(),
+          phone: phoneE164,
           fullName: normalizedFullName,
           email: normalizedEmail,
           language: messageLanguage,

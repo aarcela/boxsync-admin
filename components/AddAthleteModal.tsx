@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Award } from 'lucide-react';
+import { PhoneInput } from '@/components/PhoneInput';
 import { useToast } from './Toast';
 import { useLanguage } from './LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -221,21 +222,13 @@ export default function AddAthleteModal({ isOpen, onClose, onSuccess }: AddAthle
               />
             </div>
 
-            <div>
-              <label className={labelClass}>{t('Phone')}</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={e => setFormData({...formData, phone: e.target.value})}
-                className={inputClass}
-                placeholder="+58 412 123 4567"
-              />
-              <p className={hintClass}>
-                {formData.role === 'member'
-                  ? t('Include country code for a welcome WhatsApp when provided.')
-                  : t('Include country code. A welcome WhatsApp is sent when provided.')}
-              </p>
-            </div>
+            <PhoneInput
+              label={t('Phone')}
+              value={formData.phone}
+              onChange={(phone) => setFormData({ ...formData, phone })}
+              inputClassName={inputClass}
+              hint={t('Athletes can log in with this number and their password.')}
+            />
 
             <div>
               <label className={labelClass}>{t('Role')}</label>
