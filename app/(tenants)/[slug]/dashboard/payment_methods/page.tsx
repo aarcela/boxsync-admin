@@ -167,13 +167,12 @@ export default function PaymentMethodsPage() {
     }
     setSavingMoney(true);
     try {
-      const [savedCurrencies, savedRate] = await Promise.all([
-        tenantCurrencyService.updateForTenant(tenantId, { reference, local }),
-        tenantExchangeRateService.updateForTenant(tenantId, {
-          ...rateConfig,
-          customRate: rateConfig.baseSource === 'custom' ? rateConfig.customRate : null,
-        }),
-      ]);
+      // Sequential: both read-modify-write tenants.settings; in parallel the second write drops the first.
+      const savedCurrencies = await tenantCurrencyService.updateForTenant(tenantId, { reference, local });
+      const savedRate = await tenantExchangeRateService.updateForTenant(tenantId, {
+        ...rateConfig,
+        customRate: rateConfig.baseSource === 'custom' ? rateConfig.customRate : null,
+      });
       setCurrencies(savedCurrencies);
       setDraftCurrencies(savedCurrencies);
       setRateConfig(savedRate);
