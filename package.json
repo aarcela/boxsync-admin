@@ -15,6 +15,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test:demo": "node --import ./scripts/ts-alias-register.mjs --test scripts/test-demo-parse.mjs"
   },
   "dependencies": {

@@ -46,7 +46,7 @@ next-env.d.ts
 .vscode
 skills-lock.json
 
-AGENTS.md
+!AGENTS.md
 scripts/
 .cursor/
 .vscode/
