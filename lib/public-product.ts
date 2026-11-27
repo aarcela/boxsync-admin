@@ -1,5 +1,6 @@
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from './constants/app-links';
 import { PLATFORM_PLANS } from './platform-plans';
+import { PALETTE_IDS } from './constants/appPalettes';
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'getwodus.com';
 const PAID_PLAN_IDS = ['growth'] as const;
@@ -24,5 +25,8 @@ export function getPublicProductPayload() {
       priceUsd: PLATFORM_PLANS[id].priceUsd,
       maxActiveMembers: PLATFORM_PLANS[id].maxActiveMembers,
     })),
+    signup: {
+      paletteIds: [...PALETTE_IDS],
+    },
   };
 }

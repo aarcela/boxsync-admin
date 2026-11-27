@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isGymSignupEmailConfigured } from '@/lib/email/gymSignupVerifyEmail';
 import { sendOwnerVerificationEmail } from '@/lib/owner-verify-link';
 import { parseGymSignupBody, verifyTurnstileToken } from '@/lib/gym-signup';
+import { tenantPaletteService } from '@/lib/services/tenantPaletteService';
 import { notifyFounder } from '@/lib/notify-founder';
 import { trackProductEvent } from '@/lib/product-events';
 import { ProvisionTenantError, provisionTenant } from '@/lib/provision-tenant';
@@ -239,6 +240,12 @@ export async function POST(request: Request) {
       tenant_id: tenant.id,
       steps: {},
     });
+
+    if (input.paletteId) {
+      await tenantPaletteService
+        .updateForTenant(tenant.id, input.paletteId, supabaseAdmin)
+        .catch((error) => console.error('signup palette', error));
+    }
 
     await sendOwnerVerificationEmail({
       email: input.email,

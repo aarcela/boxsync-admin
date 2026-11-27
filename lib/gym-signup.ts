@@ -1,5 +1,6 @@
-import { normalizeWhatsAppVe } from '@/lib/phone';
+import { isPlausibleE164, normalizeToE164, normalizeWhatsAppVe } from '@/lib/phone';
 import { isValidSlugFormat, slugifyName } from '@/lib/reserved-slugs';
+import { isPaletteId, type PaletteId } from '@/lib/constants/appPalettes';
 
 export { normalizeWhatsAppVe } from '@/lib/phone';
 
@@ -30,6 +31,7 @@ export type GymSignupInput = {
   acceptedTerms: boolean;
   turnstileToken: string;
   website?: string;
+  paletteId?: PaletteId;
 };
 
 export type GymSignupFieldError = {
@@ -62,6 +64,7 @@ export function parseGymSignupBody(body: unknown): {
   const instagram = trim(bag.instagram, 80);
   const city = trim(bag.city, GYM_SIGNUP_FIELD_MAX.city);
   const website = typeof bag.website === 'string' ? bag.website : '';
+  const paletteId = isPaletteId(bag.paletteId) ? bag.paletteId : undefined;
   const acceptedTerms = bag.acceptedTerms === true || bag.accepted_terms === true;
   const turnstileToken = typeof bag.turnstileToken === 'string' ? bag.turnstileToken : typeof bag.turnstile_token === 'string' ? bag.turnstile_token : '';
 
@@ -86,8 +89,11 @@ export function parseGymSignupBody(body: unknown): {
   if (password.length < 8) errors.push({ field: 'password', message: 'La contraseña debe tener al menos 8 caracteres.' });
   if (password.length > GYM_SIGNUP_FIELD_MAX.password) errors.push({ field: 'password', message: 'La contraseña es demasiado larga.' });
 
-  const phoneE164 = normalizeWhatsAppVe(whatsapp);
-  if (!phoneE164) errors.push({ field: 'whatsapp', message: 'WhatsApp debe ser un número venezolano (04XX…).' });
+  const intlPhone = normalizeToE164(whatsapp);
+  const phoneE164 =
+    normalizeWhatsAppVe(whatsapp) ??
+    (intlPhone && isPlausibleE164(intlPhone) ? intlPhone : null);
+  if (!phoneE164) errors.push({ field: 'whatsapp', message: 'Escribe un WhatsApp válido con código de país.' });
 
   const instagramHandle = normalizeInstagram(instagram);
   if (!instagramHandle) errors.push({ field: 'instagram', message: 'Instagram del gym es obligatorio.' });
@@ -115,6 +121,7 @@ export function parseGymSignupBody(body: unknown): {
       city,
       acceptedTerms,
       turnstileToken,
+      ...(paletteId ? { paletteId } : {}),
       phoneE164: phoneE164!,
       instagramHandle: instagramHandle!,
     },
