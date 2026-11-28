@@ -1,12 +1,18 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/components/LanguageContext';
-import { AuthLanguageToggle } from '@/components/AuthLanguageToggle';
+import { AuthPageShell } from '@/components/AuthPageShell';
+import {
+  AuthAlert,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authPrimaryButtonClass,
+} from '@/components/auth-ui';
 
 function ForgotPasswordForm() {
   const { t } = useLanguage();
@@ -16,11 +22,10 @@ function ForgotPasswordForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (searchParams.get('error') === 'link_expired') {
-      setError(t('Reset link expired or invalid. Please request a new one.'));
-    }
-  }, [searchParams, t]);
+  const linkExpired = searchParams.get('error') === 'link_expired';
+  const shownError =
+    error ||
+    (linkExpired && !submitted ? t('Reset link expired or invalid. Please request a new one.') : '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,53 +53,51 @@ function ForgotPasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <p className="text-base text-pits-shell-ink-muted leading-relaxed">
+        {t("Enter your email and we'll send you a link to choose a new password.")}
+      </p>
       <div>
-        <label className="block text-xs font-bold text-pits-ink-muted uppercase tracking-wider mb-2">
-          {t('Staff Email')}
+        <label htmlFor="forgot-email" className={authLabelClass}>
+          {t('Email')}
         </label>
         <input
+          id="forgot-email"
           type="email"
           name="email"
           autoComplete="email"
+          inputMode="email"
+          autoCapitalize="none"
+          spellCheck={false}
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading || submitted}
-          className="w-full p-3 bg-pits-surface-muted border border-pits-edge rounded-lg text-pits-ink font-medium focus:ring-2 focus:ring-pits-primary/40 focus:border-pits-primary transition-all outline-none disabled:opacity-60"
-          placeholder="coach@pitscrossfit.com"
+          className={authInputClass}
+          placeholder="you@yourgym.com"
         />
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg text-center">
-          {error}
-        </div>
+      {shownError && (
+        <AuthAlert>
+          <p>{shownError}</p>
+        </AuthAlert>
       )}
 
       {submitted && (
-        <div className="bg-green-50 text-green-700 text-sm font-bold p-3 rounded-lg text-center">
-          {t('If an account exists for this email, we sent reset instructions.')}
-        </div>
+        <AuthAlert tone="success">
+          <p>{t('If an account exists for this email, we sent reset instructions.')}</p>
+        </AuthAlert>
       )}
 
-      <button
-        type="submit"
-        disabled={loading || submitted}
-        className={`w-full py-4 rounded-lg flex items-center justify-center font-bold uppercase tracking-widest text-sm shadow-lg transition-all
-          ${loading || submitted ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-pits-primary text-pits-dark-text hover:brightness-95 shadow-pits-primary/20'}
-        `}
-      >
+      <button type="submit" disabled={loading || submitted} className={authPrimaryButtonClass}>
         {loading && <Loader2 size={18} className="animate-spin mr-2" />}
         {loading ? t('Sending...') : t('Send reset link')}
       </button>
 
       <p className="text-center">
-        <Link
-          href="/"
-          className="text-xs font-bold text-pits-ink-muted uppercase tracking-wider hover:text-pits-primary transition-colors"
-        >
-          {t('Back to login')}
+        <Link href="/" className={authLinkClass}>
+          ← {t('Back to login')}
         </Link>
       </p>
     </form>
@@ -105,33 +108,10 @@ export default function ForgotPasswordPage() {
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-pits-surface flex items-center justify-center p-4 relative">
-      <AuthLanguageToggle />
-
-      <div className="max-w-md w-full bg-pits-surface-elevated rounded-2xl shadow-xl p-8 border border-pits-edge">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-pits-black rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg p-3 ring-1 ring-pits-edge">
-            <Image
-              src="/assets/logo.png"
-              alt="WODUS"
-              width={48}
-              height={48}
-              className="w-full h-full object-contain"
-              priority
-            />
-          </div>
-          <h1 className="text-2xl font-black text-pits-ink uppercase italic tracking-tighter">
-            {t('Reset password')}
-          </h1>
-          <p className="text-pits-ink-muted text-xs font-bold uppercase tracking-widest mt-1">
-            {t('Command Center')}
-          </p>
-        </div>
-
-        <Suspense fallback={null}>
-          <ForgotPasswordForm />
-        </Suspense>
-      </div>
-    </div>
+    <AuthPageShell ready title={t('Reset password')} subtitle={t('Command Center')}>
+      <Suspense fallback={null}>
+        <ForgotPasswordForm />
+      </Suspense>
+    </AuthPageShell>
   );
 }
