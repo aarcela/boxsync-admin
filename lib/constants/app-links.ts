@@ -14,6 +14,9 @@ export function buildGymSignupUrl(language: 'en' | 'es'): string {
   return `${getPublicSiteOrigin()}${language === 'es' ? '/es/signup' : '/signup'}`;
 }
 
+/** Opens the installed athlete app (no specific screen). */
+export const MOBILE_APP_OPEN_DEEP_LINK = 'boxwaveapp://';
+
 /** Mobile app password-reset deep link (used after the web confirm page). */
 export const MOBILE_RESET_PASSWORD_DEEP_LINK = 'boxwaveapp://reset-password';
 

@@ -2,11 +2,10 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/components/LanguageContext';
-import { AuthLanguageToggle } from '@/components/AuthLanguageToggle';
+import { AuthPageShell } from '@/components/AuthPageShell';
 import { useOptionalTenant } from '@/components/TenantContext';
 import {
   isEmailNotConfirmedError,
@@ -20,11 +19,16 @@ import {
   buildTenantDashboardUrl,
   isHqHost,
 } from '@/lib/tenant-host';
+import { buildGymSignupUrl } from '@/lib/constants/app-links';
 import {
-  APP_STORE_URL,
-  GOOGLE_PLAY_URL,
-  buildGymSignupUrl,
-} from '@/lib/constants/app-links';
+  AuthAlert,
+  PasswordInput,
+  StoreButtons,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authPrimaryButtonClass,
+} from '@/components/auth-ui';
 
 type LoginError =
   | { kind: 'unconfirmed' }
@@ -50,19 +54,12 @@ function useIsHqHost(): boolean {
   );
 }
 
-const inputClass =
-  'w-full h-14 px-4 bg-pits-black border border-pits-shell-edge rounded-xl text-base text-pits-shell-ink font-medium placeholder:text-pits-shell-ink-muted/50 focus:border-pits-shell-accent focus:ring-2 focus:ring-pits-shell-accent/30 transition-all outline-none disabled:opacity-60';
-
-const labelClass =
-  'block text-xs font-bold text-pits-shell-ink-muted uppercase tracking-wider mb-2';
-
 export default function StaffLoginPage() {
   const { t, lang } = useLanguage();
   const tenant = useOptionalTenant();
   const onHq = useIsHqHost();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<LoginError | null>(null);
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -172,34 +169,14 @@ export default function StaffLoginPage() {
   const showSignupLink = !tenant && !onHq;
 
   return (
-    <div className="min-h-dvh bg-pits-black flex items-start sm:items-center justify-center px-5 pt-24 pb-10 sm:p-6 relative">
-      <AuthLanguageToggle variant="dark" />
-
-      <div className="w-full max-w-md sm:bg-pits-shell sm:border sm:border-pits-shell-edge sm:rounded-3xl sm:overflow-hidden">
-        <div className="hidden sm:block h-1 bg-pits-shell-accent" />
-        <div className="sm:p-10">
-          <div className="mb-8">
-            <div className="w-14 h-14 bg-pits-black rounded-2xl flex items-center justify-center mb-6 p-2.5 ring-1 ring-pits-shell-edge">
-              <Image
-                src="/assets/logo.png"
-                alt="WODUS"
-                width={48}
-                height={48}
-                className="w-full h-full object-contain"
-                priority
-              />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-pits-shell-accent mb-2">
-              {t('Command Center')}
-            </p>
-            <h1 className="text-3xl font-black text-pits-shell-ink uppercase italic tracking-tight leading-tight break-words">
-              {gymName ? t('Sign in to {{gym}}', { gym: gymName }) : t('Sign in to WODUS')}
-            </h1>
-          </div>
-
+    <AuthPageShell
+      ready
+      title={gymName ? t('Sign in to {{gym}}', { gym: gymName }) : t('Sign in to WODUS')}
+      subtitle={t('Command Center')}
+    >
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="login-email" className={labelClass}>
+              <label htmlFor="login-email" className={authLabelClass}>
                 {t('Email')}
               </label>
               <input
@@ -214,47 +191,34 @@ export default function StaffLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className={inputClass}
+                className={authInputClass}
                 placeholder="you@yourgym.com"
               />
             </div>
 
             <div>
               <div className="flex items-baseline justify-between mb-2">
-                <label htmlFor="login-password" className={`${labelClass} mb-0`}>
+                <label htmlFor="login-password" className={`${authLabelClass} mb-0`}>
                   {t('Password')}
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-bold text-pits-shell-ink-muted hover:text-pits-shell-accent transition-colors"
+                  className={authLinkClass}
                 >
                   {t('Forgot password?')}
                 </Link>
               </div>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className={`${inputClass} pr-14`}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? t('Hide password') : t('Show password')}
-                  aria-pressed={showPassword}
-                  className="absolute inset-y-0 right-0 w-14 flex items-center justify-center text-pits-shell-ink-muted hover:text-pits-shell-ink transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              <PasswordInput
+                id="login-password"
+                name="password"
+                autoComplete="current-password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+              />
             </div>
 
             {error?.kind === 'member' && (
@@ -268,32 +232,12 @@ export default function StaffLoginPage() {
                 <p className="text-sm text-pits-shell-ink-muted">
                   {t('Members book classes and pay from the WODUS app.')}
                 </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <a
-                    href={APP_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-11 rounded-lg border border-pits-shell-edge flex items-center justify-center text-xs font-bold text-pits-shell-ink hover:border-pits-shell-accent transition-colors text-center px-2"
-                  >
-                    {t('Get on the App Store')}
-                  </a>
-                  <a
-                    href={GOOGLE_PLAY_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-11 rounded-lg border border-pits-shell-edge flex items-center justify-center text-xs font-bold text-pits-shell-ink hover:border-pits-shell-accent transition-colors text-center px-2"
-                  >
-                    {t('Get on Google Play')}
-                  </a>
-                </div>
+                <StoreButtons highlight={false} />
               </div>
             )}
 
             {errorMessage && (
-              <div
-                role="alert"
-                className="rounded-xl border border-pits-danger/40 bg-pits-danger/10 text-red-300 text-sm font-semibold p-3 text-center space-y-2"
-              >
+              <AuthAlert>
                 <p>{errorMessage}</p>
                 {error?.kind === 'unconfirmed' && (
                   <button
@@ -305,14 +249,10 @@ export default function StaffLoginPage() {
                     {resendState === 'sent' ? t('Verification email sent.') : t('Resend email')}
                   </button>
                 )}
-              </div>
+              </AuthAlert>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-14 rounded-xl flex items-center justify-center font-extrabold uppercase tracking-widest text-sm bg-pits-shell-accent text-pits-dark-text hover:brightness-95 active:brightness-90 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-            >
+            <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
               {loading && <Loader2 size={18} className="animate-spin mr-2" />}
               {loading ? t('Signing in...') : t('Sign in')}
             </button>
@@ -329,8 +269,6 @@ export default function StaffLoginPage() {
               </a>
             </p>
           )}
-        </div>
-      </div>
-    </div>
+    </AuthPageShell>
   );
 }
