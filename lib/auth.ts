@@ -7,8 +7,7 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const MIN_RESET_PASSWORD_LENGTH = 8;
 
-const AUTH_CALLBACK_NEXT_PATHS = ['/reset-password', '/welcome'] as const;
-type AuthCallbackNextPath = (typeof AUTH_CALLBACK_NEXT_PATHS)[number];
+type AuthCallbackNextPath = '/reset-password' | '/welcome';
 
 /**
  * Auth email callbacks (/auth/callback, /welcome, /reset-password) are hosted on
@@ -20,7 +19,7 @@ function getAuthCallbackRedirectUrl(nextPath: AuthCallbackNextPath): string {
   return `${buildHqUrl('/auth/callback')}?next=${next}`;
 }
 
-export function getPasswordResetRedirectUrl(_request: Request): string {
+export function getPasswordResetRedirectUrl(): string {
   return getAuthCallbackRedirectUrl('/reset-password');
 }
 
@@ -29,7 +28,7 @@ export function getMobilePasswordResetRedirectUrl(): string {
   return MOBILE_RESET_PASSWORD_DEEP_LINK;
 }
 
-export function getMemberInviteRedirectUrl(_request: Request): string {
+export function getMemberInviteRedirectUrl(): string {
   return getAuthCallbackRedirectUrl('/welcome');
 }
 

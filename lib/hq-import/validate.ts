@@ -1,7 +1,6 @@
 import { PROFILE_ROLES, type ProfileRole } from '@/lib/auth';
 import { getPlatformPlan, isOverMemberCap } from '@/lib/platform-plans';
 import { renewDateToIso } from '@/lib/renew-date';
-import type { Language } from '@/lib/translations';
 import type { InscriptionPlan, PlanLimitType, PlatformPlanId } from '@/lib/types/gym';
 import {
   HQ_IMPORT_MAX_BYTES,

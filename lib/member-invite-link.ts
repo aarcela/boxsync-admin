@@ -14,8 +14,7 @@ type GenerateLinkProperties = {
  * link to the marketing Site URL (getwodus.com), which has no callback page.
  */
 export function buildMemberInviteEmailLink(
-  properties: GenerateLinkProperties | null | undefined,
-  request?: Request
+  properties: GenerateLinkProperties | null | undefined
 ): string {
   const hashedToken = properties?.hashed_token?.trim();
   if (hashedToken) {
@@ -34,7 +33,7 @@ export function buildMemberInviteEmailLink(
       const url = new URL(actionLink);
       url.searchParams.set(
         'redirect_to',
-        getMemberInviteRedirectUrl(request ?? new Request('http://localhost'))
+        getMemberInviteRedirectUrl()
       );
       return url.toString();
     } catch {

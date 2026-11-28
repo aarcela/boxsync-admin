@@ -15,6 +15,7 @@ import {
 import { useLanguage } from '@/components/LanguageContext';
 import { useToast } from '@/components/Toast';
 import { useTenant } from '@/components/TenantContext';
+import type { TranslationKey } from '@/lib/translations';
 import {
   BOOKING_CLOSE_PRESETS_MINUTES,
   CLASS_REMINDER_PRESETS_MINUTES,
@@ -56,7 +57,7 @@ function reminderPartsToMinutes(hours: number, minutes: number): number {
 
 function reminderPresetLabel(
   minutes: number,
-  t: (key: any, params?: Record<string, string | number>) => string
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
 ) {
   if (minutes === 0) return t('Class reminder off');
   return shortPresetLabel(minutes, t);
@@ -64,7 +65,7 @@ function reminderPresetLabel(
 
 function reminderFullLabel(
   minutes: number,
-  t: (key: any, params?: Record<string, string | number>) => string
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
 ) {
   if (minutes === 0) return t('Class reminder summary off');
   return t('Class reminder summary', { time: fullWindowLabel(minutes, t) });
@@ -81,7 +82,7 @@ function partsToMinutes(hours: number, minutes: number): number {
   return Math.min(MAX_CUSTOM_MINUTES, h * 60 + m);
 }
 
-function shortPresetLabel(minutes: number, t: (key: any, params?: Record<string, string | number>) => string) {
+function shortPresetLabel(minutes: number, t: (key: TranslationKey, params?: Record<string, string | number>) => string) {
   if (minutes === 0) return t('Booking chip start');
   if (minutes < 60) return t('Booking chip minutes', { minutes });
   const hours = minutes / 60;
@@ -92,7 +93,7 @@ function shortPresetLabel(minutes: number, t: (key: any, params?: Record<string,
   return t('Booking chip hours minutes', { hours: parts.hours, minutes: parts.minutes });
 }
 
-function fullWindowLabel(minutes: number, t: (key: any, params?: Record<string, string | number>) => string) {
+function fullWindowLabel(minutes: number, t: (key: TranslationKey, params?: Record<string, string | number>) => string) {
   if (minutes === 0) return t('Booking preset until start');
   if (minutes < 60) return t('Booking preset minutes', { minutes });
   const hours = minutes / 60;
@@ -121,7 +122,7 @@ function CloseWindowEditor({
   customActive: boolean;
   onCustomActiveChange: (active: boolean) => void;
   onChange: (minutes: number) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }) {
   const parts = minutesToParts(value);
   const selectedPreset = !customActive && isPresetMinutes(value) ? value : CUSTOM_SENTINEL;
@@ -248,7 +249,7 @@ function ReminderEditor({
   customActive: boolean;
   onCustomActiveChange: (active: boolean) => void;
   onChange: (minutes: number) => void;
-  t: (key: any, params?: Record<string, string | number>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }) {
   const parts = minutesToParts(value);
   const selectedPreset = !customActive && isReminderPresetMinutes(value) ? value : CUSTOM_SENTINEL;

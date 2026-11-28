@@ -195,10 +195,10 @@ export default function CommunityPage() {
                     <MessageSquare size={14} className={post.comments_count > 0 ? 'text-pits-primary fill-pits-primary' : ''} />
                     {post.comments_count || 0}
                   </span>
-                  {post.type === 'wod_share' && post.metadata?.score ? (
+                  {post.type === 'wod_share' && post.metadata?.score !== undefined && post.metadata?.score !== null ? (
                     <span className="inline-flex items-center gap-1 font-semibold text-pits-text">
                       <TrendingUp size={12} />
-                      {t('Score')}: {post.metadata.score}
+                      {t('Score')}: {String(post.metadata.score)}
                     </span>
                   ) : null}
                 </div>

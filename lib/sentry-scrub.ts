@@ -1,4 +1,4 @@
-import type { ErrorEvent, EventHint } from '@sentry/nextjs';
+import type { ErrorEvent } from '@sentry/nextjs';
 
 const AUTH_PATH_MARKERS = [
   '/auth',
@@ -20,8 +20,7 @@ function isAuthRelatedUrl(url: string | undefined): boolean {
 
 /** Strip credentials / bodies on auth routes before events leave the process. */
 export function scrubSentryEvent(
-  event: ErrorEvent,
-  _hint?: EventHint
+  event: ErrorEvent
 ): ErrorEvent | null {
   if (event.request && isAuthRelatedUrl(event.request.url)) {
     delete event.request.data;
