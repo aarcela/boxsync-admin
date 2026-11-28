@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -14,13 +14,10 @@ function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (searchParams.get('error') === 'link_expired') {
-      setError(t('Reset link expired or invalid. Please request a new one.'));
-    }
-  }, [searchParams, t]);
+  const initialError = searchParams.get('error') === 'link_expired' 
+    ? t('Reset link expired or invalid. Please request a new one.') 
+    : '';
+  const [error, setError] = useState(initialError);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
