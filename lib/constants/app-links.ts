@@ -9,6 +9,11 @@ function getPublicSiteOrigin(): string {
   return `https://${ROOT_DOMAIN}`;
 }
 
+/** Self-serve gym signup on the marketing site (30-day trial). */
+export function buildGymSignupUrl(language: 'en' | 'es'): string {
+  return `${getPublicSiteOrigin()}${language === 'es' ? '/es/signup' : '/signup'}`;
+}
+
 /** Mobile app password-reset deep link (used after the web confirm page). */
 export const MOBILE_RESET_PASSWORD_DEEP_LINK = 'boxwaveapp://reset-password';
 
