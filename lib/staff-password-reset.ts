@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
  * Prefer hashed_token → HQ /auth/callback so marketing Site URL never swallows the flow.
  */
 export async function createStaffPasswordResetLink(email: string): Promise<string> {
-  const redirectTo = getPasswordResetRedirectUrl(new Request('http://localhost'));
+  const redirectTo = getPasswordResetRedirectUrl();
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: 'recovery',
     email,

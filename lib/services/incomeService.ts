@@ -94,7 +94,8 @@ export const incomeService = {
   },
 
   async addIncome(income: Omit<IncomeRecord, 'id' | 'created_at'>): Promise<IncomeRecord> {
-    const { source: _source, ...row } = income;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { source, ...row } = income;
     const { data, error } = await supabase
       .from('incomes')
       .insert([row])

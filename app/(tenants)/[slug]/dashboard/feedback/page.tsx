@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { 
+import {
   Star, User, Calendar, MessageSquare, Search, 
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown,
-  AlertTriangle, CheckCircle2, Phone, Filter, ArrowRight
+  AlertTriangle, Phone
 } from 'lucide-react';
 import { formatDateShort, formatTime } from '@/lib/utils/format-date';
 import { useLanguage } from '@/components/LanguageContext';
@@ -89,11 +89,11 @@ export default function FeedbackPage() {
   }, [searchTerm]);
 
   const fetchStats = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('coach_feedback')
       .select('rating, coach_id, created_at, coach:profiles!coach_id(full_name)');
     
-    if (!error && data) {
+    if (data) {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const sevenDaysAgo = today - (7 * 24 * 60 * 60 * 1000);
@@ -103,16 +103,28 @@ export default function FeedbackPage() {
       setGlobalAvg(globalSum / (data.length || 1));
       setCriticalCount(data.filter(f => f.rating <= 3).length);
 
-      // Aggregation logic
-      const agg: Record<string, any> = {};
+      type AggregationData = {
+        name: string;
+        tSum: number;
+        tCount: number;
+        wSum: number;
+        wCount: number;
+        mSum: number;
+        mCount: number;
+        aSum: number;
+        aCount: number;
+      };
+      
+      const agg: Record<string, AggregationData> = {};
       
       data.forEach(f => {
         const cid = f.coach_id;
         const ts = new Date(f.created_at).getTime();
         
         if (!agg[cid]) {
+          const coachData = f.coach as { full_name?: string } | null;
           agg[cid] = { 
-            name: (f.coach as any)?.full_name || 'N/A',
+            name: coachData?.full_name || 'N/A',
             tSum: 0, tCount: 0,
             wSum: 0, wCount: 0,
             mSum: 0, mCount: 0,
@@ -190,12 +202,12 @@ export default function FeedbackPage() {
     if (searchTerm) query = query.ilike('comment', `%${searchTerm}%`);
     if (filterCoach !== 'all') query = query.eq('coach_id', filterCoach);
 
-    const { data, error, count } = await query
+    const { data, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (!error && data) {
-      setFeedback(data as any);
+    if (data) {
+      setFeedback(data as unknown as Feedback[]);
       setTotalCount(count || 0);
     }
     setLoading(false);
@@ -487,7 +499,7 @@ export default function FeedbackPage() {
             </button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum = currentPage <= 3 ? i + 1 : (currentPage >= totalPages - 2 ? totalPages - 4 + i : currentPage - 2 + i);
+                const pageNum = currentPage <= 3 ? i + 1 : (currentPage >= totalPages - 2 ? totalPages - 4 + i : currentPage - 2 + i);
                 if (pageNum <= 0 || pageNum > totalPages) return null;
                 return (
                   <button

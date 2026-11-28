@@ -225,7 +225,7 @@ export async function PUT(
       updateAuthData.password = password;
     }
 
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
       id,
       updateAuthData
     );

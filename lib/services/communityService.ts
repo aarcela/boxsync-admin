@@ -9,7 +9,7 @@ export interface Post {
   content: string;
   media_url: string | null;
   type: PostType;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   likes_count: number;
   comments_count: number;
   created_at: string;
@@ -59,7 +59,7 @@ export const communityService = {
     if (!user) throw new Error('Not authenticated');
 
     // Build metadata
-    const metadata: Record<string, any> = {};
+    const metadata: Record<string, unknown> = {};
     if (input.type === 'wod_share' && input.wodScore?.trim()) {
       metadata.score = input.wodScore.trim();
     }

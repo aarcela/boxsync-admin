@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       await sendMobilePasswordReset({ email, fullName, language });
     } else if (isStaffRole(profile?.role)) {
       await supabaseAdmin.auth.resetPasswordForEmail(email, {
-        redirectTo: getPasswordResetRedirectUrl(request),
+        redirectTo: getPasswordResetRedirectUrl(),
       });
     }
 

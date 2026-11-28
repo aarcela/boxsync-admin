@@ -58,7 +58,7 @@ export async function commitMemberRows(
           type: 'invite',
           email: row.email,
           options: {
-            redirectTo: getMemberInviteRedirectUrl(request),
+            redirectTo: getMemberInviteRedirectUrl(),
             data: {
               full_name: row.full_name,
               tenant_id: tenantId,
@@ -106,7 +106,7 @@ export async function commitMemberRows(
 
       if (sendInvites) {
         try {
-          const inviteLink = buildMemberInviteEmailLink(linkData.properties, request);
+          const inviteLink = buildMemberInviteEmailLink(linkData.properties);
           await sendMemberInviteEmail({
             to: row.email,
             fullName: row.full_name,

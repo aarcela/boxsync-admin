@@ -158,7 +158,7 @@ export async function POST(request: Request) {
           type: 'invite',
           email: normalizedEmail,
           options: {
-            redirectTo: getMemberInviteRedirectUrl(request),
+            redirectTo: getMemberInviteRedirectUrl(),
             data: { full_name: normalizedFullName, tenant_id: tenantId },
           },
         });
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
       if (linkError) throw linkError;
       if (!linkData.user) throw new Error('Failed to create user object');
 
-      memberInviteLink = buildMemberInviteEmailLink(linkData.properties, request);
+      memberInviteLink = buildMemberInviteEmailLink(linkData.properties);
 
       authUserId = linkData.user.id;
 

@@ -74,14 +74,14 @@ export async function POST(
         type: 'invite',
         email,
         options: {
-          redirectTo: getMemberInviteRedirectUrl(request),
+          redirectTo: getMemberInviteRedirectUrl(),
           data: { full_name: fullName, tenant_id: tenantId },
         },
       });
 
     if (linkError) throw linkError;
 
-    const inviteLink = buildMemberInviteEmailLink(linkData.properties, request);
+    const inviteLink = buildMemberInviteEmailLink(linkData.properties);
 
     let emailWarning: string | undefined;
     let whatsappWarning: string | undefined;
