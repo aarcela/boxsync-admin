@@ -3,6 +3,7 @@ import { getMemberInviteRedirectUrl } from '@/lib/auth';
 import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
 import { requireStaffApi } from '@/lib/require-staff-api';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
+import { getTenantDisplayName } from '@/lib/email/tenant-name';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Language } from '@/lib/translations';
@@ -92,6 +93,7 @@ export async function POST(
         fullName,
         inviteLink,
         language: messageLanguage,
+        tenantName: await getTenantDisplayName(tenantId),
       });
     } catch (emailError) {
       console.error('Resend invite email failed:', emailError);

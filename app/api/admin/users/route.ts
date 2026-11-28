@@ -10,6 +10,7 @@ import { requireStaffApi } from '@/lib/require-staff-api';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildPlanChangeFields } from '@/lib/plan-period';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
+import { getTenantDisplayName } from '@/lib/email/tenant-name';
 import { findUserIdByPhone, syncAuthPhone } from '@/lib/sync-auth-phone';
 import { sendWelcomeWhatsApp } from '@/lib/whatsapp';
 import type { Language } from '@/lib/translations';
@@ -265,6 +266,7 @@ export async function POST(request: Request) {
           to: normalizedEmail,
           fullName: normalizedFullName,
           inviteLink: memberInviteLink,
+          tenantName: await getTenantDisplayName(tenantId),
           language: messageLanguage,
         });
       } catch (emailError) {

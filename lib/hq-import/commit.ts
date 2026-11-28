@@ -1,6 +1,7 @@
 import { getMemberInviteRedirectUrl } from '@/lib/auth';
 import { buildMemberInviteEmailLink } from '@/lib/member-invite-link';
 import { sendMemberInviteEmail } from '@/lib/email/memberInviteEmail';
+import { getTenantDisplayName } from '@/lib/email/tenant-name';
 import { membershipPlanService } from '@/lib/services/membershipPlanService';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { ValidatedMemberRow, ValidatedPlanRow } from './types';
@@ -49,6 +50,7 @@ export async function commitMemberRows(
   const ids: string[] = [];
   const failed: Array<{ line: number; message: string }> = [];
   let inviteWarnings = 0;
+  const tenantName = sendInvites ? await getTenantDisplayName(tenantId) : null;
 
   for (const row of rows) {
     let userId: string | null = null;
@@ -112,6 +114,7 @@ export async function commitMemberRows(
             fullName: row.full_name,
             inviteLink,
             language: row.language,
+            tenantName,
           });
         } catch (emailError) {
           console.error('HQ import invite email failed:', emailError);

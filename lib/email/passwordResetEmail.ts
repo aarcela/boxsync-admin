@@ -1,100 +1,77 @@
 import type { Language } from '@/lib/translations';
 import { getAuthFromEmail, isSmtpConfigured, sendEmail } from '@/lib/email/smtp';
+import { firstNameOf, renderBrandedEmail } from '@/lib/email/layout';
 
-function buildPasswordResetEmailHtml(params: {
+type ResetParams = {
   fullName: string;
   resetLink: string;
   language: Language;
   audience?: 'app' | 'staff';
-}): string {
-  const firstName = params.fullName.trim().split(/\s+/)[0] || params.fullName;
+};
+
+function resetCopy(params: ResetParams) {
   const isEs = params.language === 'es';
   const isStaff = params.audience === 'staff';
+  const firstName = firstNameOf(params.fullName);
 
-  const title = isEs ? 'Restablece tu contraseña' : 'Reset your password';
-  const greeting = isEs ? `Hola ${firstName},` : `Hi ${firstName},`;
+  const greeting = firstName
+    ? isEs ? `Hola ${firstName},` : `Hi ${firstName},`
+    : isEs ? 'Hola,' : 'Hi,';
+
   const body = isStaff
     ? isEs
-      ? 'Haz clic abajo para restablecer la contraseña de tu panel de administración WODUS.'
-      : 'Click below to reset your WODUS staff dashboard password.'
+      ? 'Recibimos una solicitud para restablecer la contraseña de tu panel WODUS. Toca el botón para elegir una nueva.'
+      : 'We got a request to reset your WODUS dashboard password. Tap the button to choose a new one.'
     : isEs
-      ? 'Haz clic abajo para abrir WODUS y elegir una nueva contraseña.'
-      : 'Tap below to open WODUS and choose a new password.';
-  const note = isEs
-    ? 'Este enlace expira pronto por seguridad.'
-    : 'This link expires soon for your security.';
-  const button = isEs ? 'Restablecer contraseña' : 'Reset password';
-  const fallback = isEs ? '¿El botón no funciona?' : 'Button not working?';
-  const ignore = isEs
-    ? 'Si no solicitaste esto, puedes ignorar este correo.'
-    : 'If you did not request this, you can safely ignore this email.';
+      ? 'Recibimos una solicitud para restablecer tu contraseña. Toca el botón para abrir WODUS y elegir una nueva.'
+      : 'We got a request to reset your password. Tap the button to open WODUS and choose a new one.';
 
-  return `<!DOCTYPE html>
-<html lang="${isEs ? 'es' : 'en'}">
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;padding:0;background-color:#EDEEF0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#EDEEF0;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:448px;background-color:#FFFFFF;border:1px solid #D9DCE1;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.08);">
-        <tr><td style="padding:32px;text-align:center;">
-          <h1 style="margin:0 0 8px;font-size:24px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em;color:#15171A;">${title}</h1>
-          <p style="margin:0 0 24px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#5A6068;">WODUS</p>
-          <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#15171A;">${greeting}</p>
-          <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#5A6068;">${body}</p>
-          <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#5A6068;">${note}</p>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
-            <tr>
-              <td align="center" bgcolor="#6B8E00" style="border-radius:8px;">
-                <a href="${params.resetLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:16px 32px;background-color:#6B8E00;color:#0D0D0D;text-decoration:none;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;border-radius:8px;">${button}</a>
-              </td>
-            </tr>
-          </table>
-          <p style="margin:24px 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#5A6068;">${fallback}</p>
-          <p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#5A6068;word-break:break-all;"><a href="${params.resetLink}" target="_blank" rel="noopener noreferrer" style="color:#6B8E00;">${params.resetLink}</a></p>
-          <p style="margin:0;font-size:11px;line-height:1.5;color:#5A6068;opacity:0.85;">${ignore}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  return {
+    subject: isEs ? 'Restablece tu contraseña de WODUS' : 'Reset your WODUS password',
+    preheader: isEs ? 'Elige una nueva contraseña para tu cuenta WODUS.' : 'Choose a new password for your WODUS account.',
+    eyebrow: isEs ? 'Seguridad de la cuenta' : 'Account security',
+    title: isEs ? 'Nueva contraseña' : 'Reset your password',
+    greeting,
+    body,
+    button: isEs ? 'Elegir nueva contraseña' : 'Choose new password',
+    note: isEs ? 'Por seguridad, este enlace expira pronto.' : 'For your security, this link expires soon.',
+    ignore: isEs
+      ? 'Si no solicitaste esto, puedes ignorar este correo. Tu contraseña no cambiará.'
+      : "If you didn't request this, you can ignore this email. Your password won't change.",
+  };
 }
 
 export function isPasswordResetEmailConfigured(): boolean {
   return isSmtpConfigured();
 }
 
-export async function sendPasswordResetEmail(params: {
-  to: string;
-  fullName: string;
-  resetLink: string;
-  language: Language;
-  audience?: 'app' | 'staff';
-}): Promise<void> {
-  const isEs = params.language === 'es';
-  const isStaff = params.audience === 'staff';
-  const subject = isEs ? 'Restablece tu contraseña de WODUS' : 'Reset your WODUS password';
-  const firstName = params.fullName.trim().split(/\s+/)[0] || params.fullName;
-  const greeting = params.fullName
-    ? isEs
-      ? `Hola ${firstName},`
-      : `Hi ${firstName},`
-    : isEs
-      ? 'Hola,'
-      : 'Hi,';
-  const textBody = isStaff
-    ? isEs
-      ? `${greeting}\n\nHaz clic en este enlace para restablecer la contraseña de tu panel de administración WODUS:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
-      : `${greeting}\n\nClick this link to reset your WODUS staff dashboard password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`
-    : isEs
-      ? `${greeting}\n\nHaz clic en este enlace para abrir WODUS y restablecer tu contraseña:\n${params.resetLink}\n\nSi no solicitaste esto, puedes ignorar este correo.`
-      : `${greeting}\n\nTap this link to open WODUS and reset your password:\n${params.resetLink}\n\nIf you did not request this, you can safely ignore this email.`;
+export function buildPasswordResetEmail(params: ResetParams) {
+  const copy = resetCopy(params);
+  const html = renderBrandedEmail({
+    language: params.language,
+    preheader: copy.preheader,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    greeting: copy.greeting,
+    paragraphs: [copy.body],
+    buttonLabel: copy.button,
+    buttonUrl: params.resetLink,
+    note: copy.note,
+    footnote: copy.ignore,
+  });
+  const text = `${copy.greeting}\n\n${copy.body}\n${params.resetLink}\n\n${copy.note}\n\n${copy.ignore}`;
+  return { subject: copy.subject, html, text };
+}
 
+export async function sendPasswordResetEmail(
+  params: ResetParams & { to: string }
+): Promise<void> {
+  const { subject, html, text } = buildPasswordResetEmail(params);
   await sendEmail({
     to: params.to,
     subject,
-    html: buildPasswordResetEmailHtml(params),
-    text: textBody,
+    html,
+    text,
     from: getAuthFromEmail(),
   });
 }
