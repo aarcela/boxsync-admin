@@ -75,6 +75,12 @@ export function isStaffProfileRole(role: string): boolean {
   return role === 'coach' || role === 'manager' || role === 'admin';
 }
 
+export function isEmailNotConfirmedError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes('email not confirmed') || msg.includes('email_not_confirmed');
+}
+
 /** Maps errors to safe, user-facing login messages (avoids leaking auth internals). */
 export function resolveLoginError(
   err: unknown,
@@ -101,7 +107,7 @@ export function resolveLoginError(
 
   const msg = err.message.toLowerCase();
 
-  if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
+  if (isEmailNotConfirmedError(err)) {
     return t('Check your email to activate your account.');
   }
 

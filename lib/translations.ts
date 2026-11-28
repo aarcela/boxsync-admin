@@ -12,6 +12,17 @@ export const translations = {
       'Unauthorized: Platform admin access only.',
     'Missing tenant context.': 'Missing tenant context.',
     'Only admins can assign the admin role.': 'Only admins can assign the admin role.',
+    'Sign in to {{gym}}': 'Sign in to {{gym}}',
+    'Sign in to WODUS': 'Sign in to WODUS',
+    'Sign in': 'Sign in',
+    'Signing in...': 'Signing in...',
+    'Show password': 'Show password',
+    'Hide password': 'Hide password',
+    'This login is for gym staff.': 'This login is for gym staff.',
+    'Members book classes and pay from the WODUS app.':
+      'Members book classes and pay from the WODUS app.',
+    'Own a gym?': 'Own a gym?',
+    'Start your 30-day free trial': 'Start your 30-day free trial',
 
     // HQ Super Admin
     'Platform HQ': 'Platform HQ',
@@ -2284,6 +2295,17 @@ export const translations = {
       'No autorizado: solo administradores de plataforma.',
     'Missing tenant context.': 'Falta el contexto del tenant.',
     'Only admins can assign the admin role.': 'Solo los administradores pueden asignar el rol de administrador.',
+    'Sign in to {{gym}}': 'Entra a {{gym}}',
+    'Sign in to WODUS': 'Entra a WODUS',
+    'Sign in': 'Entrar',
+    'Signing in...': 'Entrando...',
+    'Show password': 'Mostrar contraseña',
+    'Hide password': 'Ocultar contraseña',
+    'This login is for gym staff.': 'Este acceso es para el equipo del gym.',
+    'Members book classes and pay from the WODUS app.':
+      'Los miembros reservan clases y pagan desde la app WODUS.',
+    'Own a gym?': '¿Tienes un gym?',
+    'Start your 30-day free trial': 'Empieza tu prueba gratis de 30 días',
 
     // HQ Super Admin
     'Platform HQ': 'HQ de plataforma',
